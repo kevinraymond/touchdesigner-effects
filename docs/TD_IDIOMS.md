@@ -60,6 +60,8 @@ Each item is one of:
   [ScriptCHOP Class](https://docs.derivative.ca/ScriptCHOP_Class)
 - **C2** (auto: assert_idiomatic) Nothing runs Python every frame or forces a cook: no Execute DAT
   with Frame Start or Frame End on, no `cook(force=True)` in a script. Operators do the work.
+  A parameter expression that follows the clock (`absTime.seconds` driving a uniform or a
+  transform) is the idiomatic way to animate and doesn't count.
   [Optimize](https://docs.derivative.ca/Optimize)
 - **C3** (auto: assert_nc_resolution) Nothing renders above 1280 x 1280, the Non-Commercial cap.
 - **C4** (review) Motion and timing follow seconds (`absTime.seconds`, `me.time.seconds`), not frame

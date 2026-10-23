@@ -7,7 +7,8 @@ with a manifest beside it. Review the sources; ship the `.tox`.
 ## Layout
 
 ```
-lib/tox_build.py              shared by every builder: the standard effect shell, save-time checks, manifests
+lib/tox_build.py              shared by every builder: the standard effect shell, helpers, save-time checks, manifests
+lib/font5x7.py                a 5 x 7 bitmap font for text drawn in shaders (labels, glyph grids)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -67,7 +68,11 @@ What the shell provides:
 Helpers: `mk()` creates, places, comments, sets parameters and wires in one call (`Expr('...')`
 for an expression); `custom()` adds a parameter with its default, range and help text;
 `docked()` fills the DAT TouchDesigner docked to an operator (a GLSL TOP's `_pixel`, a Script
-CHOP's callbacks) instead of adding a second one.
+CHOP's callbacks) instead of adding a second one; `glsl()` makes a GLSL TOP in one call (docked
+shader filled, any number of inputs: past the third they go through its TOPs parameter, the
+only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is the one way
+an effect may flash (below); `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
+the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink).
 
 ## Save-time checks
 
@@ -115,14 +120,17 @@ review isn't one of the sources, so writing it doesn't call for a rebuild.
 Every effect follows [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html).
 One that can flash is built with `new_effect(..., flashing=True)`, which adds the standard
 Flashing parameter: Off never flashes; Calm, the default, allows at most one flash a second;
-Up to 3 per second is the WCAG limit, which no setting exceeds. `FLASH_INTERVAL` in
-`lib/tox_build.py` gives each setting's shortest time between flashes; the effect's own network
-enforces it, and the limits are measured on the output before release (TD_IDIOMS.md A2).
+Up to 3 per second is the WCAG limit, which no setting exceeds. Every flash goes through
+`flash_gate(comp, trigger, x, y)`: a Trigger CHOP whose Re-Trigger Delay follows the setting
+(`FLASH_INTERVAL`) and a Math CHOP that passes nothing when it is Off. `dev/selftest.py` feeds
+it 4 pulses a second for 6 s: Off lets 0 through, Calm 6, Up to 3 per second 16. The effect
+shapes the flash after the gate, and the limits are measured again on its output before release
+(TD_IDIOMS.md A2).
 
 ## Manifests and the stale-file test
 
 `<name>.json` records the effect's version, the TouchDesigner build it was saved in, a hash
-of its sources (`lib/tox_build.py`, the builder, everything in `src/`) and a hash of the
+of its sources (every `lib/*.py`, the builder, everything in `src/`) and a hash of the
 `.tox`. A bundle's also records the hash of every `.tox` it embeds.
 
 `tests/check_tox.py` fails when a source changed since the last build, the `.tox` isn't the
@@ -138,7 +146,7 @@ uv run tests/test_guards.py
 uv run tests/check_tox.py
 ```
 
-Because the source hash covers `lib/tox_build.py`, changing it means rebuilding every effect.
+Because the source hash covers `lib/`, changing anything there means rebuilding every effect.
 
 ## The dev loop
 

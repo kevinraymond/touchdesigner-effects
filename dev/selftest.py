@@ -105,6 +105,13 @@ def _shader_error(comp):
     comp.op('glsl_pixel').text = 'this is not GLSL'
 
 
+def _hidden_expression_error(comp):
+    """An expression error on an operator nothing cooks: a Switch TOP's unselected input."""
+    sw = mk(comp, switchTOP, 'sw', 600, -700, [comp.op('glsl')], comment='x', index=0)
+    bad = mk(comp, constantTOP, 'bad', 400, -800, comment='x', colorr=Expr('sin(1)'))
+    sw.inputConnectors[1].connect(bad)
+
+
 def _no_help(comp):
     custom(comp.customPages[0], 'Float', 'Bare', 'Bare', 0.5, '')
 
@@ -121,6 +128,7 @@ BREAKS = [
                                         "parent().op('out_top').cook(force = True)"), 'forces a cook'),
     ('flashing without the Flashing parameter', _flashing_without_par, 'no Flashing parameter'),
     ('an error inside', _shader_error, 'does not load clean'),
+    ('an expression error nothing cooks', _hidden_expression_error, "expression 'sin(1)' fails"),
     ('external .tox', _set('', externaltox='/Users/someone/effect.tox'), 'points outside'),
     ('clone outside', _clone_outside, 'points outside'),
     ('global shortcut', _set('', opshortcut='myeffect'), 'points outside'),
@@ -169,6 +177,83 @@ def _check_source_follows_wiring(host, comp):
     run('args[0]()', wired, delayFrames=15)
 
 
+def _check_many_inputs(host):
+    """mk() wires more inputs than a new GLSL TOP has connectors, and the shader sees them all."""
+    box = host.op('selftest_inputs') or mk(host, baseCOMP, 'selftest_inputs', 0, -900, comment='x')
+    for o in list(box.children):
+        o.destroy()
+    consts = [mk(box, constantTOP, 'c{}'.format(i), 0, -100 * i, comment='x', colorr=i / 10.0,
+                 outputresolution='custom', resolutionw=8, resolutionh=8) for i in range(5)]
+    g = glsl(box, 'g', 300, 0, consts, 'out vec4 fragColor;\nvoid main() {\n'
+             '    fragColor = vec4(texture(sTD2DInputs[1], vUV.st).r, texture(sTD2DInputs[2], vUV.st).r,\n'
+             '                     texture(sTD2DInputs[3], vUV.st).r, texture(sTD2DInputs[4], vUV.st).r);\n}\n',
+             'reads inputs 2 to 5', res=(8, 8), fmt='rgba32float')
+    g.cook(force=True)
+    px = [round(float(v), 2) for v in g.numpyArray()[0, 0]]
+    box.destroy()
+    return '{} 5-input GLSL TOP reads inputs 2-5 as {} (want [0.1, 0.2, 0.3, 0.4])'.format(
+        'ok   ' if px == [0.1, 0.2, 0.3, 0.4] else 'MISS ', px)
+
+
+def _check_blob_track_docked():
+    """A Blob Track TOP docks DATs of its own; an effect built around one must still save."""
+    comp = good('selftest_blob')
+    bt = mk(comp, blobtrackTOP, 'blobs', 200, -300, [comp.op('source')], comment='tracks blobs')
+    for d in bt.docked:
+        d.comment = 'the tracker\'s own'
+    try:
+        all_checks(comp)
+        verdict = 'ok   '
+        why = ''
+    except RuntimeError as e:
+        verdict, why = 'MISS ', ': ' + str(e).splitlines()[-1].strip()
+    docked_names = [(d.name, d.OPType) for d in bt.docked]
+    comp.destroy()
+    return '{} an effect with a Blob Track TOP passes every check; docked {}{}'.format(verdict, docked_names, why)
+
+
+def _check_flash_gate(host):
+    """A 4 Hz pulse train through flash_gate() at each Flashing setting, counted over 6 s on later
+    frames: Off passes none, Calm at most one a second, Up to 3 per second at most three."""
+    gates = {}
+    for setting in ('off', 'calm', 'wcag'):
+        comp = good('selftest_flash_' + setting, flashing=True)
+        comp.par.Flashing = setting
+        lfo = mk(comp, lfoCHOP, 'pulses', -400, -900, comment='x', wavetype='square', frequency=4,
+                 offset=0.5, amp=0.5)
+        gate = flash_gate(comp, lfo, -200, -900)
+        gates[setting] = (comp, mk(comp, countCHOP, 'flashes', 200, -900, [gate], comment='x'),
+                          mk(comp, countCHOP, 'raw', 200, -1000, [lfo], comment='x'))
+    start = {}
+
+    def pull():
+        for comp, count, raw in gates.values():
+            count.cook()
+            raw.cook()
+
+    def tick(n):
+        pull()
+        if n == 60:
+            start.update({k: (c[0].eval(), r[0].eval()) for k, (_, c, r) in gates.items()})
+        if n < 420:
+            run('args[0](args[1])', tick, n + 1, delayFrames=1)
+            return
+        lines = []
+        for k, (comp, c, r) in gates.items():
+            flashes, pulses = c[0].eval() - start[k][0], r[0].eval() - start[k][1]
+            limit = {'off': 0, 'calm': 6, 'wcag': 18}[k]
+            lines.append('{} Flashing {}: {} flashes from {} pulses in 6 s (at most {})'.format(
+                'ok   ' if flashes <= limit and (k == 'off' or flashes > 0) else 'MISS ', k, flashes, pulses, limit))
+            comp.destroy()
+        with open(os.path.join(OUT, 'flash.txt'), 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+        open(os.path.join(OUT, 'done'), 'w').write('flash.txt\n')
+
+    if os.path.exists(os.path.join(OUT, 'done')):
+        os.remove(os.path.join(OUT, 'done'))
+    tick(0)
+
+
 def main():
     host = op(globals().get('TDLIB_PARENT', '/project1'))
     os.makedirs(OUT, exist_ok=True)
@@ -199,6 +284,9 @@ def main():
         loaded.op('out_top').width, loaded.op('out_top').height, errors))
     elsewhere.destroy()
     _check_source_follows_wiring(host, comp)
+    report.append(_check_many_inputs(host))
+    report.append(_check_blob_track_docked())
+    _check_flash_gate(host)
     sample = comp.op('sample')
     sample.cook(force=True)
     report.append('info  sample media {} x {} from {}'.format(sample.width, sample.height, sample.par.file.eval()))

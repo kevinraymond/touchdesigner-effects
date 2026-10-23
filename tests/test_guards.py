@@ -43,8 +43,7 @@ def build(root, kind, name, tox, embeds=None):
 
 
 def fixture(root):
-    os.makedirs(os.path.join(root, 'lib'))
-    shutil.copy(LIB, os.path.join(root, 'lib', 'tox_build.py'))
+    shutil.copytree(os.path.dirname(LIB), os.path.join(root, 'lib'), ignore=shutil.ignore_patterns('__pycache__'))
     lib = check_tox.load_lib(root)
     os.makedirs(os.path.join(root, 'docs'))
     write(root, 'effects/demo/build_demo.py', "VERSION = '0.1.0'\n")
@@ -88,6 +87,8 @@ BREAKS = [
     ('a shader changed', edit('effects/demo/src/demo.glsl', 'vec4(1.0)', 'vec4(0.5)'), 'older than its sources'),
     ('a source file added', lambda r: write(r, 'effects/demo/src/extra.py', 'x = 1\n'), 'older than its sources'),
     ('the shared library changed', lambda r: write(r, 'lib/tox_build.py', open(os.path.join(r, 'lib/tox_build.py')).read()
+                                                   + '\n# changed\n'), 'older than its sources'),
+    ('another lib module changed', lambda r: write(r, 'lib/font5x7.py', open(os.path.join(r, 'lib/font5x7.py')).read()
                                                    + '\n# changed\n'), 'older than its sources'),
     ('the builder changed', edit('effects/demo/build_demo.py', "VERSION", "# tweak\nVERSION"), 'older than its sources'),
     ('the .tox swapped', lambda r: write(r, 'effects/demo/demo.tox', b'other tox'), 'is not the file'),

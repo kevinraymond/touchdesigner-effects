@@ -21,7 +21,7 @@ dev/td.sh effects/<n>/build_<n>.py   # build an effect in TouchDesigner, copy th
 ## Rules
 
 - `.tox` files are generated, never hand-edited. Change the sources, rebuild, and commit the
-  `.tox` with its `.json` manifest. Changing `lib/tox_build.py` means rebuilding every effect.
+  `.tox` with its `.json` manifest. Changing anything in `lib/` means rebuilding every effect.
 - Builders start from `new_effect()` and end with `finish_effect()` + `save_effect()`; see
   the builder shape in docs/BUILDING.md. Fill docked DATs with `docked()`; never add a second one.
 - Each new check gets broken once on purpose: plain-Python checks in `tests/test_guards.py`,

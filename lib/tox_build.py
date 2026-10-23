@@ -26,8 +26,10 @@ MAX_RES = 1280
 NODE_W, NODE_H = 480, 270
 # One node color for the whole library (the orange of its orange/blue palette).
 NODE_COLOR = (0.95, 0.55, 0.15)
-# Shown while nothing is wired into the effect's TOP input.
+# Shown while nothing is wired into the effect's TOP input; an effect that needs motion passes
+# one of the sample movies instead (SAMPLE_MOVIE), as an expression on app.samplesFolder.
 SAMPLE_MEDIA = "app.samplesFolder + '/Map/Banana.tif'"
+SAMPLE_MOVIE = "app.samplesFolder + '/Map/Nature/Movie.1.mp4'"
 WINDOW_W, WINDOW_H = 1280, 720
 # The standard Flashing parameter (docs/TD_IDIOMS.md A1) and the shortest time each setting
 # allows between two flashes. Never under 1/3 s: WCAG 2.3.1 allows three flashes a second.
@@ -41,12 +43,12 @@ _EXTENSION_PAR = re.compile(r'ext\d+object$')
 
 # ---- Sources and hashes (also used outside TouchDesigner) -----------------------------------
 def component_sources(root, comp_dir):
-    """What a component's .tox is built from, as patterns relative to root: this file, the
-    component's builder (build_<name>.py) and everything in its src/. A change to any of them
-    needs a rebuild, and tests/check_tox.py fails until it happens."""
+    """What a component's .tox is built from, as patterns relative to root: the shared library
+    (every lib/*.py), the component's builder (build_<name>.py) and everything in its src/. A
+    change to any of them needs a rebuild, and tests/check_tox.py fails until it happens."""
     rel = os.path.relpath(comp_dir, root).replace(os.sep, '/')
     name = os.path.basename(comp_dir)
-    patterns = ['lib/tox_build.py', '{}/build_{}.py'.format(rel, name)]
+    patterns = ['lib/*.py', '{}/build_{}.py'.format(rel, name)]
     if glob.glob(os.path.join(comp_dir, 'src', '*')):
         patterns.append(rel + '/src/*')
     return patterns
@@ -63,6 +65,14 @@ def digest(root, patterns):
             with open(path, 'rb') as f:
                 h.update(os.path.relpath(path, root).replace(os.sep, '/').encode() + b'\0' + f.read() + b'\0')
     return h.hexdigest()
+
+
+def lib_module(root, name):
+    """Another shared file, lib/<name>.py, as a dict of its names: lib_module(_ROOT, 'font5x7')."""
+    path = os.path.join(root, 'lib', name + '.py')
+    ns = {'__name__': 'lib.' + name}
+    exec(compile(open(path).read(), path, 'exec'), ns)
+    return ns
 
 
 # ---- Building ---------------------------------------------------------------------------------
@@ -89,6 +99,8 @@ def mk(host, kind, name, x, y, inputs=(), comment='', **pars):
     o = host.create(kind, name)
     o.nodeX, o.nodeY = x, y
     setpars(o, **pars)
+    # Multi-input operators (Switch, Merge, Layout) grow a connector as each one is wired; a GLSL
+    # TOP stops at 3, so glsl() handles more.
     for i, src in enumerate(inputs):
         o.inputConnectors[i].connect(src)
     if comment:
@@ -103,6 +115,53 @@ def docked(o, suffix, text, comment):
     dat.text = text
     dat.comment = comment
     return dat
+
+
+def uniforms(g, **values):
+    """Set a GLSL TOP's vector uniforms: uniforms(g, uAmount=0.5, uTint=(1, 0.5, 0), uTime=Expr('absTime.seconds')).
+    Each value is a number, an Expr, or a tuple of up to four of them (x, y, z, w)."""
+    g.seq.vec.numBlocks = max(len(values), 1)
+    for i, (name, v) in enumerate(values.items()):
+        getattr(g.par, 'vec{}name'.format(i)).val = name
+        for axis, x in zip('xyzw', v if isinstance(v, (tuple, list)) else (v,)):
+            p = getattr(g.par, 'vec{}value{}'.format(i, axis))
+            if isinstance(x, Expr):
+                p.expr = x.text
+            else:
+                p.val = x
+
+
+def glsl(host, name, x, y, inputs, pixel, comment, res=None, fmt=None, **values):
+    """A GLSL TOP with its docked pixel shader filled (never a second DAT beside it), any number
+    of inputs, an optional custom resolution and pixel format, and uniforms (see uniforms())."""
+    # A new GLSL TOP has 3 input connectors that don't grow within one Python call, and
+    # setInputs() doesn't add more either; its TOPs parameter appends further inputs as
+    # sTD2DInputs[3], [4]... (2025.33230, dev/selftest.py checks a 5-input GLSL TOP).
+    g = mk(host, glslTOP, name, x, y, inputs[:3], comment)
+    if len(inputs) > 3:
+        g.par.tops = ' '.join(o.name for o in inputs[3:])
+    docked(g, '_pixel', pixel, comment)
+    if res:
+        setpars(g, outputresolution='custom', resolutionw=res[0], resolutionh=res[1])
+    if fmt:
+        setpars(g, format=fmt)
+    if values:
+        uniforms(g, **values)
+    return g
+
+
+def flash_gate(comp, trigger, x, y, name='flash'):
+    """Every flash an effect makes goes through here (docs/TD_IDIOMS.md A1). A Trigger CHOP turns
+    trigger's channels into one-frame-wide pulses no closer together than the Flashing parameter
+    allows (Re-Trigger Delay = FLASH_INTERVAL), and a Math CHOP passes nothing when Flashing is
+    Off. Shape the flash itself (its envelope) downstream; never bypass the gate."""
+    calm, wcag = FLASH_INTERVAL['calm'], FLASH_INTERVAL['wcag']
+    limit = mk(comp, triggerCHOP, name + '_limit', x, y, [trigger],
+               'Flashes no closer together than the Flashing parameter allows.',
+               retrigger=Expr("{} if parent().par.Flashing == 'wcag' else {}".format(wcag, calm)),
+               retriggerunit='seconds', attack=0, peak=1, decay=0, sustain=0)
+    return mk(comp, mathCHOP, name, x + 200, y, [limit], 'Nothing passes when Flashing is Off.',
+              gain=Expr("0 if parent().par.Flashing == 'off' else 1"))
 
 
 def _par(group):
@@ -127,7 +186,8 @@ def custom(page, kind, name, label, default, help_text, lo=None, hi=None, clamp=
     return p
 
 
-def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=False, parent_path=None):
+def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=False, sample=SAMPLE_MEDIA,
+               parent_path=None):
     """The standard shell every effect starts from: a COMP with the library's color, tags and
     node size, a README DAT, input 1 a TOP (sample media until something is wired) and, with
     audio=True, input 2 an optional CHOP. flashing=True, for an effect that can flash, adds the
@@ -156,7 +216,7 @@ def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=Fals
     # 2025.33230, dev/probes/input_order.py): the digit keeps the TOP first.
     mk(comp, inTOP, 'in1_top', -800, 0, comment='Input 1: the picture to process.')
     mk(comp, moviefileinTOP, 'sample', -800, -150, comment='Shown until a TOP is wired into input 1.',
-       file=Expr(SAMPLE_MEDIA))
+       file=Expr(sample))
     source = mk(comp, switchTOP, 'source', -600, -50, [comp.op('in1_top'), comp.op('sample')],
                 comment='Input 1 when it is wired, the sample picture when it is not.',
                 index=Expr('0 if parent().inputConnectors[0].connections else 1'))
@@ -400,9 +460,18 @@ def assert_idiomatic(comp):
 
 def assert_loads_clean(comp):
     """It works with nothing wired, as a drag-in leaves it, and a second copy beside the first
-    works too (docs/TD_IDIOMS.md I3)."""
+    works too; every parameter expression evaluates (docs/TD_IDIOMS.md I3)."""
     twin = comp.parent().copy(comp, name=comp.name + '_twin')
     problems = []
+    # An expression on an operator nothing cooks (a Switch TOP's unselected input) fails
+    # silently until it is selected: evaluate every one.
+    for o in _all(comp):
+        for p in o.pars():
+            if p.mode == ParMode.EXPRESSION:
+                try:
+                    p.eval()
+                except Exception as e:
+                    problems.append('{}.{} expression {!r} fails: {}'.format(o.path, p.name, p.expr, e))
     try:
         for c in (comp, twin):
             c.op('out_top').cook(force=True)
