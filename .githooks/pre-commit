@@ -1,0 +1,12 @@
+#!/bin/sh
+# Refuses a commit while a .tox is out of step with its sources, or a guard can no longer fail.
+# Enable once per clone:  git config core.hooksPath .githooks
+# It checks the working tree, so a source edited but not staged still counts.
+root=$(git rev-parse --show-toplevel)
+if command -v uv >/dev/null 2>&1; then
+    py="uv run --no-project python"
+else
+    py=python3
+fi
+out=$($py "$root/tests/test_guards.py" 2>&1) || { echo "$out"; exit 1; }
+$py "$root/tests/check_tox.py"

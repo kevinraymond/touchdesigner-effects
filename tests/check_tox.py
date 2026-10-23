@@ -1,0 +1,114 @@
+"""The checked-in .tox files are exactly what their sources build. Runs before every commit
+(.githooks/pre-commit) and in CI, with plain Python: no TouchDesigner needed.
+
+    uv run tests/check_tox.py
+
+A component is a folder effects/<name>/ or bundles/<name>/ holding build_<name>.py. For each,
+it fails when:
+  - the component was never built (no <name>.tox or <name>.json beside the builder),
+  - a source changed since the last build (lib/tox_build.py, the builder, anything in src/),
+  - the .tox is not the file its manifest describes,
+  - the builder's VERSION is not the version the .tox was built as,
+  - an effect has no docs page, the page doesn't link the latest-release download, or the
+    preview it shows is missing,
+  - a bundle embeds an older build of a component than the one checked in.
+tests/test_guards.py breaks each of these on purpose and checks that it fails.
+"""
+
+import glob
+import hashlib
+import json
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+KINDS = ('effects', 'bundles')
+PREVIEW = re.compile(r'\]\(([^)\s]+\.(?:gif|mp4|webm|png|jpg))\)')
+
+
+def load_lib(root):
+    path = os.path.join(root, 'lib', 'tox_build.py')
+    lib = {}
+    exec(compile(open(path).read(), path, 'exec'), lib)
+    return lib
+
+
+def components(root):
+    for kind in KINDS:
+        for d in sorted(glob.glob(os.path.join(root, kind, '*', ''))):
+            name = os.path.basename(os.path.dirname(d))
+            if not name.startswith(('.', '_')):
+                yield kind, name, os.path.dirname(d)
+
+
+def _docs(root, lib, name, errors):
+    page = os.path.join(root, 'docs', 'effects', name + '.md')
+    if not os.path.isfile(page):
+        errors.append('effects/{0}: no docs page docs/effects/{0}.md'.format(name))
+        return
+    text = open(page).read()
+    if lib['DOWNLOAD_URL'].format(name) not in text:
+        errors.append('docs/effects/{}.md does not link {}'.format(name, lib['DOWNLOAD_URL'].format(name)))
+    previews = PREVIEW.findall(text)
+    if not previews:
+        errors.append('docs/effects/{}.md shows no preview (a .gif or clip)'.format(name))
+    for target in previews:
+        if '://' not in target and not os.path.isfile(os.path.join(root, 'docs', 'effects', target)):
+            errors.append('docs/effects/{}.md shows {}, which does not exist'.format(name, target))
+
+
+def check(root=ROOT):
+    """Every problem found, as one line each, and how many components were checked."""
+    lib = load_lib(root)
+    errors, built, found = [], {}, list(components(root))
+    seen = {}
+    for kind, name, d in found:
+        rel = '{}/{}'.format(kind, name)
+        if name in seen:
+            errors.append('{} and {} share a name; release assets need unique names'.format(seen[name], rel))
+        seen[name] = rel
+        builder = os.path.join(d, 'build_{}.py'.format(name))
+        if not os.path.isfile(builder):
+            errors.append('{}: no builder build_{}.py'.format(rel, name))
+            continue
+        if kind == 'effects':
+            _docs(root, lib, name, errors)
+        tox_path, manifest_path = (os.path.join(d, name + ext) for ext in ('.tox', '.json'))
+        if not (os.path.isfile(tox_path) and os.path.isfile(manifest_path)):
+            errors.append('{}: never built; run build_{}.py in TouchDesigner (docs/BUILDING.md)'.format(rel, name))
+            continue
+        manifest = json.load(open(manifest_path))
+        tox = open(tox_path, 'rb').read()
+        if hashlib.sha256(tox).hexdigest() != manifest.get('tox_sha256'):
+            errors.append('{0}/{1}.tox is not the file {1}.json describes'.format(rel, name))
+        if lib['digest'](root, lib['component_sources'](root, d)) != manifest.get('sources_sha256'):
+            errors.append('{}/{}.tox is older than its sources: rebuild it in TouchDesigner (docs/BUILDING.md)'.format(
+                rel, name))
+        version = re.search(r"^VERSION = '([^']+)'", open(builder).read(), re.M)
+        if version is None:
+            errors.append('{}/build_{}.py has no VERSION line'.format(rel, name))
+        elif version.group(1) != manifest.get('version'):
+            errors.append('{}: the builder says VERSION {} but the .tox was built as {}; rebuild it'.format(
+                rel, version.group(1), manifest.get('version')))
+        built[name] = manifest
+    for kind, name, d in found:
+        for inner, sha in sorted(built.get(name, {}).get('embeds', {}).items()):
+            if inner not in built:
+                errors.append('{}/{} embeds {}, which is not a built component'.format(kind, name, inner))
+            elif built[inner]['tox_sha256'] != sha:
+                errors.append('{}/{}.tox embeds an older {}.tox: rebuild the bundle after the component'.format(
+                    kind, name, inner))
+    return errors, len(found)
+
+
+def main():
+    errors, n = check(ROOT)
+    for e in errors:
+        print('FAIL', e)
+    print('{} component(s) checked, {} problem(s)'.format(n, len(errors)))
+    return 1 if errors else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

@@ -1,0 +1,28 @@
+name: Checks
+
+# The plain-Python guards the pre-commit hook runs: every .tox in step with its sources,
+# and each guard still able to fail. Standard library only, so no setup step.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Each guard fails when its rule is broken
+        run: python3 tests/test_guards.py
+      - name: Every .tox in step with its sources
+        run: python3 tests/check_tox.py

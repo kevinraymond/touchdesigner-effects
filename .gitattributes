@@ -1,0 +1,9 @@
+# Source hashes in the manifests are taken over the files' bytes: keep text LF everywhere,
+# or a Windows checkout would report every .tox as older than its sources.
+* text=auto eol=lf
+*.tox binary
+*.gif binary
+*.png binary
+*.jpg binary
+*.mp4 binary
+*.webm binary

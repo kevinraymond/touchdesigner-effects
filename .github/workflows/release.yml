@@ -1,0 +1,50 @@
+name: Release
+
+# Pushing a tag vX.Y.Z publishes every checked-in .tox as its own release asset, by bare
+# file name, so the docs can link releases/latest/download/<name>.tox and never go stale.
+# The .tox files are built in TouchDesigner and committed (docs/BUILDING.md); this only
+# checks that they match their sources and attaches them.
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Every .tox in step with its sources
+        run: python3 tests/test_guards.py && python3 tests/check_tox.py
+
+      # check_tox.py already refuses two components with one name, so file names are unique.
+      - name: Stage the .tox files and SHA256SUMS
+        run: |
+          shopt -s nullglob
+          files=(effects/*/*.tox bundles/*/*.tox)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::no .tox files to release"
+            exit 1
+          fi
+          mkdir dist
+          cp "${files[@]}" dist/
+          (cd dist && sha256sum *.tox > SHA256SUMS)
+          cat dist/SHA256SUMS
+
+      # Verifiable with `gh attestation verify <name>.tox --repo <owner>/<repo>`.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/*.tox
+
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
