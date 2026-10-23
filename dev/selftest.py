@@ -27,9 +27,9 @@ void main()
 """
 
 
-def good(name='selftest_ok'):
+def good(name='selftest_ok', flashing=False):
     comp, page, source = new_effect(name, 'Selftest', 'Selftest: inverts its input.', 'Selftest README.\n',
-                                    tags=('selftest',), audio=True)
+                                    tags=('selftest',), audio=True, flashing=flashing)
     custom(page, 'Float', 'Amount', 'Amount', 1.0, 'How much to invert.', 0, 1, True)
     glsl = mk(comp, glslTOP, 'glsl', 0, 0, [source], comment='Inverts the picture.')
     docked(glsl, '_pixel', SHADER, 'The pixel shader: one minus the color.')
@@ -78,11 +78,49 @@ def _constant(path, name, value):
     return apply
 
 
+def _about_not_last(comp):
+    custom(comp.appendCustomPage('Extra'), 'Float', 'Late', 'Late', 0.0, 'A page after About.')
+
+
+def _editable_version(comp):
+    comp.par.Version.readOnly = False
+
+
+def _extension_lazy(comp):
+    ext = mk(comp, textDAT, 'SelftestExt', -400, -700, comment='an extension')
+    ext.text = 'class SelftestExt:\n    def __init__(self, ownerComp):\n        self.ownerComp = ownerComp\n'
+    setpars(comp, ext0object="op('./SelftestExt').module.SelftestExt(me)", initextonstart=False)
+
+
+def _script_chop_always(comp):
+    chop = mk(comp, scriptCHOP, 'script', 0, -700, comment='a Script CHOP')
+    docked(chop, '_callbacks', 'def onCook(scriptOp):\n    scriptOp.clear()\n    return\n', 'its callbacks')
+
+
+def _flashing_without_par(comp):
+    comp.tags.add('flashing')
+
+
+def _shader_error(comp):
+    comp.op('glsl_pixel').text = 'this is not GLSL'
+
+
 def _no_help(comp):
     custom(comp.customPages[0], 'Float', 'Bare', 'Bare', 0.5, '')
 
 
 BREAKS = [
+    ('About not the last page', _about_not_last, 'About last'),
+    ('Version editable', _editable_version, 'read-only'),
+    ('a parameter off its default', _set('', Amount=0.25), 'not its default'),
+    ('node shows nothing', _attr('', viewer=False), 'does not show out_top'),
+    ('extension without Init on Start', _extension_lazy, 'Init Extensions on Start'),
+    ('Script CHOP cooking always', _script_chop_always, 'WHEN_USED'),
+    ('Python every frame', _extra(executeDAT, 'ticker', 'x', framestart=True), 'every frame'),
+    ('a forced cook', lambda c: setattr(_extra(textDAT, 'forcer', 'x')(c), 'text',
+                                        "parent().op('out_top').cook(force = True)"), 'forces a cook'),
+    ('flashing without the Flashing parameter', _flashing_without_par, 'no Flashing parameter'),
+    ('an error inside', _shader_error, 'does not load clean'),
     ('external .tox', _set('', externaltox='/Users/someone/effect.tox'), 'points outside'),
     ('clone outside', _clone_outside, 'points outside'),
     ('global shortcut', _set('', opshortcut='myeffect'), 'points outside'),
@@ -139,6 +177,11 @@ def main():
     # The intact effect passes every check, saves, and its shell is wired as promised.
     comp = good()
     path, manifest = save_tox(comp, OUT, comp.name, {'version': '0.0.1', 'sources_sha256': 'selftest'})
+    flash = good('selftest_flash', flashing=True)
+    all_checks(flash)
+    report.append('ok    a flashing effect passes, Flashing {} default {!r}'.format(
+        list(flash.par.Flashing.menuLabels), flash.par.Flashing.default))
+    flash.destroy()
     report.append('ok    intact effect saves: {} ({} bytes, build {})'.format(
         os.path.basename(path), manifest['tox_bytes'], manifest['touchdesigner_build']))
     w = comp.op('window').par.winop.eval()

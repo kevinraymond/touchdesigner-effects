@@ -24,7 +24,7 @@ dev/                          dev loop and self-test; never shipped
 Open a textport in TouchDesigner (Alt+T) and run the builder with `__file__` set to its path:
 
 ```python
-__file__ = '/path/to/tdlib/effects/glow/build_glow.py'; exec(open(__file__).read())
+__file__ = '/path/to/touchdesigner-effects/effects/glow/build_glow.py'; exec(open(__file__).read())
 ```
 
 It creates `/project1/glow` (replacing any previous copy), checks it, and writes
@@ -81,10 +81,43 @@ CHOP's callbacks) instead of adding a second one.
 - it isn't readable inside: no README, an operator without a comment, a parameter without
   help, the About page incomplete, no tags, another node color, a node smaller than 480 x 270;
 - the inputs aren't a TOP then optionally a CHOP, or the output isn't one TOP;
-- an operator renders larger than the Non-Commercial license's 1280 x 1280.
+- an operator renders larger than the Non-Commercial license's 1280 x 1280;
+- it breaks a TouchDesigner idiom a script can judge (`assert_idiomatic`, items named in
+  [TD_IDIOMS.md](TD_IDIOMS.md)): pages out of order, Version editable, a parameter saved off its
+  default, a node that doesn't show the output, extensions not initialized on start, a Script
+  CHOP not cooking `WHEN_USED`, Python every frame or a forced cook, or a flashing effect
+  without the standard Flashing parameter;
+- it doesn't load clean (`assert_loads_clean`): any error or warning with nothing wired, in it
+  or in a second copy beside it. TouchDesigner reports a GLSL compile error as a warning, so
+  warnings count.
 
-`dev/selftest.py` breaks each of these once inside TouchDesigner and checks it refuses, and
-checks that the intact effect loads elsewhere without errors, as a drag-in would.
+`dev/selftest.py` breaks each of these once inside TouchDesigner and checks it refuses, checks
+that a flashing effect built the standard way passes, and that the intact effect loads
+elsewhere without errors, as a drag-in would.
+
+## The idiom review
+
+[TD_IDIOMS.md](TD_IDIOMS.md) lists what an experienced TouchDesigner developer expects of a
+component they download. Items marked *auto* are the checks above; items marked *review* are
+judged by hand, once per version, in `effects/<name>/review.md`:
+
+```sh
+uv run tests/check_tox.py --review-template glow > effects/glow/review.md
+```
+
+Tick each box (`- [x]`) with a few words on how it holds. `tests/check_tox.py` fails while a
+box is open, when the review is for an older version than the builder's, and when the checklist
+gains an item the review doesn't have, so adding an idiom reopens every effect's review. The
+review isn't one of the sources, so writing it doesn't call for a rebuild.
+
+## Flashing
+
+Every effect follows [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html).
+One that can flash is built with `new_effect(..., flashing=True)`, which adds the standard
+Flashing parameter: Off never flashes; Calm, the default, allows at most one flash a second;
+Up to 3 per second is the WCAG limit, which no setting exceeds. `FLASH_INTERVAL` in
+`lib/tox_build.py` gives each setting's shortest time between flashes; the effect's own network
+enforces it, and the limits are measured on the output before release (TD_IDIOMS.md A2).
 
 ## Manifests and the stale-file test
 
@@ -94,8 +127,9 @@ of its sources (`lib/tox_build.py`, the builder, everything in `src/`) and a has
 
 `tests/check_tox.py` fails when a source changed since the last build, the `.tox` isn't the
 file its manifest describes, the builder's `VERSION` isn't the built one, an effect has no docs
-page (or it doesn't link `releases/latest/download/<name>.tox`, or its preview is missing), or
-a bundle embeds an older build. `tests/test_guards.py` breaks each of those on purpose. Both run
+page (or it doesn't link `releases/latest/download/<name>.tox`, doesn't state the build the
+`.tox` was saved in, or its preview is missing), an effect's idiom review is missing or out of
+date (above), or a bundle embeds an older build. `tests/test_guards.py` breaks each of those on purpose. Both run
 in CI and before every commit:
 
 ```sh
@@ -145,7 +179,7 @@ git tag v0.1.0 && git push origin v0.1.0
 
 `.github/workflows/release.yml` reruns both tests and attaches every `.tox` as its own
 release asset with `SHA256SUMS` and build provenance, so
-`https://github.com/kevinraymond/tdlib/releases/latest/download/<name>.tox` always serves the
+`https://github.com/kevinraymond/touchdesigner-effects/releases/latest/download/<name>.tox` always serves the
 newest.
 
 ## TouchDesigner behaviors found here

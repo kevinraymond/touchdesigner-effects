@@ -13,7 +13,7 @@ import json
 import os
 import re
 
-REPO = 'kevinraymond/tdlib'
+REPO = 'kevinraymond/touchdesigner-effects'
 DOCS_URL = 'https://github.com/' + REPO + '/blob/main/docs/effects/{}.md'
 DOWNLOAD_URL = 'https://github.com/' + REPO + '/releases/latest/download/{}.tox'
 
@@ -29,9 +29,14 @@ NODE_COLOR = (0.95, 0.55, 0.15)
 # Shown while nothing is wired into the effect's TOP input.
 SAMPLE_MEDIA = "app.samplesFolder + '/Map/Banana.tif'"
 WINDOW_W, WINDOW_H = 1280, 720
+# The standard Flashing parameter (docs/TD_IDIOMS.md A1) and the shortest time each setting
+# allows between two flashes. Never under 1/3 s: WCAG 2.3.1 allows three flashes a second.
+FLASHING = (('off', 'Off'), ('calm', 'Calm'), ('wcag', 'Up to 3 per second'))
+FLASH_INTERVAL = {'off': None, 'calm': 1.0, 'wcag': 1 / 3}
 
 _ABSOLUTE = re.compile(r'^(/|[A-Za-z]:[/\\]|\\\\)')
 _ABSOLUTE_OP_CALL = re.compile(r"""op\(\s*['"]/(?!sys/|ui/)""")
+_EXTENSION_PAR = re.compile(r'ext\d+object$')
 
 
 # ---- Sources and hashes (also used outside TouchDesigner) -----------------------------------
@@ -122,10 +127,12 @@ def custom(page, kind, name, label, default, help_text, lo=None, hi=None, clamp=
     return p
 
 
-def new_effect(name, title, summary, readme, tags=(), audio=False, parent_path=None):
+def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=False, parent_path=None):
     """The standard shell every effect starts from: a COMP with the library's color, tags and
     node size, a README DAT, input 1 a TOP (sample media until something is wired) and, with
-    audio=True, input 2 an optional CHOP. Returns (comp, page, source): the effect's custom
+    audio=True, input 2 an optional CHOP. flashing=True, for an effect that can flash, adds the
+    standard Flashing parameter (finish_effect() places it); read it from inside the effect as
+    parent().par.Flashing, and never flash more often than FLASH_INTERVAL allows. Returns (comp, page, source): the effect's custom
     page and the TOP to start the effect from. finish_effect() adds the rest and saves.
     parent_path defaults to TDLIB_PARENT when the caller defined one (the dev loop does), else
     /project1. Any previous copy there is replaced."""
@@ -140,7 +147,7 @@ def new_effect(name, title, summary, readme, tags=(), audio=False, parent_path=N
     comp.nodeWidth, comp.nodeHeight = NODE_W, NODE_H
     comp.color = NODE_COLOR
     comp.comment = summary
-    for tag in ('tdlib',) + tuple(tags):
+    for tag in ('touchdesigner-effects',) + tuple(tags) + (('flashing',) if flashing else ()):
         comp.tags.add(tag)
     page = comp.appendCustomPage(title)
     mk(comp, textDAT, 'README', -800, 400, comment='What this effect does and how to use it.').text = readme
@@ -171,6 +178,14 @@ def finish_effect(comp, last, version, page=None):
                 d.comment = 'Docked to {}; TouchDesigner made it with it.'.format(o.name)
     out = mk(comp, outTOP, 'out_top', 800, 0, [last], "Output 1: the effect's picture.")
 
+    if 'flashing' in comp.tags:
+        flash = custom(page, 'Menu', 'Flashing', 'Flashing', None,
+                       'How much the effect may flash. Off: never. Calm: at most one flash a second. '
+                       'Up to 3 per second: the WCAG 2.3.1 limit, which no setting exceeds.')
+        flash.menuNames = [n for n, _ in FLASHING]
+        flash.menuLabels = [label for _, label in FLASHING]
+        flash.default = flash.val = 'calm'
+        flash.startSection = True
     opener = custom(page, 'Pulse', 'Openwindow', 'Open Window', None,
                     'Show the picture in its own window, 1280 x 720 or filling a display. Esc closes it.')
     opener.startSection = True
@@ -338,8 +353,70 @@ def assert_nc_resolution(comp):
             comp.path, MAX_RES, MAX_RES, '\n  '.join(big)))
 
 
+def assert_idiomatic(comp):
+    """The idioms in docs/TD_IDIOMS.md a script can judge (each line names its item there);
+    the rest are reviewed by hand in effects/<name>/review.md."""
+    problems = []
+    pages = [p.name for p in comp.customPages]
+    if not pages or pages[0] == 'About' or pages[-1] != 'About':
+        problems.append("P1: pages are {}; the effect's page comes first, About last".format(pages))
+    for name in ('Version', 'Builtwith'):
+        p = getattr(comp.par, name, None)
+        if p is not None and not p.readOnly:
+            problems.append('P1: {} is editable; it should be read-only'.format(name))
+    for p in comp.customPars:
+        if p.readOnly or p.mode != ParMode.CONSTANT or p.style in ('Pulse', 'Momentary', 'Header'):
+            continue
+        value, default = p.eval(), p.default
+        same = abs(value - default) < 1e-6 if isinstance(value, float) else value == default
+        if not same:
+            problems.append('P3: {} is {!r}, not its default {!r}; save at the defaults so Reset returns '
+                            'here'.format(p.name, value, default))
+    viewer = comp.par.opviewer.eval()
+    if not comp.viewer or getattr(viewer, 'name', None) != 'out_top':
+        problems.append('I2: the node does not show out_top (viewer {}, Node View {})'.format(comp.viewer, viewer))
+    extensions = [p for p in comp.pars() if _EXTENSION_PAR.match(p.name) and (p.eval() or p.expr)]
+    if extensions and not comp.par.initextonstart.eval():
+        problems.append('E1: it has extensions but Init Extensions on Start is off')
+    for o in comp.findChildren():
+        if o.OPType == 'scriptCHOP':
+            dat = o.par.callbacks.eval()
+            if dat is None or 'CookLevel.WHEN_USED' not in dat.text:
+                problems.append('C1: {} does not return CookLevel.WHEN_USED from onGetCookLevel'.format(o.path))
+        if o.OPType == 'executeDAT' and o.par.active.eval() and (o.par.framestart.eval() or o.par.frameend.eval()):
+            problems.append('C2: {} runs Python every frame (Frame Start/End on)'.format(o.path))
+        if o.isDAT and o.name != 'README' and 'cook(force=True)' in o.text.replace(' ', ''):
+            problems.append('C2: {} forces a cook'.format(o.path))
+    if 'flashing' in comp.tags:
+        flash = getattr(comp.par, 'Flashing', None)
+        if flash is None:
+            problems.append('A1: tagged flashing but has no Flashing parameter (new_effect(flashing=True))')
+        elif list(flash.menuNames) != [n for n, _ in FLASHING] or flash.default != 'calm':
+            problems.append('A1: Flashing is {} defaulting to {!r}; it must be the standard menu, default '
+                            'calm'.format(list(flash.menuNames), flash.default))
+    if problems:
+        raise RuntimeError('{} is not idiomatic (docs/TD_IDIOMS.md):\n  {}'.format(comp.path, '\n  '.join(problems)))
+
+
+def assert_loads_clean(comp):
+    """It works with nothing wired, as a drag-in leaves it, and a second copy beside the first
+    works too (docs/TD_IDIOMS.md I3)."""
+    twin = comp.parent().copy(comp, name=comp.name + '_twin')
+    problems = []
+    try:
+        for c in (comp, twin):
+            c.op('out_top').cook(force=True)
+            for kind, text in (('errors', c.errors(recurse=True)), ('warnings', c.warnings(recurse=True))):
+                if text:
+                    problems.append('{} {}: {}'.format(c.path, kind, text))
+    finally:
+        twin.destroy()
+    if problems:
+        raise RuntimeError('{} does not load clean:\n  {}'.format(comp.path, '\n  '.join(problems)))
+
+
 EFFECT_CHECKS = (assert_self_contained, assert_no_unused_docked, assert_readable, assert_standard_io,
-                 assert_nc_resolution)
+                 assert_nc_resolution, assert_idiomatic, assert_loads_clean)
 
 
 def save_tox(comp, out_dir, stem, manifest, checks=EFFECT_CHECKS):

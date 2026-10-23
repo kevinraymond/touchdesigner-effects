@@ -8,7 +8,7 @@
 One paragraph: what it does, what it is good for, what makes it different from the
 nearest thing in the Palette or elsewhere.
 
-**[Download name.tox](https://github.com/kevinraymond/tdlib/releases/latest/download/name.tox)**
+**[Download name.tox](https://github.com/kevinraymond/touchdesigner-effects/releases/latest/download/name.tox)**
 · saved in TouchDesigner 2025.33230 (older builds may not open it) · works on the free
 Non-Commercial license
 
@@ -39,8 +39,9 @@ N fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, TouchDe
 
 ## Accessibility
 
-How it carries meaning without relying on hue alone (brightness, size, motion); its palette;
-anything that flashes, and how to calm it.
+How it carries meaning without relying on hue alone (brightness, size, motion); its palette.
+If it can flash: the Flashing parameter (Off / Calm, the default / Up to 3 per second, the
+WCAG 2.3.1 limit) and the measured flash rate at each setting.
 
 ## Experimental
 

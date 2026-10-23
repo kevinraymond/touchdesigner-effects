@@ -18,6 +18,7 @@ sys.path.insert(0, HERE)
 import check_tox  # noqa: E402
 
 LIB = os.path.join(os.path.dirname(HERE), 'lib', 'tox_build.py')
+IDIOMS = os.path.join(os.path.dirname(HERE), 'docs', 'TD_IDIOMS.md')
 
 
 def write(root, rel, data):
@@ -45,10 +46,13 @@ def fixture(root):
     os.makedirs(os.path.join(root, 'lib'))
     shutil.copy(LIB, os.path.join(root, 'lib', 'tox_build.py'))
     lib = check_tox.load_lib(root)
+    os.makedirs(os.path.join(root, 'docs'))
     write(root, 'effects/demo/build_demo.py', "VERSION = '0.1.0'\n")
     write(root, 'effects/demo/src/demo.glsl', 'out vec4 fragColor;\nvoid main() { fragColor = vec4(1.0); }\n')
-    write(root, 'docs/effects/demo.md', '# Demo\n\n![Demo](demo.gif)\n\n[Download]({})\n'.format(
-        lib['DOWNLOAD_URL'].format('demo')))
+    shutil.copy(IDIOMS, os.path.join(root, 'docs', 'TD_IDIOMS.md'))
+    write(root, 'docs/effects/demo.md', '# Demo\n\n![Demo](demo.gif)\n\n[Download]({}) · saved in '
+          'TouchDesigner 2025.33230\n'.format(lib['DOWNLOAD_URL'].format('demo')))
+    write(root, 'effects/demo/review.md', check_tox.review_template(root, 'demo', '0.1.0').replace('- [ ]', '- [x]'))
     write(root, 'docs/effects/demo.gif', b'GIF89a')
     demo = build(root, 'effects', 'demo', b'demo tox v1')
     write(root, 'bundles/reel/build_reel.py', "VERSION = '0.1.0'\n")
@@ -66,6 +70,13 @@ def edit(rel, old, new):
 
 def remove(rel):
     return lambda root: os.remove(os.path.join(root, rel))
+
+
+def bump_and_rebuild(root):
+    """A new version built and the bundle rebuilt around it, but nobody reviewed it."""
+    edit('effects/demo/build_demo.py', '0.1.0', '0.2.0')(root)
+    demo = build(root, 'effects', 'demo', b'demo tox v2')
+    build(root, 'bundles', 'reel', b'reel tox v2', embeds={'demo': demo['tox_sha256']})
 
 
 def rebuild_effect_only(root):
@@ -89,6 +100,13 @@ BREAKS = [
     ('no preview shown', edit('docs/effects/demo.md', '![Demo](demo.gif)', ''), 'shows no preview'),
     ('preview missing', remove('docs/effects/demo.gif'), 'which does not exist'),
     ('bundle embeds an older effect', rebuild_effect_only, 'embeds an older demo.tox'),
+    ('no idiom review', remove('effects/demo/review.md'), 'no review.md'),
+    ('a review box left open', edit('effects/demo/review.md', '- [x] C5', '- [ ] C5'), 'leaves unchecked: C5'),
+    ('a new version, not reviewed', bump_and_rebuild, 'reviews version 0.1.0, the builder is at 0.2.0'),
+    ('an idiom added since the review', lambda r: write(r, 'docs/TD_IDIOMS.md', open(os.path.join(
+        r, 'docs/TD_IDIOMS.md')).read() + '- **Z9** (review) A new idiom.\n'), 'leaves unchecked: Z9'),
+    ('docs page without the build', edit('docs/effects/demo.md', ' · saved in TouchDesigner 2025.33230', ''),
+     'does not state the build'),
     ('two components share a name', lambda r: write(r, 'bundles/demo/build_demo.py', "VERSION = '0.1.0'\n"),
      'share a name'),
 ]
@@ -99,6 +117,8 @@ def main():
     try:
         intact = os.path.join(base, 'intact')
         fixture(intact)
+        items = check_tox.review_items(intact)
+        assert len(items) >= 10, ('docs/TD_IDIOMS.md must yield its review items', items)
         errors, n = check_tox.check(intact)
         assert errors == [] and n == 2, ('the intact fixture must pass', errors, n)
         print('ok    intact fixture passes ({} components)'.format(n))

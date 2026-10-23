@@ -9,10 +9,14 @@ it fails when:
   - a source changed since the last build (lib/tox_build.py, the builder, anything in src/),
   - the .tox is not the file its manifest describes,
   - the builder's VERSION is not the version the .tox was built as,
-  - an effect has no docs page, the page doesn't link the latest-release download, or the
-    preview it shows is missing,
+  - an effect has no docs page, the page doesn't link the latest-release download or state the
+    build the .tox was saved in, or the preview it shows is missing,
+  - an effect's idiom review (effects/<name>/review.md, docs/TD_IDIOMS.md) is missing, leaves a
+    box open, reviews an older version, or lacks an item the checklist has gained since,
   - a bundle embeds an older build of a component than the one checked in.
 tests/test_guards.py breaks each of these on purpose and checks that it fails.
+
+    uv run tests/check_tox.py --review-template <name>    # print a blank review.md to start from
 """
 
 import glob
@@ -25,6 +29,9 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KINDS = ('effects', 'bundles')
 PREVIEW = re.compile(r'\]\(([^)\s]+\.(?:gif|mp4|webm|png|jpg))\)')
+REVIEW_ITEM = re.compile(r'^- \*\*([A-Z]\d+)\*\* \(review\) (.*(?:\n  .*)*)', re.M)
+CHECKED = re.compile(r'^- \[[xX]\] ([A-Z]\d+)\b', re.M)
+REVIEWED = re.compile(r'^Reviewed version: (\S+)', re.M)
 
 
 def load_lib(root):
@@ -40,6 +47,37 @@ def components(root):
             name = os.path.basename(os.path.dirname(d))
             if not name.startswith(('.', '_')):
                 yield kind, name, os.path.dirname(d)
+
+
+def review_items(root):
+    """The (review) items of docs/TD_IDIOMS.md, as (id, text on one line)."""
+    text = open(os.path.join(root, 'docs', 'TD_IDIOMS.md')).read()
+    return [(i, ' '.join(body.split())) for i, body in REVIEW_ITEM.findall(text)]
+
+
+def review_template(root, name, version):
+    lines = ['# {}: idiom review'.format(name), '', 'Reviewed version: {}'.format(version), '',
+             'The review items of docs/TD_IDIOMS.md, checked by hand for this version: tick each box',
+             '(`- [x]`) and say in a few words how it holds.', '']
+    lines += ['- [ ] {} {}'.format(i, text) for i, text in review_items(root)]
+    return '\n'.join(lines) + '\n'
+
+
+def _review(root, rel, d, version, errors):
+    path = os.path.join(d, 'review.md')
+    if not os.path.isfile(path):
+        errors.append('{}: no review.md; every version gets the idiom review (docs/TD_IDIOMS.md, '
+                      'check_tox.py --review-template)'.format(rel))
+        return
+    text = open(path).read()
+    reviewed = REVIEWED.search(text)
+    if reviewed is None or reviewed.group(1) != version:
+        errors.append('{}/review.md reviews version {}, the builder is at {}: review it again'.format(
+            rel, reviewed.group(1) if reviewed else 'none', version))
+    checked = set(CHECKED.findall(text))
+    open_items = [i for i, _ in review_items(root) if i not in checked]
+    if open_items:
+        errors.append('{}/review.md leaves unchecked: {}'.format(rel, ' '.join(open_items)))
 
 
 def _docs(root, lib, name, errors):
@@ -91,6 +129,14 @@ def check(root=ROOT):
         elif version.group(1) != manifest.get('version'):
             errors.append('{}: the builder says VERSION {} but the .tox was built as {}; rebuild it'.format(
                 rel, version.group(1), manifest.get('version')))
+        if kind == 'effects':
+            if version is not None:
+                _review(root, rel, d, version.group(1), errors)
+            page = os.path.join(root, 'docs', 'effects', name + '.md')
+            build = manifest.get('touchdesigner_build', '')
+            if os.path.isfile(page) and (not build or build not in open(page).read()):
+                errors.append('docs/effects/{}.md does not state the build the .tox was saved in ({})'.format(
+                    name, build))
         built[name] = manifest
     for kind, name, d in found:
         for inner, sha in sorted(built.get(name, {}).get('embeds', {}).items()):
@@ -103,6 +149,11 @@ def check(root=ROOT):
 
 
 def main():
+    if sys.argv[1:2] == ['--review-template']:
+        name = sys.argv[2]
+        builder = open(os.path.join(ROOT, 'effects', name, 'build_{}.py'.format(name))).read()
+        sys.stdout.write(review_template(ROOT, name, re.search(r"^VERSION = '([^']+)'", builder, re.M).group(1)))
+        return 0
     errors, n = check(ROOT)
     for e in errors:
         print('FAIL', e)

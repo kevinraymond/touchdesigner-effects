@@ -1,3 +1,5 @@
 dev/out/
 __pycache__/
 *.swp
+# Product research and collected posts: local only, never pushed.
+private/

@@ -34,7 +34,8 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
   viewing, and a performance note (fps on a stated reference machine).
 - **Accessible by default:** no signal carried by hue alone (also brightness, size or
   motion). A colorblind-safe palette such as orange and blue. Text legible at the
-  size it is shown.
+  size it is shown. Flashing follows WCAG 2.3.1 (never more than three flashes a second),
+  defaults to calm, and can be switched off entirely.
 - **Honest labels:** anything unreliable is marked experimental in its help and docs.
 - **A preview** (GIF or short clip) and a one-paragraph description per effect.
 - **A clear license** (MIT or CC0 for code), with credits for anything derived.
