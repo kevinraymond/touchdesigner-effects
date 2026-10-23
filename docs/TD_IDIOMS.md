@@ -41,9 +41,9 @@ Each item is one of:
   `out_top`) at a size that reads. [Base COMP](https://docs.derivative.ca/Base_COMP)
 - **I3** (auto: assert_loads_clean) It works with nothing wired, as a drag-in leaves it: no errors
   or warnings, the sample picture through the effect; a second copy beside the first works too.
-- **I4** (review) The audio input is read by channel name, with a sensible fallback when a channel
-  is missing; a pulse is taken from its count channel when one exists, because a one-frame pulse is
-  lost on any frame nothing pulls the CHOP. [Cook](https://docs.derivative.ca/Cook),
+- **I4** (review) The audio input goes through `audio_in()`, which reads it by channel name with
+  fallbacks and takes a pulse from its count channel when one exists, because a one-frame pulse is
+  lost on any frame nothing pulls the CHOP; the effect reads `beat_count` for logic, not `beat`. [Cook](https://docs.derivative.ca/Cook),
   [Logic CHOP](https://docs.derivative.ca/Logic_CHOP)
 
 ## Extensions (when an effect has one)

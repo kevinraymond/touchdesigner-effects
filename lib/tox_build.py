@@ -150,6 +150,24 @@ def glsl(host, name, x, y, inputs, pixel, comment, res=None, fmt=None, **values)
     return g
 
 
+def audio_in(comp, root, x=-600, y=-350):
+    """The effect's audio front end. Whatever is wired into input 2 (raw audio, Fosfora's signal,
+    TouchDesigner's audioAnalysis or Essentia rhythm CHOP, or nothing) becomes the channels beat,
+    beat_count, level and source; lib/audio_callbacks.py says how. Operators do the signal work
+    (the low band's loudness, for raw audio); a Script CHOP that cooks only when used picks the
+    source and counts beats. Needs new_effect(..., audio=True); returns the Script CHOP."""
+    src = comp.op('in2_audio')
+    low = mk(comp, audiofilterCHOP, 'audio_low', x, y - 150, [src], 'Raw audio only: the low band (kick, bass).',
+             filter='lowpass', cutofffrequency=150)
+    rms = mk(comp, analyzeCHOP, 'audio_rms', x + 200, y - 150, [low], 'Raw audio only: its loudness this frame.',
+             function='rmspower')
+    script = mk(comp, scriptCHOP, 'audio', x + 400, y, [src, rms],
+                'Input 2 as beat, beat_count, level and source (lib/audio_callbacks.py).')
+    docked(script, '_callbacks', open(os.path.join(root, 'lib', 'audio_callbacks.py')).read(),
+           'Turns whatever is on input 2 into beat, beat_count and level.')
+    return script
+
+
 def flash_gate(comp, trigger, x, y, name='flash'):
     """Every flash an effect makes goes through here (docs/TD_IDIOMS.md A1). A Trigger CHOP turns
     trigger's channels into one-frame-wide pulses no closer together than the Flashing parameter

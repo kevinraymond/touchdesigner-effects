@@ -212,6 +212,27 @@ def _check_blob_track_docked():
     return '{} an effect with a Blob Track TOP passes every check; docked {}{}'.format(verdict, docked_names, why)
 
 
+def _check_audio_in_saves(host):
+    """An effect with audio_in() passes every check unwired, and analysis channels at a control
+    rate on input 2 raise no warnings (the raw-audio filter sees them too)."""
+    comp = good('selftest_audio_saves')
+    audio_in(comp, _ROOT)
+    try:
+        all_checks(comp)
+        verdict, why = 'ok   ', ''
+    except RuntimeError as e:
+        verdict, why = 'MISS ', ': ' + str(e).splitlines()[-1].strip()
+    chans = mk(host, constantCHOP, 'selftest_chans', -500, -1600, comment='x', const0name='energy', const0value=0.5)
+    comp.inputConnectors[1].connect(chans)
+    comp.op('audio').cook(force=True)
+    warnings = comp.warnings(recurse=True) + comp.errors(recurse=True)
+    if warnings:
+        verdict, why = 'MISS ', why + '; with channels on input 2: ' + warnings
+    chans.destroy()
+    comp.destroy()
+    return '{} an effect with audio_in() passes every check, and channels on input 2 warn nothing{}'.format(verdict, why)
+
+
 def _check_flash_gate(host):
     """A 4 Hz pulse train through flash_gate() at each Flashing setting, counted over 6 s on later
     frames: Off passes none, Calm at most one a second, Up to 3 per second at most three."""
@@ -254,6 +275,75 @@ def _check_flash_gate(host):
     tick(0)
 
 
+def _check_audio_in(host):
+    """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; Fosfora-style
+    beat_count and energy; audioAnalysis-style kick pulses and low; raw audio (the sample MP3)."""
+    cases = {}
+
+    def effect(kind):
+        comp = good('selftest_audio_' + kind)
+        return comp, audio_in(comp, _ROOT)
+
+    comp, script = effect('none')
+    cases['none'] = (comp, script, [])
+    for kind, beat_name, level_name, level in (('counted', 'beat_count', 'energy', 0.6), ('pulses', 'kick', 'low', 0.4)):
+        comp, script = effect(kind)
+        lfo = mk(host, lfoCHOP, 'selftest_lfo_' + kind, -900, -1200, comment='x', wavetype='square',
+                 frequency=2, offset=0.5, amp=0.5)
+        beats = mk(host, countCHOP, 'selftest_count_' + kind, -700, -1200, [lfo], comment='x') if kind == 'counted' else lfo
+        named = mk(host, renameCHOP, 'selftest_named_' + kind, -500, -1200, [beats], comment='x',
+                   renamefrom='*', renameto=beat_name)
+        const = mk(host, constantCHOP, 'selftest_level_' + kind, -500, -1300, comment='x', const0name=level_name, const0value=level)
+        merged = mk(host, mergeCHOP, 'selftest_in_' + kind, -300, -1200, [named, const], comment='x')
+        comp.inputConnectors[1].connect(merged)
+        cases[kind] = (comp, script, list(dict.fromkeys([lfo, beats, named, const, merged])))
+    comp, script = effect('raw')
+    music = mk(host, audiofileinCHOP, 'selftest_music', -500, -1500, comment='x',
+               file=Expr("app.samplesFolder + '/Audio/JeremyCaulfield_www.dumb-unit.com.mp3'"))
+    comp.inputConnectors[1].connect(music)
+    cases['raw'] = (comp, script, [music])
+    start = {}
+
+    def tick(n):
+        for _, script, _ in cases.values():
+            script.cook()
+        if n == 30:
+            start.update({k: script['beat_count'].eval() for k, (_, script, _) in cases.items()})
+        if n < 210:
+            run('args[0](args[1])', safe_tick, n + 1, delayFrames=1)
+            return
+        lines = []
+        want = {'none': (0, 0, 0, 0), 'counted': (2, 5, 7, 0.6), 'pulses': (2, 5, 7, 0.4), 'raw': (1, 2, 30, None)}
+        for k, (comp, script, extra) in cases.items():
+            src, n_beats, level = (script[c].eval() for c in ('source', 'beat_count', 'level'))
+            n_beats -= start[k]
+            w_src, lo, hi, w_level = want[k]
+            good_level = (level > 0.05) if w_level is None else abs(level - w_level) < 0.05
+            ok = src == w_src and lo <= n_beats <= hi and good_level
+            lines.append('{} audio {}: source {:.0f}, {:.0f} beats in 3 s (want {}-{}), level {:.2f}'.format(
+                'ok   ' if ok else 'MISS ', k, src, n_beats, lo, hi, level))
+            for o in extra:
+                o.destroy()
+            comp.destroy()
+        with open(os.path.join(OUT, 'audio.txt'), 'w') as f:
+            f.write('\n'.join(lines) + '\n')
+        open(os.path.join(OUT, 'audio_done'), 'w').write('audio.txt\n')
+
+    def safe_tick(n):
+        # A failure on a later frame lands in the textport, not in dev/td.sh's output: write it down.
+        try:
+            tick(n)
+        except Exception:
+            import traceback
+            with open(os.path.join(OUT, 'audio.txt'), 'w') as f:
+                f.write('MISS  audio check failed on frame {}:\n{}'.format(n, traceback.format_exc()))
+            open(os.path.join(OUT, 'audio_done'), 'w').write('audio.txt\n')
+
+    if os.path.exists(os.path.join(OUT, 'audio_done')):
+        os.remove(os.path.join(OUT, 'audio_done'))
+    safe_tick(0)
+
+
 def main():
     host = op(globals().get('TDLIB_PARENT', '/project1'))
     os.makedirs(OUT, exist_ok=True)
@@ -286,7 +376,9 @@ def main():
     _check_source_follows_wiring(host, comp)
     report.append(_check_many_inputs(host))
     report.append(_check_blob_track_docked())
+    report.append(_check_audio_in_saves(host))
     _check_flash_gate(host)
+    _check_audio_in(host)
     sample = comp.op('sample')
     sample.cook(force=True)
     report.append('info  sample media {} x {} from {}'.format(sample.width, sample.height, sample.par.file.eval()))

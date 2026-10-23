@@ -9,6 +9,7 @@ with a manifest beside it. Review the sources; ship the `.tox`.
 ```
 lib/tox_build.py              shared by every builder: the standard effect shell, helpers, save-time checks, manifests
 lib/font5x7.py                a 5 x 7 bitmap font for text drawn in shaders (labels, glyph grids)
+lib/audio_callbacks.py        the audio input's logic (audio_in() puts it in a Script CHOP)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -126,6 +127,24 @@ Up to 3 per second is the WCAG limit, which no setting exceeds. Every flash goes
 it 4 pulses a second for 6 s: Off lets 0 through, Calm 6, Up to 3 per second 16. The effect
 shapes the flash after the gate, and the limits are measured again on its output before release
 (TD_IDIOMS.md A2).
+
+## The audio input
+
+An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
+which turns whatever is wired there into four channels on the CHOP `audio`: `beat` (1 on the
+frame a beat arrives), `beat_count` (watch it for logic: a one-frame pulse can be missed),
+`level` (0 to 1) and `source` (0 nothing, 1 raw audio, 2 analysis channels). Input 2 may carry:
+
+- raw audio (Audio File In, Audio Device In): the low band's loudness gives `level`, and a jump
+  above its recent average gives a beat;
+- analysis channels, by name: beats from `beat_count` (Fosfora), or the rising edge of `beat`,
+  `kick` or `onset` (Fosfora, TouchDesigner's audioAnalysis and Essentia rhythm CHOPs); level from
+  `energy`, `level`, `low`, `bass` or `rms`;
+- nothing: no beats, level 0, and the effect still works.
+
+`lib/audio_callbacks.py` holds the logic. `dev/selftest.py` feeds it each kind of input for 3 s:
+nothing gives 0 beats; `beat_count` and `kick` at 2 a second give 6; TouchDesigner's sample MP3
+gives 6 (about 120 BPM). Beats that make the picture flash still go through `flash_gate()`.
 
 ## Manifests and the stale-file test
 
