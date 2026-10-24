@@ -1,6 +1,6 @@
 """DEV ONLY. What an effect's audio front end makes of a song: its level (0-1) percentiles and beats
 and bars a second over SECONDS, read every frame, with the song as raw audio on input 2 (as
-dev/record.py feeds it). TD_ARGS='depth_particles audio=m1_ease' dev/td.sh dev/probes/level_stats.py,
+dev/record.py feeds it). TD_ARGS='particles audio=m1_ease' dev/td.sh dev/probes/level_stats.py,
 then dev/td.sh --pull dev/out/level_stats/done."""
 import glob
 import json
@@ -10,7 +10,7 @@ _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 OUT = os.path.join(_ROOT, 'dev', 'out', 'level_stats')
 SECONDS = 20.0
-names = [a for a in TDLIB_ARGS if '=' not in a] or ['depth_particles']
+names = [a for a in TDLIB_ARGS if '=' not in a] or ['particles']
 opts = dict(a.split('=', 1) for a in TDLIB_ARGS if '=' in a)
 song = os.path.join(_ROOT, 'private', 'assets', 'ready', opts.get('audio', 'm1_cinematic') + '.wav')
 host = op(TDLIB_PARENT)

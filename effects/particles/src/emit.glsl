@@ -1,8 +1,8 @@
-// Depth Particles (touchdesigner-effects, MIT). Where particles may be born. An Analyze TOP
+// Particles (touchdesigner-effects, MIT). Where particles may be born. An Analyze TOP
 // averages this over the frame, which gives how much of the frame each kind of emitter covers
-// (sim.glsl paces emission with it) and the people's middle (where a drop's shockwave starts).
-// Inputs: 0 the people (find.glsl).
-// Out: r 1 inside the people; g 1 on their outline (inside, with outside within 2 pixels);
+// (sim.glsl paces emission with it) and the subject's middle (where beats and drops push from).
+// Inputs: 0 the subject (subject.glsl).
+// Out: r 1 inside the subject; g 1 on its outline (inside, with outside within 2 pixels);
 // b and a r times this pixel's position (u, v), for the middle.
 out vec4 fragColor;
 

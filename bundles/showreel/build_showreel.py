@@ -76,14 +76,15 @@ comp.vfs.addFile(os.path.join(_HERE, 'src', CLIP))
 comp.vfs.addFile(os.path.join(_HERE, 'src', CLIP_DEPTH))
 comp.op('sample').comment = 'Shown until a TOP is wired into input 1: the dancer clip inside this component.'
 setpars(comp.op('sample'), **IN_STEP)
-# Input 3's stand-in: the dancer's depth while she is showing, else input 1's brightness.
-guess = mk(comp, monochromeTOP, 'depth_guess', -1000, -1000, [source],
-           "Input 1's brightness, standing in for depth when input 1 is wired but input 3 is not.")
+# Input 3's stand-in: the dancer's depth while she is showing, else black: no depth, so each effect
+# falls back to its own way of working without (Particles: what moves).
+guess = mk(comp, constantTOP, 'no_depth', -1000, -1000, comment="Black: no depth, when input 1 is wired but input 3 is not.",
+           outputresolution='custom', resolutionw=320, resolutionh=180, colorr=0, colorg=0, colorb=0, alpha=1)
 sample_depth = mk(comp, moviefileinTOP, 'sample_depth', -1000, -1150,
                   comment="The dancer's depth map inside this component, in step with the dancer clip.",
                   file=Expr("'vfs:' + parent().path + ':{}'".format(CLIP_DEPTH)), **IN_STEP)
 stand_in = mk(comp, switchTOP, 'depth_stand_in', -800, -1050, [guess, sample_depth],
-              "The dancer's depth while the dancer clip shows (input 1 unwired), else input 1's brightness.",
+              "The dancer's depth while the dancer clip shows (input 1 unwired), else no depth (black).",
               index=Expr('0 if parent().inputConnectors[0].connections else 1'))
 depth = depth_in(comp, stand_in, x=-600, y=-850)
 depth.comment = 'Input 3 (depth or mask) when it is wired, else the stand-in: for the effects that take one.'

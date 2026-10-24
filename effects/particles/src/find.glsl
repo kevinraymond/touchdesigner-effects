@@ -1,5 +1,5 @@
-// Depth Particles (touchdesigner-effects, MIT). Finds the people: whatever stands in front of its
-// surroundings in the depth map.
+// Particles (touchdesigner-effects, MIT). Finds the people (or anything) in the depth map: whatever
+// stands in front of its surroundings. subject.glsl decides whether the depth is used.
 // Find on Stand Out: a pixel counts when it is nearer than the Far Limit and something at least
 // Stand Out farther lies both to its left and to its right in the same row. A floor is about as
 // near all along a row, and a wall gets steadily nearer or farther along one, so neither passes;
@@ -21,12 +21,22 @@ void main() {
         fragColor = vec4(0.0);
         return;
     }
-    // The farthest reading to the left and to the right along the row.
-    float left = 2.0, right = 2.0;
-    for (int x = 0; x < w; x++) {
-        vec2 d = texelFetch(sTD2DInputs[0], ivec2(x, p.y), 0).rg;
-        if (d.g < 0.5 || x == p.x) continue;
-        if (x < p.x) left = min(left, d.r); else right = min(right, d.r);
+    // The farthest reading to the left and to the right along the row, where it is the nearest of
+    // three pixels side by side: a lone speck of sensor noise reading farther doesn't count, or one
+    // speck would make a whole span of the row stand out. a, b, c: three pixels, -1 without a reading.
+    float left = 2.0, right = 2.0, a = -1.0, b = -1.0;
+    for (int x = 0; x <= w; x++) {
+        float c = -1.0;
+        if (x < w) {
+            vec2 d = texelFetch(sTD2DInputs[0], ivec2(x, p.y), 0).rg;
+            c = d.g < 0.5 ? -1.0 : d.r;
+        }
+        if (x >= 1 && x - 1 != p.x && b >= 0.0) {
+            float m = max(b, max(a, c));
+            if (x - 1 < p.x) left = min(left, m); else right = min(right, m);
+        }
+        a = b;
+        b = c;
     }
     float stand = left > 1.5 || right > 1.5 ? 0.0 : here.r - max(left, right);
     bool near = here.r > uFind.z;

@@ -1,16 +1,16 @@
-// Depth Particles (touchdesigner-effects, MIT). The particles: one per pixel of three 32-bit float
+// Particles (touchdesigner-effects, MIT). The particles: one per pixel of three 32-bit float
 // buffers, which this shader reads back each frame through Feedback TOPs and moves on.
 // A free particle is born with a chance that makes the frame's births come to the number asked for
-// (Rate, more on a beat): it picks a random pixel of the people (or their outline) and is born there
+// (Rate, more on a beat): it picks a random pixel of the subject (or its outline) and is born there
 // if the pixel is one, takes the picture's color there, and leaves the body outward. A living one
 // ages, rides the wind (Drift, its direction swung by the bars), swirls in the turbulence (curl
-// noise: a swirling flow that never piles particles up), is kicked outward from the people on each
+// noise: a swirling flow that never piles particles up), is kicked outward from the subject on each
 // beat and by a drop's shockwave, fades in, and fades out over the second half of its life. Positions are in frame heights from the middle of the frame (x across, y up), which is
 // how the Geometry COMP draws them; sizes are in frame heights too.
 // Inputs: 0, 1, 2 this TOP's three buffers last frame; 3 where particles may be born (emit.glsl);
-// 4 the people, blurred (their outward direction); 5 the picture (their colors); 6 the average of
+// 4 the subject, blurred (its outward direction); 5 the picture (their colors); 6 the average of
 // buffer 1 last frame (a: how many are alive); 7 the average of input 3 (how much of the frame the
-// emitters cover, and the people's middle).
+// emitters cover, and the subject's middle).
 // Out: buffer 0 x, y, x speed, y speed; buffer 1 age (s), life (s), size, 1 alive or 0 free;
 // buffer 2 color r, g, b, and a: how visible it is now.
 uniform vec4 uClock;  // x seconds since the last frame, y seconds, z frame number (the dice), w aspect (width / height)
@@ -75,7 +75,7 @@ void main() {
             free_slot();
             return;
         }
-        // Outward: down the slope of the blurred people; where it's flat, any way.
+        // Outward: down the slope of the blurred subject; where it's flat, any way.
         vec2 px = 1.0 / vec2(textureSize(sTD2DInputs[4], 0));
         vec2 slope = vec2(texture(sTD2DInputs[4], uv + vec2(px.x, 0.0)).r - texture(sTD2DInputs[4], uv - vec2(px.x, 0.0)).r,
                           texture(sTD2DInputs[4], uv + vec2(0.0, px.y)).r - texture(sTD2DInputs[4], uv - vec2(0.0, px.y)).r);
@@ -110,7 +110,7 @@ void main() {
     // about a second, and the turbulence pushes it around on top.
     v = mix(v, uMove.x * vec2(sin(uWave.z), cos(uWave.z)), 1.0 - exp(-dt / 0.8));
     v += swirl(w, uClock.y) * uMove.y * 0.3 * dt;
-    // Outward from the people's middle: every particle on a beat, and a drop's shockwave, a ring
+    // Outward from the subject's middle: every particle on a beat, and a drop's shockwave, a ring
     // leaving the middle that shoves what it passes.
     vec4 cover = texelFetch(sTD2DInputs[7], ivec2(0), 0);
     vec2 mid = cover.r > 1e-4 ? to_world(cover.ba / cover.r) : vec2(0.0);

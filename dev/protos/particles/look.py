@@ -1,4 +1,4 @@
-"""DEV ONLY. Feed Depth Particles (TDLIB_PARENT/depth_particles as dev/td.sh built it, else loaded
+"""DEV ONLY. Feed Particles (TDLIB_PARENT/particles as dev/td.sh built it, else loaded
 from its .tox) a test clip, its depth clip on input 3 and the stress beat, and capture its output
 and insides:
 
@@ -18,7 +18,7 @@ exec(compile(open(os.path.join(_ROOT, 'dev', 'capture.py')).read(), 'capture.py'
 READY = os.path.join(_ROOT, 'private', 'assets', 'ready')     # testbed.py's own is relative to this file
 
 host = op(TDLIB_PARENT)
-fx = host.op('depth_particles') or host.loadTox(os.path.join(_ROOT, 'effects', 'depth_particles', 'depth_particles.tox'))
+fx = host.op('particles') or host.loadTox(os.path.join(_ROOT, 'effects', 'particles', 'particles.tox'))
 words = [w for w in TDLIB_ARGS if '=' in w]
 opts = dict(clip='b1_dancer', beat='stress', depth='clip', out='r1', at='1,2,4', dfile='')
 pars = {}
@@ -49,5 +49,5 @@ for k, v in pars.items():
 print('wired:', [[o.owner.name for o in c.connections] for c in fx.inputConnectors], 'clip file', clip.par.file.eval())
 print('clip', opts['clip'], 'beat', opts['beat'], 'depth', opts['depth'], 'pars', pars)
 at = [float(t) for t in opts['at'].split(',')]
-capture({'out': fx.op('out_top'), 'find': fx.op('find'), 'render': fx.op('render')},
+capture({'out': fx.op('out_top'), 'subject': fx.op('subject'), 'render': fx.op('render')},
         os.path.join(_ROOT, 'dev', 'out', 'particles', opts['out']), at=at, keep_cooking=True)
