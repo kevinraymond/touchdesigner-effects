@@ -22,7 +22,9 @@ saying how it was found.
 - Only a picture (a webcam, a video): what moves emits. Someone who holds still fades out within a
   couple of seconds; moving shadows count too.
 - Only a picture from a fixed camera: set Find to Background and, with the frame empty, press Capture
-  Background; then everything that isn't the empty room emits, still or moving.
+  Background, which keeps input 1's picture as the empty room; then everything that isn't the empty
+  room emits, still or moving. It needs a moment with nobody in the frame: for a video where someone
+  is always there, use Movement.
 - A lit performer on a dark stage: Find on Stand Out reads the picture's brightness as depth.
 Auto goes by what input 3 carries: a depth input that goes black falls back to Movement on its own.
 

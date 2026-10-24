@@ -53,7 +53,7 @@ other ways are a menu choice away.
 | A depth camera close up, at a desk say, where you touch the edges of the frame | Nearer Than Far Limit, Far Limit just behind you | Everything nearer than Far Limit: you, and anything as near as you (the desk's edge, a monitor). |
 | A mask on input 3 (MediaPipe, the NVIDIA Background TOP) | Auto: Stand Out | Inside the mask. Nearer Than Far Limit keeps people who touch the edge of the frame. |
 | Only a picture, from a camera that stays still: a webcam, a video | Auto: Movement | Whatever moves: hands, faces, edges and patterns as they move; a plain shirt barely counts, since a flat color looks the same when it shifts. Someone who holds still fades out within a couple of seconds; moving shadows count too. If the camera itself moves, everything moves: then only depth helps. |
-| Only a picture, from a fixed camera, with a moment when the frame is empty | Background, then press Capture Background | Everything that isn't the empty room, still or moving, as long as the camera and the light stay put. |
+| Only a picture, from a fixed camera, with a moment when the frame is empty | Background, then press Capture Background | Everything that isn't the empty room, still or moving, as long as the camera and the light stay put. A video where someone is always in the frame has no empty room to keep: use Movement. |
 | A lit performer on a dark stage, no depth | Stand Out (it reads the picture's brightness as depth) | Bright things that stand out from what is beside them. |
 | Nothing wired (TouchDesigner's sample movie) | Auto: the sample's brightness as depth | The birch trunk: a first look, nothing more. |
 
@@ -117,8 +117,8 @@ Set Depth Type to what input 3 holds:
   emitting for half a second after it stops. It sees change, so edges and patterns count more than
   flat colors. The camera has to stay still: when it moves (a phone in the hand, a pan), the whole
   picture counts as moving.
-- **Background** compares each pixel's color with the empty room, kept when Capture Background was
-  last pressed. Until then it works as Movement, and the label says so. Webcams change their
+- **Background** compares each pixel's color with the empty room: input 1's picture when Capture
+  Background was last pressed (the effect never opens a camera itself). Until then it works as Movement, and the label says so. Webcams change their
   exposure and color balance by themselves, most of all when someone steps in and fills the frame;
   the effect compares hue, which exposure leaves alone, and brightness after dividing out the drift,
   measured on the bulk of the picture (the room). Press Capture
@@ -132,7 +132,7 @@ The Particles page, top to bottom:
 |---|---|---|
 | Show | Particles | Particles: the effect. Subject: what the particles come from, in orange, the depth beside it in blue when depth is in use, over the dimmed picture, with a label saying how it was found. |
 | Find | Auto | What the particles come from: Auto, Stand Out, Nearer Than Far Limit, Movement or Background (see What you have, what you get). |
-| Capture Background | | For Background: with the subject out of the frame, keeps the empty room. Grayed out unless Find is Background. |
+| Capture Background | | For Background: with the subject out of the frame, keeps input 1's picture as the empty room. Grayed out unless Find is Background. |
 | Sensitivity | 0.5 | For Movement and Background (and Auto with no depth): how small a change counts. Raise it to catch slight movement; lower it if a still picture or camera noise emits. |
 | Stand Out | 0.08 | How much nearer than what lies to its left and right something must be to count, as a share of the depth range (0 to 0.3). Grayed out unless Find is Auto or Stand Out. |
 | Far Limit | 0.5 | Anything farther than this never counts, from 0 (farthest) to 1 (nearest). Raise it to drop the background; lower it if parts of the subject go missing. |

@@ -22,7 +22,9 @@ has Effect (which one the `show` viewer shows; a Switch TOP cooks only its chose
 effects' own node viewers are off), Play (the clip; off to pause it) and Beat: Auto takes
 Fosfora's signal only while it is online and hearing something (Fosfora's beat clock keeps
 ticking through silence and pauses, with its energy at 0), else the song; Fosfora and Song force
-one. The /tdlib_demo box shows `show` too, so the top level has the picture and, one click away,
+one. Source picks input 1: the clip (its depth on input 3) or the Mac's camera (nothing on input 3,
+as with a webcam; the camera runs only then, and Source goes back to Clip whenever the project
+opens). The /tdlib_demo box shows `show` too, so the top level has the picture and, one click away,
 the Demo page. Pulse an effect's Open Window to see it at full size. Delete /tdlib_demo freely;
 the next run makes it again.
 """
@@ -64,6 +66,23 @@ except OSError:
 if stamp is not None and clip.fetch('mtime', None) not in (None, stamp):
     clip.par.reloadpulse.pulse()  # the file was replaced (a re-generated clip, same name)
 clip.store('mtime', stamp)
+# The Mac's camera, for Source on the Demo page. It runs (and its light is on) only while Source is
+# Camera, and Source goes back to Clip whenever the project opens.
+camera = demo.op('camera')
+if camera is None:
+    camera = place(demo.create(videodeviceinTOP, 'camera'), -2 * COLUMN, 100,
+                   "The Mac's camera: on only while Source (Demo page) is Camera.")
+    # The first device isn't always the built-in one: an iPhone nearby joins as a Continuity Camera.
+    pick = [n for n, l in zip(camera.par.device.menuNames, camera.par.device.menuLabels) if 'facetime' in l.lower()]
+    if pick:
+        camera.par.device = pick[0]
+picture = demo.op('picture') or place(demo.create(switchTOP, 'picture'), -COLUMN // 2, 0,
+                                      "The effects' input 1: the clip or the camera, by Source (Demo page).")
+if [i.path for i in picture.inputs] != [clip.path, camera.path]:
+    for c in reversed(picture.inputConnectors):
+        c.disconnect()
+    picture.inputConnectors[0].connect(clip)
+    picture.inputConnectors[1].connect(camera)
 # The clip's depth, for input 3, when it has one. Decided here, not by an expression: a parameter
 # expression can't see the os module to check that the file exists (2025.33230).
 depth_file = os.path.splitext(clip.par.file.eval())[0] + '_depth.mp4'
@@ -125,11 +144,33 @@ if speaker is None:
                     'Plays the track while Sound is on (Demo page).')
     speaker.inputConnectors[0].connect(track)
 speaker.comment = 'Plays the track while Sound is on (Demo page).'
-if demo.op('sound_off') is None:
-    quiet = place(demo.create(executeDAT, 'sound_off'), -COLUMN, -850,
-                  'Turns Sound off whenever the project opens, so it never opens playing.')
-    quiet.text = 'def onStart():\n    parent().par.Sound = False\n    return\n'
-    quiet.par.start = True
+quiet = demo.op('sound_off') or place(demo.create(executeDAT, 'sound_off'), -COLUMN, -850, '')
+quiet.comment = ('Turns Sound off and Source back to Clip whenever the project opens, so it never opens '
+                 'playing or with the camera on.')
+quiet.text = "def onStart():\n    parent().par.Sound = False\n    parent().par.Source = 'clip'\n    return\n"
+quiet.par.start = True
+# The camera has no depth: while Source is Camera, the effects' input 3 is left unwired, as it would
+# be with a webcam. A connection can't follow an expression, so this DAT rewires on each change.
+source_exec = demo.op('source_exec') or place(
+    demo.create(parameterexecuteDAT, 'source_exec'), -2 * COLUMN, -50,
+    "Wires the clip's depth into the effects' input 3 while Source is Clip, and unwires it for Camera.")
+source_exec.text = '''\
+def wire_depth(demo):
+    depth = demo.op('clip_depth')
+    for fx in demo.findChildren(type=COMP, depth=1):
+        if fx.name == 'fosfora_signal' or len(fx.inputConnectors) < 3:
+            continue
+        if depth is not None and demo.par.Source.eval() == 'clip':
+            fx.inputConnectors[2].connect(depth)
+        else:
+            fx.inputConnectors[2].disconnect()
+
+
+def onValueChange(par, prev):
+    wire_depth(par.owner)
+'''
+source_exec.par.op, source_exec.par.pars = '..', 'Source'
+source_exec.par.valuechange, source_exec.par.onpulse = True, False
 
 loaded = []
 paths = sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
@@ -151,14 +192,9 @@ for i, (path, name) in enumerate(zip(paths, names)):
     loaded.append('{} {}'.format(name, fx.par.Version.eval() if hasattr(fx.par, 'Version') else ''))
 for name in names:
     fx = demo.op(name)
-    fx.inputConnectors[0].connect(clip)
+    fx.inputConnectors[0].connect(picture)
     if len(fx.inputConnectors) > 1:
         fx.inputConnectors[1].connect(beat)
-    if len(fx.inputConnectors) > 2:
-        if depth is not None:
-            fx.inputConnectors[2].connect(depth)
-        else:
-            fx.inputConnectors[2].disconnect()
 
 # One effect at a time: the Demo page picks it, and only the chosen one cooks.
 page = next((pg for pg in demo.customPages if pg.name == 'Demo'), None) or demo.appendCustomPage('Demo')
@@ -174,6 +210,13 @@ if not hasattr(demo.par, 'Beat'):
     demo.par.Beat.menuNames = ['auto', 'fosfora', 'song']
     demo.par.Beat.menuLabels = ['Auto', 'Fosfora', 'Song']
     demo.par.Beat.val = 'auto'
+if not hasattr(demo.par, 'Source'):
+    page.appendMenu('Source', label='Source')
+    demo.par.Source.menuNames = ['clip', 'camera']
+    demo.par.Source.menuLabels = ['Clip', 'Camera']
+    demo.par.Source.val = 'clip'
+demo.par.Source.help = ("The effects' input 1: the test clip (with its depth on input 3), or the Mac's camera "
+                        '(nothing on input 3). Goes back to Clip whenever the project opens.')
 demo.par.Effect.help = 'Which effect the show viewer shows; only that one runs.'
 demo.par.Play.help = 'Play the test clip; off pauses it.'
 demo.par.Sound.help = 'Play the track out loud. Turns itself off whenever the project opens.'
@@ -193,6 +236,9 @@ def follow(par, expr):
 
 follow(clip.par.play, 'parent().par.Play')
 follow(speaker.par.active, 'parent().par.Sound')
+follow(camera.par.active, "parent().par.Source.eval() == 'camera'")
+follow(picture.par.index, 'parent().par.Source.menuIndex')
+source_exec.module.wire_depth(demo)
 if signal is not None:  # beat's inputs: 0 Fosfora's signal, 1 the track
     follow(beat.par.index, (
         "0 if parent().par.Beat.eval() == 'fosfora' or (parent().par.Beat.eval() == 'auto'"
@@ -202,7 +248,7 @@ else:
     follow(beat.par.index, '0')
 current = demo.par.Effect.eval()
 demo.par.Effect.menuNames = ['clip'] + names
-demo.par.Effect.menuLabels = ['Clip only'] + names
+demo.par.Effect.menuLabels = ['Source only'] + names
 demo.par.Effect.val = current if current in names else 'clip'
 show = demo.op('show')
 if show is None:
@@ -216,9 +262,9 @@ demo.par.opviewer = './show'
 demo.viewer = True
 if demo.nodeWidth < 480:
     demo.nodeX, demo.nodeY, demo.nodeWidth, demo.nodeHeight = 200, -500, 480, 270
-# show's inputs in the Effect menu's order: clip, then each effect. Disconnecting one input of a
+# show's inputs in the Effect menu's order: the picture, then each effect. Disconnecting one input of a
 # multi-input operator renumbers the rest, so clear them last to first, then check.
-wanted = [clip] + [demo.op(n) for n in names]
+wanted = [picture] + [demo.op(n) for n in names]
 if [i.path for i in show.inputs] != [(o.outputConnectors[0].outOP or o).path for o in wanted]:
     for c in reversed(show.inputConnectors):
         c.disconnect()
@@ -233,9 +279,9 @@ for name in names:
 
 if relinked:
     print('put back:', ', '.join(relinked))
-print('{}: clip {}{}; beat from {} (Beat {}); loaded {}'.format(
-    DEMO, os.path.basename(clip.par.file.eval()), ' with its depth' if depth is not None else '', 'Fosfora' if beat.par.index.eval() == 0 and signal else 'the track',
-    demo.par.Beat.eval(),
+print('{}: source {}; clip {}{}; beat from {} (Beat {}); loaded {}'.format(
+    DEMO, demo.par.Source.eval(), os.path.basename(clip.par.file.eval()), ' with its depth' if depth is not None else '',
+    'Fosfora' if beat.par.index.eval() == 0 and signal else 'the track', demo.par.Beat.eval(),
     ', '.join(loaded) or 'nothing new'))
 for fx in demo.findChildren(type=COMP, depth=1):
     if fx.name == 'fosfora_signal':

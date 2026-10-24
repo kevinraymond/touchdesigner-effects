@@ -131,7 +131,8 @@ find = choices(custom(page, 'Menu', 'Find', 'Find', None,
                ['Auto', 'Stand Out', 'Nearer Than Far Limit', 'Movement', 'Background'], 'auto')
 find.startSection = True
 custom(page, 'Pulse', 'Capture', 'Capture Background', None,
-       'For Find on Background: with the subject out of the frame, press this to keep the empty room. Press '
+       "For Find on Background: with the subject out of the frame, press this to keep input 1's picture as "
+       'the empty room. The effect never opens a camera itself: wire one (Video Device In) into input 1. Press '
        'it again after the camera or the light changes.').enableExpr = "me.par.Find == 'background'"
 custom(page, 'Float', 'Sense', 'Sensitivity', 0.5,
        'For Movement and Background (and Auto with no depth): how small a change counts. Raise it to catch '
