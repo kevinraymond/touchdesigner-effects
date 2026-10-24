@@ -81,7 +81,7 @@ library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
   | View and clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
   | Grid, dancer in a hazy warehouse | 0.5 | 1.0 | 2.0 | 1.0 |
-  | Grid, people crossing a plaza | 0.5 | 1.5 | 2.0 | 0.5 |
+  | Grid, people crossing a plaza | 0.5 | 1.0 | 2.0 | 0.5 |
   | Cycle at Every 1, dancer | 1.0 | 2.0 | 3.0 | 1.0 |
 
   Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
