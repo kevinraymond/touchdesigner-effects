@@ -47,7 +47,8 @@ released under the [Krea 2 Community License](https://www.krea.ai/krea-2-licensi
 claims rights over what it generates.
 
 The beat the effects follow in the previews comes from "Prison of Pixels", a song by Kevin Raymond
-made with [Suno](https://suno.com). The previews are silent, and the song isn't in this repository.
+made with [Suno](https://suno.com), licensed like the rest of the media (below). The previews are
+silent, and the song isn't in this repository.
 
 None of it ships inside a `.tox`: with nothing wired in, every effect shows TouchDesigner's own
 sample media.
@@ -55,8 +56,9 @@ sample media.
 ## License
 
 - Code, `.tox` files and docs: MIT; see [LICENSE](LICENSE).
-- Media (the demo footage, and the preview images and videos on the effect pages):
-  [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Use them however you like, including
-  commercially; credit them as "Kevin Raymond, touchdesigner-effects" with a link to this repo.
+- Media (the demo footage, the preview images and videos on the effect pages, and the song "Prison
+  of Pixels"): [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Use them however you
+  like, including commercially; credit them as "Kevin Raymond, touchdesigner-effects" with a link
+  to this repo.
 
 Each effect's page credits anything it derives from.
