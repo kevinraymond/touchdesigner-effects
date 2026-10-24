@@ -5,11 +5,11 @@
     dev/td.sh --pull dev/out/idle/done
     cat dev/out/idle/report.txt
 
-Each effect is loaded from effects/<n>/<n>.tox into TDLIB_PARENT with its node viewer off and
-nothing downstream, first with nothing wired, then with dev/testbed.py's clip and stress beat on
-its inputs (a beat that changes every frame, as Fosfora's signal does). Each time it waits
-SETTLE frames, then counts the operators inside whose cookAbsFrame moves over WATCH frames: the
-answer should be 0. As a control it then pulls out_top every frame for a few frames, which must
+Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT with its node
+viewer off and nothing downstream, first with nothing wired, then with dev/testbed.py's clip and
+stress beat on its inputs (a beat that changes every frame, as Fosfora's signal does). Each time it
+waits SETTLE frames, then counts the operators inside whose cookAbsFrame moves over WATCH frames:
+the answer should be 0. As a control it then pulls out_top every frame for a few frames, which must
 make operators cook, or the check proves nothing.
 """
 
@@ -39,6 +39,8 @@ def main():
     names, opts = test_args(globals().get('TDLIB_ARGS') or [])
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
+    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
+              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip, beat = testbed(host, dict(opts, beat='stress'))
     runs = []
     for path in paths:

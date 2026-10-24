@@ -402,7 +402,9 @@ def assert_readable(comp):
 
 
 def assert_standard_io(comp):
-    """Input 1 a TOP, optional input 2 a CHOP, output 1 a TOP, and nothing else."""
+    """Input 1 a TOP, optional input 2 a CHOP, output 1 a TOP, and nothing else: in particular no
+    sound. TouchDesigner saves an Audio Device Out's state with the project, so one that was playing
+    starts again the moment the project opens, and nobody dragging in an effect expects music."""
     ins = [c.inOP.OPType for c in comp.inputConnectors]
     outs = [c.outOP.OPType for c in comp.outputConnectors]
     problems = []
@@ -410,6 +412,8 @@ def assert_standard_io(comp):
         problems.append('inputs are {}, expected a TOP, then optionally a CHOP'.format(ins))
     if outs != ['outTOP']:
         problems.append('outputs are {}, expected one TOP'.format(outs))
+    for o in comp.findChildren(type=audiodeviceoutCHOP):
+        problems.append('{} makes sound; a component outputs only its picture'.format(o.path))
     if problems:
         raise RuntimeError('{} does not have the standard inputs and outputs:\n  {}'.format(
             comp.path, '\n  '.join(problems)))

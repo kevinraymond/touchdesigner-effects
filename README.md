@@ -22,6 +22,10 @@ performance note, and a download link that always points at the latest release.
 | [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines, and beats swap the characters and pop the contrast. |
 | [Blob Track](docs/effects/blob_track.md) | The look of computer vision: whatever moves gets a numbered box that follows it, joined to its neighbors by lines, like surveillance software or a film's targeting display. Beats scramble the labels and spawn links. |
 | [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Bars set off the melts; Fosfora's builds hold them back until the drop. |
+| *More on the way* | New effects are in the works. Watch or star the repo to see them land. |
+
+To try them all at once, the [Showreel](docs/effects/showreel.md) holds every effect in one
+`.tox`: side by side in a grid, one after another with the music, or one by name.
 
 Every effect reacts to music on input 2 and gets the most from
 [Fosfora](https://github.com/kevinraymond/fosfora)'s signal (bars, builds, drops, sections), and
@@ -30,8 +34,9 @@ measured against WCAG 2.3.1 and can be turned off.
 
 ## Status
 
-The first three effects are done (ASCII and Datamosh-style 0.1.0, Blob Track 0.1.1); there is no
-release yet, so the download links on their pages start working with the first one.
+The first three effects are done (ASCII and Datamosh-style 0.1.0, Blob Track 0.1.1), and the
+Showreel 0.1.0 holds them all; there is no release yet, so the download links on their pages start
+working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.
@@ -50,8 +55,9 @@ The beat the effects follow in the previews comes from "Prison of Pixels", a son
 made with [Suno](https://suno.com), licensed like the rest of the media (below). The previews are
 silent, and the song isn't in this repository.
 
-None of it ships inside a `.tox`: with nothing wired in, every effect shows TouchDesigner's own
-sample media.
+None of it ships inside an effect's `.tox`: with nothing wired in, every effect shows
+TouchDesigner's own sample media. The Showreel is the one exception: it carries the 5-second dancer
+clip, so it shows motion straight away. No `.tox` here makes sound.
 
 ## License
 

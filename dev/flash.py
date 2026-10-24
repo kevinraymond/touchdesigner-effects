@@ -5,14 +5,16 @@ flashes (docs/TD_IDIOMS.md A2):
     TD_ARGS='ascii datamosh' dev/td.sh dev/flash.py    # those effects (none named: every one)
     TD_ARGS='clip=b2_plaza' dev/td.sh dev/flash.py     # every effect on another test clip
     TD_ARGS='blob_track beat=none' dev/td.sh dev/flash.py   # no beat: into dev/out/flash/b1_dancer_no_beat
+    TD_ARGS='showreel View=cycle' dev/td.sh dev/flash.py    # a setting off its default: b1_dancer_View-cycle
     dev/td.sh --pull dev/out/flash/b1_dancer/done
     uv run --with numpy dev/flashcount.py dev/out/flash/b1_dancer
 
-Each effect is loaded from effects/<n>/<n>.tox into TDLIB_PARENT and gets dev/testbed.py's
-input: the test clip and a beat far busier than music, so every flash it can make is asked for. For each Flashing setting (once, as <n>_fixed, for an
-effect without one) it waits SETTLE seconds, then records SECONDS seconds: a GLSL TOP averages
-the output in linear light into a 64 x 36 grid of relative luminance and WCAG's red measure, read
-back every frame. The clip alone is recorded first (clip_source.npz), so its own changes show.
+Each effect is loaded from effects/<n>/<n>.tox (a bundle, bundles/<n>/<n>.tox, when named) into
+TDLIB_PARENT and gets dev/testbed.py's input: the test clip and a beat far busier than music, so
+every flash it can make is asked for. For each Flashing setting (once, as <n>_fixed, for an effect
+without one) it waits SETTLE seconds, then records SECONDS seconds: a GLSL TOP averages the output
+in linear light into a 64 x 36 grid of relative luminance and WCAG's red measure, read back every
+frame. The clip alone is recorded first (clip_source.npz), so its own changes show.
 
 Writes dev/out/flash/<clip>/<n>_<setting>.npz, then dev/out/flash/<clip>/done. Takes about
 (1 + settings x effects) x (SETTLE + SECONDS) s, reading a small texture every frame: keep other
@@ -65,10 +67,14 @@ def main():
         if o.valid:  # destroying an operator also destroys the DATs docked to it
             o.destroy()
     names, opts = test_args(globals().get('TDLIB_ARGS') or [])
-    out = os.path.join(OUT, opts['clip'] + ('' if opts['beat'] == 'stress' else '_no_beat'))
+    overrides = {k: v for k, v in opts.items() if k[:1].isupper()}
+    out = os.path.join(OUT, '_'.join([opts['clip']] + ([] if opts['beat'] == 'stress' else ['no_beat']) +
+                                     ['{}-{}'.format(k, v) for k, v in overrides.items()]))
     os.makedirs(out, exist_ok=True)
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
+    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
+              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     # Only this run's recordings are replaced; other effects' stay for the report.
     for stem in ['clip'] + [os.path.splitext(os.path.basename(p))[0] for p in paths]:
         for f in glob.glob(os.path.join(out, stem + '_*.npz')):
@@ -87,6 +93,9 @@ def main():
         fx.inputConnectors[0].connect(clip)
         if beat is not None and len(fx.inputConnectors) > 1:
             fx.inputConnectors[1].connect(beat)
+        for k, v in overrides.items():  # View=cycle and the like: measure a setting other than the default
+            if hasattr(fx.par, k):
+                setattr(fx.par, k, int(v) if v.lstrip('-').isdigit() else v)
         fx.allowCooking = False
         settings = list(fx.par.Flashing.menuNames) if hasattr(fx.par, 'Flashing') else ['fixed']
         runs += [(fx.name, s, fx, s if s != 'fixed' else None) for s in settings]

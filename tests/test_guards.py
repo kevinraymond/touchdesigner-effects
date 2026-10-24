@@ -1,6 +1,6 @@
 """Breaks every guard in check_tox.py once on purpose and checks that it fails; a guard that
 has never failed guards nothing. Builds a small fake library (one effect, one bundle that
-embeds it) in a temporary folder, checks that the intact copy passes, then breaks one thing
+embeds every effect) in a temporary folder, checks that the intact copy passes, then breaks one thing
 per copy.
 
     uv run tests/test_guards.py
@@ -38,6 +38,7 @@ def build(root, kind, name, tox, embeds=None):
                     touchdesigner_build='2025.33230', tox_sha256=hashlib.sha256(tox).hexdigest(), tox_bytes=len(tox))
     if embeds:
         manifest['embeds'] = embeds
+        manifest['embeds_all'] = True
     write(root, '{}/{}/{}.json'.format(kind, name, name), json.dumps(manifest, indent=2) + '\n')
     return manifest
 
@@ -46,16 +47,28 @@ def fixture(root):
     shutil.copytree(os.path.dirname(LIB), os.path.join(root, 'lib'), ignore=shutil.ignore_patterns('__pycache__'))
     lib = check_tox.load_lib(root)
     os.makedirs(os.path.join(root, 'docs'))
-    write(root, 'effects/demo/build_demo.py', "VERSION = '0.1.0'\n")
-    write(root, 'effects/demo/src/demo.glsl', 'out vec4 fragColor;\nvoid main() { fragColor = vec4(1.0); }\n')
     shutil.copy(IDIOMS, os.path.join(root, 'docs', 'TD_IDIOMS.md'))
-    write(root, 'docs/effects/demo.md', '# Demo\n\n![Demo](demo.gif)\n\n[Download]({}) · saved in '
-          'TouchDesigner 2025.33230\n'.format(lib['DOWNLOAD_URL'].format('demo')))
-    write(root, 'effects/demo/review.md', check_tox.review_template(root, 'demo', '0.1.0').replace('- [ ]', '- [x]'))
-    write(root, 'docs/effects/demo.gif', b'GIF89a')
-    demo = build(root, 'effects', 'demo', b'demo tox v1')
-    write(root, 'bundles/reel/build_reel.py', "VERSION = '0.1.0'\n")
+    demo = add_effect(root, 'demo')
+    pages(root, 'bundles', 'reel')
     build(root, 'bundles', 'reel', b'reel tox v1', embeds={'demo': demo['tox_sha256']})
+
+
+def pages(root, kind, name):
+    """A component's builder, docs page, preview and ticked review."""
+    lib = check_tox.load_lib(root)
+    write(root, '{0}/{1}/build_{1}.py'.format(kind, name), "VERSION = '0.1.0'\n")
+    write(root, 'docs/effects/{}.md'.format(name), '# {0}\n\n![{0}]({0}.gif)\n\n[Download]({1}) · saved in '
+          'TouchDesigner 2025.33230\n'.format(name, lib['DOWNLOAD_URL'].format(name)))
+    write(root, 'docs/effects/{}.gif'.format(name), b'GIF89a')
+    write(root, '{}/{}/review.md'.format(kind, name),
+          check_tox.review_template(root, name, '0.1.0').replace('- [ ]', '- [x]'))
+
+
+def add_effect(root, name):
+    """A complete, built effect."""
+    pages(root, 'effects', name)
+    write(root, 'effects/{0}/src/{0}.glsl'.format(name), 'out vec4 fragColor;\nvoid main() { fragColor = vec4(1.0); }\n')
+    return build(root, 'effects', name, '{} tox v1'.format(name).encode())
 
 
 def edit(rel, old, new):
@@ -96,9 +109,11 @@ BREAKS = [
     ('never built', remove('effects/demo/demo.json'), 'never built'),
     ('no builder', lambda r: write(r, 'effects/orphan/src/a.glsl', '\n'), 'no builder'),
     ('no docs page', remove('docs/effects/demo.md'), 'no docs page'),
+    ('a bundle without a docs page', remove('docs/effects/reel.md'), 'bundles/reel: no docs page'),
+    ('a new effect the bundle leaves out', lambda r: add_effect(r, 'demo2'), 'does not embed demo2'),
     ('no download link', edit('docs/effects/demo.md', 'releases/latest/download', 'releases/download/v1'),
      'does not link'),
-    ('no preview shown', edit('docs/effects/demo.md', '![Demo](demo.gif)', ''), 'shows no preview'),
+    ('no preview shown', edit('docs/effects/demo.md', '![demo](demo.gif)', ''), 'shows no preview'),
     ('preview missing', remove('docs/effects/demo.gif'), 'which does not exist'),
     ('bundle embeds an older effect', rebuild_effect_only, 'embeds an older demo.tox'),
     ('no idiom review', remove('effects/demo/review.md'), 'no review.md'),

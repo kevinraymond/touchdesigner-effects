@@ -9,11 +9,13 @@ it fails when:
   - a source changed since the last build (lib/tox_build.py, the builder, anything in src/),
   - the .tox is not the file its manifest describes,
   - the builder's VERSION is not the version the .tox was built as,
-  - an effect has no docs page, the page doesn't link the latest-release download or state the
-    build the .tox was saved in, or the preview it shows is missing,
-  - an effect's idiom review (effects/<name>/review.md, docs/TD_IDIOMS.md) is missing, leaves a
+  - a component has no docs page (docs/effects/<name>.md, bundles too), the page doesn't link the
+    latest-release download or state the build the .tox was saved in, or the preview it shows is
+    missing,
+  - a component's idiom review (<kind>/<name>/review.md, docs/TD_IDIOMS.md) is missing, leaves a
     box open, reviews an older version, or lacks an item the checklist has gained since,
-  - a bundle embeds an older build of a component than the one checked in.
+  - a bundle embeds an older build of a component than the one checked in, or, built to embed
+    every effect (embeds_all in its manifest, like the showreel), leaves one out.
 tests/test_guards.py breaks each of these on purpose and checks that it fails.
 
     uv run tests/check_tox.py --review-template <name>    # print a blank review.md to start from
@@ -80,10 +82,10 @@ def _review(root, rel, d, version, errors):
         errors.append('{}/review.md leaves unchecked: {}'.format(rel, ' '.join(open_items)))
 
 
-def _docs(root, lib, name, errors):
+def _docs(root, lib, rel, name, errors):
     page = os.path.join(root, 'docs', 'effects', name + '.md')
     if not os.path.isfile(page):
-        errors.append('effects/{0}: no docs page docs/effects/{0}.md'.format(name))
+        errors.append('{}: no docs page docs/effects/{}.md'.format(rel, name))
         return
     text = open(page).read()
     if lib['DOWNLOAD_URL'].format(name) not in text:
@@ -110,8 +112,7 @@ def check(root=ROOT):
         if not os.path.isfile(builder):
             errors.append('{}: no builder build_{}.py'.format(rel, name))
             continue
-        if kind == 'effects':
-            _docs(root, lib, name, errors)
+        _docs(root, lib, rel, name, errors)
         tox_path, manifest_path = (os.path.join(d, name + ext) for ext in ('.tox', '.json'))
         if not (os.path.isfile(tox_path) and os.path.isfile(manifest_path)):
             errors.append('{}: never built; run build_{}.py in TouchDesigner (docs/BUILDING.md)'.format(rel, name))
@@ -129,21 +130,26 @@ def check(root=ROOT):
         elif version.group(1) != manifest.get('version'):
             errors.append('{}: the builder says VERSION {} but the .tox was built as {}; rebuild it'.format(
                 rel, version.group(1), manifest.get('version')))
-        if kind == 'effects':
-            if version is not None:
-                _review(root, rel, d, version.group(1), errors)
-            page = os.path.join(root, 'docs', 'effects', name + '.md')
-            build = manifest.get('touchdesigner_build', '')
-            if os.path.isfile(page) and (not build or build not in open(page).read()):
-                errors.append('docs/effects/{}.md does not state the build the .tox was saved in ({})'.format(
-                    name, build))
-        built[name] = manifest
+        if version is not None:
+            _review(root, rel, d, version.group(1), errors)
+        page = os.path.join(root, 'docs', 'effects', name + '.md')
+        build = manifest.get('touchdesigner_build', '')
+        if os.path.isfile(page) and (not build or build not in open(page).read()):
+            errors.append('docs/effects/{}.md does not state the build the .tox was saved in ({})'.format(
+                name, build))
+        built[name] = (kind, manifest)
     for kind, name, d in found:
-        for inner, sha in sorted(built.get(name, {}).get('embeds', {}).items()):
+        manifest = built.get(name, (kind, {}))[1]
+        embeds = manifest.get('embeds', {})
+        for inner, sha in sorted(embeds.items()):
             if inner not in built:
                 errors.append('{}/{} embeds {}, which is not a built component'.format(kind, name, inner))
-            elif built[inner]['tox_sha256'] != sha:
+            elif built[inner][1]['tox_sha256'] != sha:
                 errors.append('{}/{}.tox embeds an older {}.tox: rebuild the bundle after the component'.format(
+                    kind, name, inner))
+        if manifest.get('embeds_all'):
+            for inner in sorted(n for n, (k, _) in built.items() if k == 'effects' and n not in embeds):
+                errors.append('{}/{} does not embed {}: rebuild the bundle, which takes every effect'.format(
                     kind, name, inner))
     return errors, len(found)
 
@@ -151,7 +157,8 @@ def check(root=ROOT):
 def main():
     if sys.argv[1:2] == ['--review-template']:
         name = sys.argv[2]
-        builder = open(os.path.join(ROOT, 'effects', name, 'build_{}.py'.format(name))).read()
+        kind = next(k for k in KINDS if os.path.isdir(os.path.join(ROOT, k, name)))
+        builder = open(os.path.join(ROOT, kind, name, 'build_{}.py'.format(name))).read()
         sys.stdout.write(review_template(ROOT, name, re.search(r"^VERSION = '([^']+)'", builder, re.M).group(1)))
         return 0
     errors, n = check(ROOT)

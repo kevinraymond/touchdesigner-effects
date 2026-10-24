@@ -75,6 +75,22 @@ only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` 
 an effect may flash (below); `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
 the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink).
 
+## Building a bundle
+
+A bundle is a component that embeds others: `bundles/showreel/build_showreel.py` finds every
+built `effects/<name>/<name>.tox`, loads each one into the shell unchanged (its Flashing follows the
+bundle's, its node viewer off) and puts them behind one View menu. It saves with `save_tox()` and a
+manifest that records each embedded file's hash under `embeds`, with `embeds_all` set: the bundle
+takes every effect. So adding or rebuilding an effect needs only a rebuild of the showreel:
+
+```sh
+dev/td.sh bundles/showreel/build_showreel.py
+```
+
+Until then `tests/check_tox.py` fails, naming the effect it lacks or embeds an older build of. A
+bundle is a component like any other: the same save-time checks, a docs page, an idiom review. The
+dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`).
+
 ## Save-time checks
 
 `save_tox()` refuses to save, naming each offender, when:
@@ -86,7 +102,8 @@ the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders g
 - a docked DAT is unused (the builder wired its own beside it);
 - it isn't readable inside: no README, an operator without a comment, a parameter without
   help, the About page incomplete, no tags, another node color, a node smaller than 480 x 270;
-- the inputs aren't a TOP then optionally a CHOP, or the output isn't one TOP;
+- the inputs aren't a TOP then optionally a CHOP, the output isn't one TOP, or anything inside
+  makes sound (an Audio Device Out, whose saved state would play the moment a project opens);
 - an operator renders larger than the Non-Commercial license's 1280 x 1280;
 - it breaks a TouchDesigner idiom a script can judge (`assert_idiomatic`, items named in
   [TD_IDIOMS.md](TD_IDIOMS.md)): pages out of order, Version editable, a parameter saved off its
@@ -174,14 +191,16 @@ sample MP3 gives 6 (about 120 BPM). Beats that make the picture flash still go t
 
 `<name>.json` records the effect's version, the TouchDesigner build it was saved in, a hash
 of its sources (every `lib/*.py`, the builder, everything in `src/`) and a hash of the
-`.tox`. A bundle's also records the hash of every `.tox` it embeds.
+`.tox`. A bundle's also records the hash of every `.tox` it embeds (`embeds`), and whether it
+takes every effect (`embeds_all`).
 
 `tests/check_tox.py` fails when a source changed since the last build, the `.tox` isn't the
-file its manifest describes, the builder's `VERSION` isn't the built one, an effect has no docs
-page (or it doesn't link `releases/latest/download/<name>.tox`, doesn't state the build the
-`.tox` was saved in, or its preview is missing), an effect's idiom review is missing or out of
-date (above), or a bundle embeds an older build. `tests/test_guards.py` breaks each of those on purpose. Both run
-in CI and before every commit:
+file its manifest describes, the builder's `VERSION` isn't the built one, a component (effect or
+bundle) has no docs page (or it doesn't link `releases/latest/download/<name>.tox`, doesn't state
+the build the `.tox` was saved in, or its preview is missing), its idiom review is missing or out
+of date (above), a bundle embeds an older build, or a bundle that takes every effect leaves one
+out. `tests/test_guards.py` breaks each of those on purpose. Both run in CI and before every
+commit:
 
 ```sh
 git config core.hooksPath .githooks      # once per clone

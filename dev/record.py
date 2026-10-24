@@ -11,12 +11,12 @@ Words in TD_ARGS: effect names (none: every effect), clip=<name> for private/ass
 (default 8), audio=<file> for a track in private/assets/ready/ (default: m1_* when there, else
 TouchDesigner's sample MP3; audio=none records silence and feeds no beat).
 
-Each effect is loaded from effects/<n>/<n>.tox into TDLIB_PARENT at its defaults, the clip and
-the track restart together, and the effect hears the track on input 2 while a Movie File Out
-records its output and the track at 30 fps. One effect at a time, nothing else of ours cooking.
-Writes dev/out/record/<effect>_<clip>.mov, then dev/out/record/done with each file's frames
-written and dropped (TouchDesigner repeats a frame to keep time when it drops one: keep the Mac
-otherwise idle while recording).
+Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT at its
+defaults, the clip and the track restart together, and the effect hears the track on input 2 while a
+Movie File Out records its output and the track at 30 fps. One effect at a time, nothing else of
+ours cooking. Writes dev/out/record/<effect>_<clip>.mov, then dev/out/record/done with each file's
+frames written and dropped (TouchDesigner repeats a frame to keep time when it drops one: keep the
+Mac otherwise idle while recording).
 """
 
 import glob
@@ -62,6 +62,8 @@ def main():
     names, clip_file, track_file, seconds = options(globals().get('TDLIB_ARGS') or [])
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
+    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
+              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip = mk(host, moviefileinTOP, 'clip', -600, 0, comment='The clip.', file=clip_file)
     track = mk(host, audiofileinCHOP, 'track', -600, -300, comment='The track.', file=track_file,
                repeat='on') if track_file else None

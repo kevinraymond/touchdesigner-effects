@@ -11,7 +11,8 @@ every effects/<n>/<n>.tox in it, wired to both. Run it again after building
 an effect: only the effects whose .tox changed are reloaded (and any whose .tox is gone are
 removed), so the clip, the track and their settings stay as they are (change the clip in
 /tdlib_demo/clip's File parameter). The track is
-silent until Active is turned on in /tdlib_demo/speaker.
+silent until Sound is turned on on the Demo page, and Sound turns itself off whenever the project
+opens: TouchDesigner saves a playing speaker with the project, which then opens playing.
 
 One effect runs at a time, so the Mac isn't running all of them at once: /tdlib_demo's Demo page
 has Effect (which one the `show` viewer shows; a Switch TOP cooks only its chosen input, and the
@@ -89,11 +90,17 @@ if signal is not None and demo.op('heard') is None:
                   'Fosfora heard something lately: Beat Auto takes its signal only then.')
     heard.inputConnectors[0].connect(energy)
     heard.par.lag1, heard.par.lag2 = 0, HEARD_HOLD
-if demo.op('speaker') is None:
+speaker = demo.op('speaker')
+if speaker is None:
     speaker = place(demo.create(audiodeviceoutCHOP, 'speaker'), -COLUMN, -700,
-                    'Turn Active on to hear the track.')
+                    'Plays the track while Sound is on (Demo page).')
     speaker.inputConnectors[0].connect(track)
-    speaker.par.active = False
+speaker.comment = 'Plays the track while Sound is on (Demo page).'
+if demo.op('sound_off') is None:
+    quiet = place(demo.create(executeDAT, 'sound_off'), -COLUMN, -850,
+                  'Turns Sound off whenever the project opens, so it never opens playing.')
+    quiet.text = 'def onStart():\n    parent().par.Sound = False\n    return\n'
+    quiet.par.start = True
 
 loaded = []
 paths = sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
@@ -125,6 +132,9 @@ if not hasattr(demo.par, 'Effect'):
     page.appendMenu('Effect', label='Effect')
     page.appendToggle('Play', label='Play')
     demo.par.Play.val = False
+if not hasattr(demo.par, 'Sound'):
+    page.appendToggle('Sound', label='Sound')
+    demo.par.Sound.val = False
 if not hasattr(demo.par, 'Beat'):
     page.appendMenu('Beat', label='Beat')
     demo.par.Beat.menuNames = ['auto', 'fosfora', 'song']
@@ -132,6 +142,7 @@ if not hasattr(demo.par, 'Beat'):
     demo.par.Beat.val = 'auto'
 demo.par.Effect.help = 'Which effect the show viewer shows; only that one runs.'
 demo.par.Play.help = 'Play the test clip; off pauses it.'
+demo.par.Sound.help = 'Play the track out loud. Turns itself off whenever the project opens.'
 demo.par.Beat.help = ("The effects' input 2. Auto: Fosfora's signal while it is online and hearing "
                       "music, else the song in track. Fosfora or Song: always that one.")
 # Typing a value into a parameter switches it to that constant, which cuts it off from the Demo
@@ -147,6 +158,7 @@ def follow(par, expr):
 
 
 follow(clip.par.play, 'parent().par.Play')
+follow(speaker.par.active, 'parent().par.Sound')
 if signal is not None:  # beat's inputs: 0 Fosfora's signal, 1 the track
     follow(beat.par.index, (
         "0 if parent().par.Beat.eval() == 'fosfora' or (parent().par.Beat.eval() == 'auto'"

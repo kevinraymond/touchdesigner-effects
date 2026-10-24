@@ -151,6 +151,7 @@ BREAKS = [
     ('no README', lambda c: c.op('README').destroy(), 'README'),
     ('two TOP outputs', _extra(outTOP, 'out_two', 'x'), 'outputs are'),
     ('a second TOP input', _extra(inTOP, 'in_two', 'x'), 'inputs are'),
+    ('makes sound', _extra(audiodeviceoutCHOP, 'speaker', 'x', active=False), 'makes sound'),
     ('over the Non-Commercial cap', _extra(constantTOP, 'big', 'x', outputresolution='custom', resolutionw=1920,
                                             resolutionh=1080), 'exceeds'),
 ]

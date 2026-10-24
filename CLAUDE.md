@@ -16,12 +16,14 @@ uv run tests/test_guards.py          # each stale-file guard still fails when br
 uv run tests/check_tox.py            # every .tox in step with its sources (pre-commit + CI)
 dev/td.sh dev/selftest.py            # in TouchDesigner: each save-time check refuses when broken
 dev/td.sh effects/<n>/build_<n>.py   # build an effect in TouchDesigner, copy the .tox back
+dev/td.sh bundles/showreel/build_showreel.py   # then the showreel, which embeds every effect
 ```
 
 ## Rules
 
 - `.tox` files are generated, never hand-edited. Change the sources, rebuild, and commit the
   `.tox` with its `.json` manifest. Changing anything in `lib/` means rebuilding every effect.
+  Building or adding an effect means rebuilding the showreel too (check_tox.py fails until then).
 - Builders start from `new_effect()` and end with `finish_effect()` + `save_effect()`; see
   the builder shape in docs/BUILDING.md. Fill docked DATs with `docked()`; never add a second one.
 - Each new check gets broken once on purpose: plain-Python checks in `tests/test_guards.py`,

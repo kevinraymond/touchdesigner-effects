@@ -1,0 +1,13 @@
+{
+  "version": "0.1.0",
+  "sources_sha256": "1bdf4ba1bc4429ab5afa7ae78b4fd62c52b9a69e7bdd6f9075d8a8259fb74ced",
+  "embeds": {
+    "ascii": "0efcc4a79ef203415907e6e08ed4a7090e185e87cd0f2db78d902986a7b255bf",
+    "blob_track": "03104ebf3f6b6cf25c4554d628387fd3050460aa7f8d52e15d8a3ecb11910417",
+    "datamosh": "f3f489f9a1143975ce9db510ee85382163cf38e45675269ac32ccab223804b71"
+  },
+  "embeds_all": true,
+  "touchdesigner_build": "2025.33230",
+  "tox_sha256": "42fb2fe9c72f9c6b35914b06aa629c8ed6f232e9bf8f80bf6c974662a8c0c58c",
+  "tox_bytes": 1355038
+}
