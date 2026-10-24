@@ -1,6 +1,6 @@
 # Showreel
 
-![The Showreel's Grid view on a dancer in a hazy warehouse: four cells, each named in its corner on a dark plate: the input, ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, and Datamosh-style smearing her pose into the next](showreel.webp)
+![The Showreel's Grid view on a dancer in a hazy warehouse: a cell for the input and one for each effect, each named in its corner on a dark plate: ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, and Glitch tearing her on the beat](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
 in, and the same picture runs through each effect side by side, or one after another in time with
@@ -63,10 +63,10 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230). Grid, the default, runs every effect at once: 7.71 ms on the GPU per
-frame (95th percentile 9.85 ms) and 1.69 ms on the CPU (95th percentile 1.75 ms). Cycle and the
-single views run one effect at a time: Cycle took 3.27 ms on the GPU (95th percentile 6.33 ms; it
-depends on the effect showing) and 0.62 ms on the CPU. Grid's cost grows with every effect the
+TouchDesigner 2025.33230), with the four effects of this release inside. Grid, the default, runs
+every effect at once: 9.18 ms on the GPU per frame (95th percentile 11.22 ms) and 2.17 ms on the
+CPU (95th percentile 2.41 ms). Cycle and the single views run one effect at a time: Cycle took 2.94
+ms on the GPU (95th percentile 5.58 ms; it depends on the effect showing) and 0.78 ms on the CPU. Grid's cost grows with every effect the
 library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -80,13 +80,14 @@ library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
 
   | View and clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Grid, dancer in a hazy warehouse | 1.0 | 1.5 | 2.5 | 1.0 |
-  | Grid, people crossing a plaza | 0.5 | 1.5 | 2.5 | 0.5 |
-  | Cycle at Every 1, dancer | 1.0 | 2.5 | 3.0 | 1.0 |
+  | Grid, dancer in a hazy warehouse | 0.5 | 1.0 | 2.0 | 1.0 |
+  | Grid, people crossing a plaza | 0.5 | 1.5 | 2.0 | 0.5 |
+  | Cycle at Every 1, dancer | 1.0 | 2.0 | 3.0 | 1.0 |
 
-  There were no red flashes. Off adds nothing to what the clips do by themselves, and no setting
-  goes past WCAG's 3. Cycle at its fastest under that beat is the hardest case: Calm then reaches
-  the one flash a second it allows on top of the clip's own, plus the half-flash step of the count.
+  Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
+  setting goes past WCAG's 3, Cycle at its fastest under that beat included (it reaches 3 at Up to 3
+  per second). Red flashes, from Glitch's colored fringes, appeared only in Cycle: half a flash a
+  second at Calm and one at Up to 3 per second, well under WCAG's 3.
 - **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 2 pixels
   per font pixel in the grid and 3 in the single views (at 720 pixels high; they scale with the
   picture), so they read on light and dark pictures alike.
