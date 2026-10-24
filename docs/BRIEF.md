@@ -37,7 +37,9 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
   size it is shown. Flashing follows WCAG 2.3.1 (never more than three flashes a second),
   defaults to calm, and can be switched off entirely.
 - **Honest labels:** anything unreliable is marked experimental in its help and docs.
-- **A preview** (GIF or short clip) and a one-paragraph description per effect.
+- **A preview** (GIF or short clip) and a one-paragraph description per effect, after a
+  short plain-words intro to the technique (ASCII art, blob tracking, datamoshing) for anyone
+  who has never heard of it. The README's table says it in one line.
 - **A clear license** (MIT or CC0 for code), with credits for anything derived.
 
 ## How the .tox files are made (lessons from building Fosfora's TD component)

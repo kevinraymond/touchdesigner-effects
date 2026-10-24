@@ -1,5 +1,6 @@
 """DEV ONLY. Lay frames saved by dev/capture.py out as a contact sheet: one row per name, one
-column per capture time, each row labeled.
+column per capture time, each row labeled; a name's event frames (<name>_event<k>.png) get a row
+of their own, "<name> events".
 
     uv run --with pillow dev/sheet.py dev/out/blob/round1            # writes .../sheet.png
     uv run --with pillow dev/sheet.py dev/out/blob/round1 --width 480 --names a_trace,b_hud
@@ -12,7 +13,7 @@ import re
 
 from PIL import Image, ImageDraw
 
-FRAME = re.compile(r'^(.+)_(\d+)\.png$')
+FRAME = re.compile(r'^(.+?)_(event)?(\d+)\.png$')
 
 
 def main():
@@ -27,7 +28,8 @@ def main():
     for path in glob.glob(os.path.join(a.folder, '*.png')):
         m = FRAME.match(os.path.basename(path))
         if m and m.group(1) != 'sheet':
-            frames.setdefault(m.group(1), {})[int(m.group(2))] = path
+            row = m.group(1) + (' events' if m.group(2) else '')
+            frames.setdefault(row, {})[int(m.group(3))] = path
     names = a.names.split(',') if a.names else sorted(frames)
     cols = max(len(frames[n]) for n in names)
     first = Image.open(next(iter(frames[names[0]].values())))

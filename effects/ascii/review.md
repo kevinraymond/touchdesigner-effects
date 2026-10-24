@@ -1,0 +1,33 @@
+# ascii: idiom review
+
+Reviewed version: 0.1.0
+
+The review items of docs/TD_IDIOMS.md, checked by hand for this version: tick each box
+(`- [x]`) and say in a few words how it holds.
+
+- [x] P4 Pulse for actions, Toggle for states, Menu for discrete choices; labels in Title Case. Names of 10 characters or fewer are checked at save time (assert_idiomatic); TouchDesigner itself refuses names that aren't an uppercase letter followed by lowercase letters or digits. [Custom Parameters](https://docs.derivative.ca/Custom_Parameters), [Page Class](https://docs.derivative.ca/Page_Class)
+  Pulses for Open Window and Open Docs; Toggles for Auto Levels, Fosfora Moments and Full Screen; Menus for Font, Glyphs, Color, Pop On and Flashing; labels in Title Case. The shell's Filldisplay (11 characters) became Fullscreen in lib, and the save-time check now holds every name to 10.
+- [x] P5 Inner operators follow the COMP's parameters through expressions (`parent().par.Amount`), not scripts copying values; values only the inside needs are kept off the pages (`ipar`). [Internal Parameters](https://docs.derivative.ca/Internal_Parameters)
+  Every inner operator follows the page through expressions: GLSL uniforms, the cell and grid Constant CHOPs, the Select CHOPs' channel names, moments_on, the atlas font and size. The only script is lib's parexec for the two pulses. Slot sizes, thresholds and the palette stay in the builder and shaders, off the page.
+- [x] P6 Related parameters are grouped with `startSection`; parameters that don't apply in the current mode are grayed out with `enableExpr`.
+  Sections: Font to Edges, Color to Backdrop, Beat Pop to Fosfora Moments, then Flashing and the window. Checked in TouchDesigner (dev/protos/ascii/pass2_checks.py): Font Name is grayed out for Bitmap 5x7, Ink unless Color is Mono, Pop On while Beat Pop is 0.
+- [x] I4 The audio input goes through `audio_in()`, which reads it by channel name with fallbacks and takes a pulse from its count channel when one exists, because a one-frame pulse is lost on any frame nothing pulls the CHOP; the effect reads the counts (`beat_count`, `bar_count`...) for logic, not `beat`. [Cook](https://docs.derivative.ca/Cook), [Logic CHOP](https://docs.derivative.ca/Logic_CHOP)
+  Input 2 goes through audio_in(). moments_pop, moments_drop and moments_beat select bar_count or beat_count, drop_count and beat_count, and a Lag + Math + Trigger chain turns each step of a count into a pulse. section_count picks the glyph set and beat_count seeds the glyph swaps. The beat channel is never read.
+- [x] E2 Only capitalized members are promoted; state lives on `self` and the extension can be reinitialized at any time; no module globals; `onInitTD`/`onDestroyTD`, the 2025 names. [Release Notes 2025](https://docs.derivative.ca/Release_Notes/2025.30000)
+  No extension in this effect, so nothing to promote or reinitialize.
+- [x] C4 Motion and timing follow seconds (`absTime.seconds`, `me.time.seconds`), not frame counts, so dropped frames don't change the speed. [AbsTime Class](https://docs.derivative.ca/AbsTime_Class)
+  Checked in TouchDesigner: every Trigger CHOP length and every Lag CHOP is in seconds. Auto Levels eases by absTime.stepSeconds, and the glyph swaps are seeded by beat_count. Nothing counts frames.
+- [x] C5 Nothing cooks while the output is unused: checked with dev/idle.py (nothing downstream, the node out of view; input 2 unwired and wired to a changing beat), or in the Performance Monitor. [Performance Monitor](https://docs.derivative.ca/Performance_Monitor_Dialog)
+  dev/idle.py on the final 0.1.0 build (node viewer off, nothing downstream): 0 of 61 operators cooked over 60 frames unused with input 2 unwired, and 0 with the clip and a beat changing every frame wired in; the control (pulling out_top) cooked 45. Getting there took two lib fixes in audio_in(): no time-sliced Audio Filter (it cooked every frame), and no read of the input's .rate (it made TouchDesigner cook in2_audio every frame).
+- [x] C6 Pixel formats are 8-bit unless precision is needed, and 32-bit float for data textures (a CHOP to TOP feeding a shader).
+  8-bit where precision isn't needed: edges rg8fixed, render rgba8fixed, the atlas. 16-bit float for the luminance and its blurs, which the difference of Gaussians subtracts. 32-bit float for data: cells, avg, peak, stats and stats_prev.
+- [x] C7 The performance note on the docs page was measured on the reference machine at 1280 x 720, not estimated.
+  dev/perf.py on the final 0.1.0 build, Mac otherwise idle (MacBook Pro M2 Pro 16 GB, macOS 15.6, TouchDesigner 2025.33230), 1280 x 720, defaults: GPU 1.09 ms (95th percentile 1.33), CPU 0.42 ms (0.48), 60 fps held (dev/out/perf/b1_dancer/report.txt).
+- [x] D5 The README DAT and docs page say how to update: dragging a `.tox` in embeds a copy, so updating means dragging in the new one (or pointing External .tox at it). [A word about external files](https://derivative.ca/community-post/word-about-external-files-202310k-builds/68166)
+  The README DAT's UPDATING section and the docs page's Use it section both say to delete the copy and drag in the new ascii.tox, or point External .tox at a downloaded file.
+- [x] A2 The flash limits were measured, not assumed: the output recorded with a beat-heavy input at each Flashing setting, and the flashes in any one second counted.
+  dev/flash.py + dev/flashcount.py on the final 0.1.0 build, Mac otherwise idle, stress beat of 8 beats, 2 bars and 1 drop a second, on b1_dancer and b2_plaza. Worst second, area rule: Off 0.0 and 0.0, Calm 1.0 and 1.0, Up to 3 per second 2.0 and 2.0 (the clips alone 1.0 and 0.5); no red flashes; all pass.
+- [x] A3 No meaning rests on hue alone (brightness, size or motion carries it too); the palette is colorblind-safe (orange and blue); text is legible at the size it is shown.
+  Outlines differ from fill by glyph shape (| \ - /) and brightness as well as orange against blue; brightness follows the picture in every color mode. Legibility checked on 1:1 crops at the default Cell Size 18 (Courier New Bold 16 px; Bitmap 5x7 at 2x), and in the preview.
+- [x] A4 Anything unreliable is labeled experimental in its help and docs.
+  Fosfora's drop detection is marked experimental in the Fosfora Moments help, the README DAT and the docs page. Raw-audio beat detection is marked experimental in the Beat Pop help, the README DAT and the docs page.

@@ -5,8 +5,9 @@ PROMPTS.md there for what each clip is for):
     uv run --with pillow dev/assets.py --force    # redo everything
 
 Each video becomes private/assets/ready/<name>.mp4: 1280 x 720 (scaled to cover, then
-center-cropped, so any aspect works), a constant frame rate (the source's if it is 24, 25, 30,
-50 or 60, else 30), H.264, no sound. Each audio file becomes ready/<name>.wav, 48 kHz 16-bit.
+center-cropped, so any aspect works), a constant frame rate (the source's if it is 16, 24, 25,
+30, 50 or 60, else 30; video models often make 16, and doubling frames to reach 30 would judder),
+H.264, no sound. Each audio file becomes ready/<name>.wav, 48 kHz 16-bit.
 Clips whose names start d3a and d3b are also joined into ready/d3_cut.mp4, a hard cut. A contact
 sheet of every ready clip (start, middle, end) goes to ready/sheet.png, and the report lists the
 PROMPTS.md IDs that have no clip yet. dev/td.sh copies private/ to the Mac with everything else,
@@ -24,7 +25,7 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 VIDEO = ('.mp4', '.mov', '.webm', '.mkv', '.m4v', '.avi')
 AUDIO = ('.wav', '.mp3', '.flac', '.aif', '.aiff', '.ogg', '.m4a')
-RATES = (24, 25, 30, 50, 60)
+RATES = (16, 24, 25, 30, 50, 60)
 
 
 def run(*cmd):

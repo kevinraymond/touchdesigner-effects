@@ -24,8 +24,9 @@ Each item is one of:
 - **P3** (auto: assert_idiomatic) Saved at its defaults: every parameter holds its default, so
   right-click Reset returns to the state that shipped. [Par Class](https://docs.derivative.ca/Par_Class)
 - **P4** (review) Pulse for actions, Toggle for states, Menu for discrete choices; labels in Title
-  Case; names of 10 characters or fewer (TouchDesigner itself refuses names that aren't an
-  uppercase letter followed by lowercase letters or digits).
+  Case. Names of 10 characters or fewer are checked at save time (assert_idiomatic);
+  TouchDesigner itself refuses names that aren't an uppercase letter followed by lowercase
+  letters or digits.
   [Custom Parameters](https://docs.derivative.ca/Custom_Parameters), [Page Class](https://docs.derivative.ca/Page_Class)
 - **P5** (review) Inner operators follow the COMP's parameters through expressions
   (`parent().par.Amount`), not scripts copying values; values only the inside needs are kept off
@@ -43,7 +44,7 @@ Each item is one of:
   or warnings, the sample picture through the effect; a second copy beside the first works too.
 - **I4** (review) The audio input goes through `audio_in()`, which reads it by channel name with
   fallbacks and takes a pulse from its count channel when one exists, because a one-frame pulse is
-  lost on any frame nothing pulls the CHOP; the effect reads `beat_count` for logic, not `beat`. [Cook](https://docs.derivative.ca/Cook),
+  lost on any frame nothing pulls the CHOP; the effect reads the counts (`beat_count`, `bar_count`...) for logic, not `beat`. [Cook](https://docs.derivative.ca/Cook),
   [Logic CHOP](https://docs.derivative.ca/Logic_CHOP)
 
 ## Extensions (when an effect has one)
@@ -66,9 +67,9 @@ Each item is one of:
 - **C3** (auto: assert_nc_resolution) Nothing renders above 1280 x 1280, the Non-Commercial cap.
 - **C4** (review) Motion and timing follow seconds (`absTime.seconds`, `me.time.seconds`), not frame
   counts, so dropped frames don't change the speed. [AbsTime Class](https://docs.derivative.ca/AbsTime_Class)
-- **C5** (review) Nothing cooks while the output is unused: checked in the Performance Monitor
-  with nothing wired downstream and the node out of view.
-  [Performance Monitor](https://docs.derivative.ca/Performance_Monitor_Dialog)
+- **C5** (review) Nothing cooks while the output is unused: checked with `dev/idle.py` (nothing
+  downstream, the node out of view; input 2 unwired and wired to a changing beat), or in the
+  Performance Monitor. [Performance Monitor](https://docs.derivative.ca/Performance_Monitor_Dialog)
 - **C6** (review) Pixel formats are 8-bit unless precision is needed, and 32-bit float for data
   textures (a CHOP to TOP feeding a shader).
 - **C7** (review) The performance note on the docs page was measured on the reference machine at

@@ -5,6 +5,7 @@
 #   dev/td.sh effects/glow/build_glow.py
 #   dev/td.sh dev/selftest.py
 #   dev/td.sh --pull [dev/out/<dir>/done]   # only copy results back, first waiting for that file
+#   TD_ARGS='ascii datamosh' dev/td.sh dev/flash.py   # words the script reads as TDLIB_ARGS
 #
 # It copies the repo to $TD_REPO on $TD_HOST, writes a cmd.py that runs the file into the
 # folder a watcher Execute DAT polls ($TD_WATCH), waits for the watcher's out.txt to change,
@@ -54,8 +55,10 @@ script=$(realpath --relative-to="$root" "$1")
 [ -f "$root/$script" ] || { echo "no such file: $script" >&2; exit 2; }
 
 # Sources out; built files stay where they are on both sides until they come back below.
-rsync -a --delete --exclude .git --exclude '*.tox' --exclude 'effects/*/*.json' \
-  --exclude 'bundles/*/*.json' --exclude dev/out "$root/" "$HOST:$REPO/"
+rsync -a --delete --exclude .git --exclude '/effects/*/*.tox' --exclude '/effects/*/*.json' \
+  --exclude '/bundles/*/*.tox' --exclude '/bundles/*/*.json' --exclude /dev/out "$root/" "$HOST:$REPO/"
+
+args=$(TD_ARGS="${TD_ARGS:-}" python3 -c 'import json, os; print(json.dumps(os.environ["TD_ARGS"].split()))')
 
 # One ssh: take the lock (a lock older than 10 minutes is left from a dead run and is broken),
 # note the watcher's last answer (its first line carries the time and the absolute frame, so it
@@ -76,12 +79,13 @@ ssh "$HOST" "cd $WATCH && \
 # Written by tdlib dev/td.sh: runs $script from ~/$REPO inside TouchDesigner.
 import os
 TDLIB_PARENT = '$PARENT'
+TDLIB_ARGS = $args
 if op(TDLIB_PARENT) is None:
     op('/').create(baseCOMP, TDLIB_PARENT.strip('/')).comment = 'DEV ONLY: tdlib builds from dev/td.sh. Delete freely.'
 # The script gets TouchDesigner's names but not the watcher's own (DIR, CMD, OUT...).
 _ns = {k: v for k, v in globals().items()
        if k not in ('DIR', 'CMD', 'OUT', 'onFrameStart', 'io', 'sys', 'time', 'traceback')}
-_ns.update(TDLIB_PARENT=TDLIB_PARENT, __file__=os.path.expanduser('~/$REPO/$script'), __name__='__tdlib__')
+_ns.update(TDLIB_PARENT=TDLIB_PARENT, TDLIB_ARGS=TDLIB_ARGS, __file__=os.path.expanduser('~/$REPO/$script'), __name__='__tdlib__')
 exec(compile(open(_ns['__file__']).read(), _ns['__file__'], 'exec'), _ns)
 EOF
 

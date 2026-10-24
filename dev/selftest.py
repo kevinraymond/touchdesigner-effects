@@ -116,10 +116,15 @@ def _no_help(comp):
     custom(comp.customPages[0], 'Float', 'Bare', 'Bare', 0.5, '')
 
 
+def _long_name(comp):
+    custom(comp.customPages[0], 'Float', 'Toolongname', 'Too Long Name', 0.5, 'A name of 11 characters.')
+
+
 BREAKS = [
     ('About not the last page', _about_not_last, 'About last'),
     ('Version editable', _editable_version, 'read-only'),
     ('a parameter off its default', _set('', Amount=0.25), 'not its default'),
+    ('a parameter name over 10 characters', _long_name, 'keep names to 10 or fewer'),
     ('node shows nothing', _attr('', viewer=False), 'does not show out_top'),
     ('extension without Init on Start', _extension_lazy, 'Init Extensions on Start'),
     ('Script CHOP cooking always', _script_chop_always, 'WHEN_USED'),
@@ -276,8 +281,9 @@ def _check_flash_gate(host):
 
 
 def _check_audio_in(host):
-    """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; Fosfora-style
-    beat_count and energy; audioAnalysis-style kick pulses and low; raw audio (the sample MP3)."""
+    """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; beat_count and
+    energy; audioAnalysis-style kick pulses and low; Fosfora's signal (beat and bar counts, build,
+    beat_phase, bar_phase); raw audio (the sample MP3)."""
     cases = {}
 
     def effect(kind):
@@ -297,6 +303,21 @@ def _check_audio_in(host):
         merged = mk(host, mergeCHOP, 'selftest_in_' + kind, -300, -1200, [named, const], comment='x')
         comp.inputConnectors[1].connect(merged)
         cases[kind] = (comp, script, list(dict.fromkeys([lfo, beats, named, const, merged])))
+    comp, script = effect('fosfora')
+    made = []
+    for name, hz, y in (('beat_count', 2, -1700), ('bar_count', 0.5, -1800)):
+        lfo = mk(host, lfoCHOP, 'selftest_lfo_' + name, -900, y, comment='x', wavetype='square',
+                 frequency=hz, offset=0.5, amp=0.5)
+        count = mk(host, countCHOP, 'selftest_count_' + name, -700, y, [lfo], comment='x')
+        made += [lfo, count, mk(host, renameCHOP, 'selftest_named_' + name, -500, y, [count], comment='x',
+                                renamefrom='*', renameto=name)]
+    const = mk(host, constantCHOP, 'selftest_fosfora_levels', -500, -1900, comment='x')
+    const.seq.const.numBlocks = 4
+    made.append(setpars(const, const0name='energy', const0value=0.6, const1name='build', const1value=0.7,
+                        const2name='beat_phase', const2value=0.25, const3name='bar_phase', const3value=0.5) or const)
+    made.append(mk(host, mergeCHOP, 'selftest_in_fosfora', -300, -1800, [made[2], made[5], made[6]], comment='x'))
+    comp.inputConnectors[1].connect(made[-1])
+    cases['fosfora'] = (comp, script, made)
     comp, script = effect('raw')
     music = mk(host, audiofileinCHOP, 'selftest_music', -500, -1500, comment='x',
                file=Expr("app.samplesFolder + '/Audio/JeremyCaulfield_www.dumb-unit.com.mp3'"))
@@ -308,20 +329,31 @@ def _check_audio_in(host):
         for _, script, _ in cases.values():
             script.cook()
         if n == 30:
-            start.update({k: script['beat_count'].eval() for k, (_, script, _) in cases.items()})
+            start.update({k: (script['beat_count'].eval(), script['bar_count'].eval())
+                          for k, (_, script, _) in cases.items()})
         if n < 210:
             run('args[0](args[1])', safe_tick, n + 1, delayFrames=1)
             return
         lines = []
-        want = {'none': (0, 0, 0, 0), 'counted': (2, 5, 7, 0.6), 'pulses': (2, 5, 7, 0.4), 'raw': (1, 2, 30, None)}
+        # source, beats in 3 s, bars in 3 s (4 beats to a bar unless the input has bars), level
+        # (None: any above 0.05), build, beat_phase (None: any in 0..1)
+        want = {'none': (0, (0, 0), (0, 0), 0, 0, 0), 'counted': (2, (5, 7), (1, 2), 0.6, 0, None),
+                'pulses': (2, (5, 7), (1, 2), 0.4, 0, None), 'fosfora': (3, (5, 7), (1, 2), 0.6, 0.7, 0.25),
+                'raw': (1, (2, 30), (0, 8), None, 0, None)}
         for k, (comp, script, extra) in cases.items():
-            src, n_beats, level = (script[c].eval() for c in ('source', 'beat_count', 'level'))
-            n_beats -= start[k]
-            w_src, lo, hi, w_level = want[k]
+            src, n_beats, n_bars, level, build, phase = (script[c].eval() for c in (
+                'source', 'beat_count', 'bar_count', 'level', 'build', 'beat_phase'))
+            n_beats -= start[k][0]
+            n_bars -= start[k][1]
+            w_src, beats, bars, w_level, w_build, w_phase = want[k]
             good_level = (level > 0.05) if w_level is None else abs(level - w_level) < 0.05
-            ok = src == w_src and lo <= n_beats <= hi and good_level
-            lines.append('{} audio {}: source {:.0f}, {:.0f} beats in 3 s (want {}-{}), level {:.2f}'.format(
-                'ok   ' if ok else 'MISS ', k, src, n_beats, lo, hi, level))
+            good_phase = (0 <= phase < 1) if w_phase is None else abs(phase - w_phase) < 0.01
+            ok = (src == w_src and beats[0] <= n_beats <= beats[1] and bars[0] <= n_bars <= bars[1]
+                  and good_level and abs(build - w_build) < 0.01 and good_phase)
+            lines.append('{} audio {}: source {:.0f}, {:.0f} beats and {:.0f} bars in 3 s (want {}-{}, {}-{}), '
+                         'level {:.2f}, build {:.2f}, beat_phase {:.2f}'.format(
+                             'ok   ' if ok else 'MISS ', k, src, n_beats, n_bars, beats[0], beats[1], bars[0],
+                             bars[1], level, build, phase))
             for o in extra:
                 o.destroy()
             comp.destroy()

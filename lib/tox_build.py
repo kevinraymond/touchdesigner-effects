@@ -151,20 +151,19 @@ def glsl(host, name, x, y, inputs, pixel, comment, res=None, fmt=None, **values)
 
 
 def audio_in(comp, root, x=-600, y=-350):
-    """The effect's audio front end. Whatever is wired into input 2 (raw audio, Fosfora's signal,
+    """The effect's audio front end. Whatever is wired into input 2 (Fosfora's signal, raw audio,
     TouchDesigner's audioAnalysis or Essentia rhythm CHOP, or nothing) becomes the channels beat,
-    beat_count, level and source; lib/audio_callbacks.py says how. Operators do the signal work
-    (the low band's loudness, for raw audio); a Script CHOP that cooks only when used picks the
-    source and counts beats. Needs new_effect(..., audio=True); returns the Script CHOP."""
-    src = comp.op('in2_audio')
-    low = mk(comp, audiofilterCHOP, 'audio_low', x, y - 150, [src], 'Raw audio only: the low band (kick, bass).',
-             filter='lowpass', cutofffrequency=150)
-    rms = mk(comp, analyzeCHOP, 'audio_rms', x + 200, y - 150, [low], 'Raw audio only: its loudness this frame.',
-             function='rmspower')
-    script = mk(comp, scriptCHOP, 'audio', x + 400, y, [src, rms],
-                'Input 2 as beat, beat_count, level and source (lib/audio_callbacks.py).')
+    beat_count, bar_count, beat_phase, level, build, drop_count, section_count and source;
+    lib/audio_callbacks.py says how (build and the drop and section counts need Fosfora). One
+    Script CHOP does it and cooks only when something uses it, so nothing in the audio front end
+    runs while the effect's output is unused (TD_IDIOMS C5, dev/idle.py checks it); for raw audio
+    it measures the low band itself (numpy), since a time-sliced Audio Filter CHOP there cooked
+    every frame, used or not (2025.33230). Needs new_effect(..., audio=True); returns the Script
+    CHOP."""
+    script = mk(comp, scriptCHOP, 'audio', x, y, [comp.op('in2_audio')],
+                'Input 2 as beat, beat_count, level and the rest (lib/audio_callbacks.py).')
     docked(script, '_callbacks', open(os.path.join(root, 'lib', 'audio_callbacks.py')).read(),
-           'Turns whatever is on input 2 into beat, beat_count and level.')
+           'Turns whatever is on input 2 into beat, beat_count, level and the rest.')
     return script
 
 
@@ -267,14 +266,14 @@ def finish_effect(comp, last, version, page=None):
     opener = custom(page, 'Pulse', 'Openwindow', 'Open Window', None,
                     'Show the picture in its own window, 1280 x 720 or filling a display. Esc closes it.')
     opener.startSection = True
-    custom(page, 'Toggle', 'Filldisplay', 'Fill Display', False,
+    custom(page, 'Toggle', 'Fullscreen', 'Full Screen', False,
            'Open the window filling the whole display, for a projector or a second screen.')
     custom(page, 'Int', 'Display', 'Display', 0, 'Which display the window opens on; 0 is the primary display.',
            0, 3).clampMin = True
     mk(comp, windowCOMP, 'window', 800, -300, comment='Open Window shows out_top here; Esc closes it.',
        winop='out_top', title=comp.name, justifyoffsetto='specifydisplay', display=Expr('parent().par.Display'),
-       justifyh='center', justifyv='center', size=Expr("'fill' if parent().par.Filldisplay else 'custom'"),
-       winw=WINDOW_W, winh=WINDOW_H, borders=Expr('not parent().par.Filldisplay'), blocksleep=True,
+       justifyh='center', justifyv='center', size=Expr("'fill' if parent().par.Fullscreen else 'custom'"),
+       winw=WINDOW_W, winh=WINDOW_H, borders=Expr('not parent().par.Fullscreen'), blocksleep=True,
        closeescape=True)
 
     about = comp.appendCustomPage('About')
@@ -443,6 +442,9 @@ def assert_idiomatic(comp):
         if p is not None and not p.readOnly:
             problems.append('P1: {} is editable; it should be read-only'.format(name))
     for p in comp.customPars:
+        if len(p.tupletName) > 10:
+            problems.append('P4: the parameter name {} is {} characters; keep names to 10 or fewer'.format(
+                p.tupletName, len(p.tupletName)))
         if p.readOnly or p.mode != ParMode.CONSTANT or p.style in ('Pulse', 'Momentary', 'Header'):
             continue
         value, default = p.eval(), p.default

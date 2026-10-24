@@ -18,7 +18,7 @@ bundles/<name>/               same shape; a bundle embeds effects (the showreel)
 docs/effects/<name>.md        the effect's page, its preview beside it (_template.md to start)
 tests/check_tox.py            the stale-file test
 tests/test_guards.py          breaks each rule check_tox.py enforces, once, and checks it fails
-dev/                          dev loop and self-test; never shipped
+dev/                          dev loop, self-test and measuring tools; never shipped
 ```
 
 ## Building an effect
@@ -61,7 +61,7 @@ What the shell provides:
   DAT, and the inputs: `in1_top` (input 1), a Switch TOP `source` that shows a sample picture
   from `app.samplesFolder` until something is wired in, and with `audio=True`, `in2_audio`
   (input 2, an optional CHOP).
-- `finish_effect()` adds `out_top`, the Open Window / Fill Display / Display parameters and
+- `finish_effect()` adds `out_top`, the Open Window / Full Screen / Display parameters and
   their Window COMP, the About page (Version, Built With, Open Docs), and shows the output
   on the node.
 - `save_effect()` runs the save-time checks, saves, and writes the manifest.
@@ -126,25 +126,49 @@ Up to 3 per second is the WCAG limit, which no setting exceeds. Every flash goes
 (`FLASH_INTERVAL`) and a Math CHOP that passes nothing when it is Off. `dev/selftest.py` feeds
 it 4 pulses a second for 6 s: Off lets 0 through, Calm 6, Up to 3 per second 16. The effect
 shapes the flash after the gate, and the limits are measured again on its output before release
-(TD_IDIOMS.md A2).
+(TD_IDIOMS.md A2): `dev/flash.py` records the output's luminance, cell by cell, under a beat
+far busier than music at each setting, and `dev/flashcount.py` counts the flashes with WCAG's
+definitions and area rule (see The dev loop).
 
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
-which turns whatever is wired there into four channels on the CHOP `audio`: `beat` (1 on the
-frame a beat arrives), `beat_count` (watch it for logic: a one-frame pulse can be missed),
-`level` (0 to 1) and `source` (0 nothing, 1 raw audio, 2 analysis channels). Input 2 may carry:
+which turns whatever is wired there into the same channels on the CHOP `audio`:
 
-- raw audio (Audio File In, Audio Device In): the low band's loudness gives `level`, and a jump
-  above its recent average gives a beat;
-- analysis channels, by name: beats from `beat_count` (Fosfora), or the rising edge of `beat`,
-  `kick` or `onset` (Fosfora, TouchDesigner's audioAnalysis and Essentia rhythm CHOPs); level from
-  `energy`, `level`, `low`, `bass` or `rms`;
+| Channel | Value |
+|---|---|
+| `beat` | 1 on the frame a beat arrives, else 0 |
+| `beat_count` | beats so far; for logic, watch the counts, since a one-frame pulse can be missed |
+| `bar_count` | bars so far: Fosfora's `bar_count` (or `downbeat` pulses), else one every 4 beats |
+| `beat_phase` | 0 to 1 through the current beat: Fosfora's, else timed from the last beats |
+| `level` | 0 to 1, how loud right now |
+| `build` | 0 to 1, how far into a build: Fosfora only, else 0 |
+| `drop_count` | drop-like moments so far: Fosfora's `drop_count` (experimental there), else 0 |
+| `section_count` | section changes so far: Fosfora's `boundary_count`, else 0 |
+| `source` | 0 nothing, 1 raw audio, 2 analysis channels, 3 Fosfora's signal |
+
+Input 2 may carry:
+
+- [Fosfora](https://github.com/kevinraymond/fosfora)'s signal (`fosfora_signal.tox`): every
+  channel comes from it, so an effect can follow bars, builds, drops and sections as well as beats;
+- raw audio (Audio File In, Audio Device In): the low band's loudness (30 to 150 Hz, from an FFT
+  of the last 40 ms) gives `level`, and a jump above its recent average gives a beat;
+- other analysis channels, by name: beats from `beat_count`, or the rising edge of `beat`, `kick`
+  or `onset` (TouchDesigner's audioAnalysis and Essentia rhythm CHOPs); level from `energy`,
+  `level`, `low`, `bass` or `rms`;
 - nothing: no beats, level 0, and the effect still works.
 
-`lib/audio_callbacks.py` holds the logic. `dev/selftest.py` feeds it each kind of input for 3 s:
-nothing gives 0 beats; `beat_count` and `kick` at 2 a second give 6; TouchDesigner's sample MP3
-gives 6 (about 120 BPM). Beats that make the picture flash still go through `flash_gate()`.
+It is one Script CHOP that cooks only when something uses it, so the audio front end does
+nothing while the effect's output is unused (TD_IDIOMS C5). An earlier version measured raw
+audio's low band with a time-sliced Audio Filter CHOP, which cooked every frame, used or not.
+
+An effect works with any of them and is at its best on Fosfora's signal: `build`, `drop_count` and
+`section_count` stay at 0 without it, so use them for extra moments, never for the effect's
+basic behavior. `lib/audio_callbacks.py` holds the logic. `dev/selftest.py` feeds it each kind
+of input for 3 s: nothing gives 0 beats; `beat_count` and `kick` at 2 a second give 6 (and 1 or 2
+bars); a Fosfora-shaped input passes its bars, build and beat phase through; TouchDesigner's
+sample MP3 gives 6 (about 120 BPM). Beats that make the picture flash still go through
+`flash_gate()`.
 
 ## Manifests and the stale-file test
 
@@ -187,13 +211,34 @@ Defaults (override with the environment): `TD_HOST=kevin@mbpm2`, `TD_WATCH=fosfo
 (the folder `fosfora_dev_watcher` in `~/Desktop/fosfora-dev.toe` polls), `TD_REPO=tdlib`,
 `TD_PARENT=/tdlib_dev`. If that watcher is gone, `dev/watcher.py` says how to install a copy.
 Check the first line of the watcher's `out.txt` before a run: another session may be using it.
+`TD_ARGS='a b'` hands the script the words `a` and `b` as `TDLIB_ARGS`.
+
+Everything a script does runs on TouchDesigner's main thread, so the interface waits for it: a
+build with its save checks stalls the Mac's TouchDesigner for a few seconds, and a measurement
+that reads the output every frame slows it for as long as it runs. Keep that in mind when
+someone is using the Mac.
+
+The other dev tools, each run through `dev/td.sh` (their headers say more):
+
+| Script | What it does |
+|---|---|
+| `dev/demo.py` | `/tdlib_demo`: every built effect on a test clip, with Fosfora's signal (or a sample track) as the beat, one effect running at a time; reloads what changed |
+| `dev/capture.py` | exec'd by a script: save frames of some TOPs over the next seconds; `dev/sheet.py` lays them out |
+| `dev/flash.py` + `dev/flashcount.py` | record each Flashing setting's output under a stress beat, then count flashes per second the WCAG way (`uv run --with numpy dev/flashcount.py dev/out/flash`; `--selftest` checks the counting) |
+| `dev/perf.py` | each effect's CPU and GPU cook time per frame at its defaults, for the performance note |
+| `dev/record.py` + `dev/clips.py` | record effects as video with sound (Motion JPEG: the free license can't encode H.264), then MP4s and docs previews (`uv run dev/clips.py dev/out/record --preview`) |
+| `dev/idle.py` | checks an effect does nothing while its output is unused, input 2 unwired and wired (TD_IDIOMS C5) |
+| `dev/testbed.py` | the clip and stress beat `flash.py`, `perf.py` and `idle.py` feed every effect |
+| `dev/assets.py` | normalize test footage in `private/assets/` (see `PROMPTS.md` there) |
 
 Nothing under `dev/` goes into a `.tox`.
 
 ## Performance notes
 
-Each effect's page states its frame rate on the reference machine: MacBook Pro, Apple M2 Pro
-(16 GB), macOS 15.6, TouchDesigner 2025.33230, at 1280 x 720 input.
+Each effect's page states its cost on the reference machine: MacBook Pro, Apple M2 Pro
+(16 GB), macOS 15.6, TouchDesigner 2025.33230, at 1280 x 720 input, measured with `dev/perf.py`
+(CPU and GPU milliseconds per frame at the defaults, and the frame rate TouchDesigner held) with
+the Mac otherwise idle.
 
 ## Releasing
 
@@ -217,3 +262,8 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   (2025.33230, `dev/probes/input_order.py`): hence `in1_top`, `in2_audio`.
 - A Switch TOP whose index is `0 if parent().inputConnectors[0].connections else 1` follows
   wiring and unwiring on later frames without a forced cook (`dev/selftest.py`).
+- Things that keep an unused effect cooking every frame (`dev/idle.py` finds them): a
+  time-sliced CHOP (an Audio Filter CHOP, say) inside it; a Script CHOP that has read its
+  input's `.rate` (from then on the input cooks every frame; reading channels, names or
+  `numpyArray()` doesn't do this, `dev/probes/in_chop_cook.py`); a size expression such as
+  `op('source').width` that keeps a sample movie playing.

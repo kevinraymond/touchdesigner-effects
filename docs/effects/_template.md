@@ -1,11 +1,14 @@
 <!-- Copy to docs/effects/<name>.md. tests/check_tox.py requires the download link below and
-     a preview that exists beside this page. Delete this comment. -->
+     a preview that exists beside this page (dev/clips.py --preview makes the .webp). Delete this comment. -->
 
 # Effect name
 
-![Effect name: what the preview shows](name.gif)
+![Effect name: what the preview shows](name.webp)
 
-One paragraph: what it does, what it is good for, what makes it different from the
+**New to <technique>?** A few sentences for someone who has never heard of it: what it is, how
+it works in plain words (explain any term you can't avoid), and where they may have seen it.
+
+One paragraph: what this effect does, what it is good for, what makes it different from the
 nearest thing in the Palette or elsewhere.
 
 **[Download name.tox](https://github.com/kevinraymond/touchdesigner-effects/releases/latest/download/name.tox)**
@@ -28,9 +31,10 @@ Open Window (on the effect's page) shows it full size; Esc closes the window.
 
 ## Audio input
 
-Which channels it reads from input 2, by name, and what each one drives. What it does with
-nothing wired (the effect must still work). Worked examples: TouchDesigner's audio analysis,
-Fosfora's `fosfora_signal`.
+Lead with [Fosfora](https://github.com/kevinraymond/fosfora): wire `fosfora_signal` into input 2,
+and what its bars, builds, drops and sections add. Then what plain audio or TouchDesigner's
+audio analysis drives (the channels from docs/BUILDING.md, The audio input), and what the effect
+does with nothing wired (it must still work).
 
 ## Performance
 

@@ -1,0 +1,33 @@
+# datamosh: idiom review
+
+Reviewed version: 0.1.0
+
+The review items of docs/TD_IDIOMS.md, checked by hand for this version: tick each box
+(`- [x]`) and say in a few words how it holds.
+
+- [x] P4 Pulse for actions, Toggle for states, Menu for discrete choices; labels in Title Case. Names of 10 characters or fewer are checked at save time (assert_idiomatic); TouchDesigner itself refuses names that aren't an uppercase letter followed by lowercase letters or digits. [Custom Parameters](https://docs.derivative.ca/Custom_Parameters), [Page Class](https://docs.derivative.ca/Page_Class)
+  Keyframe and Skip Keyframe are Pulses; Hold, Mosh Cuts and Song Structure are Toggles; Mode, Skip On and Flashing are Menus. Labels are Title Case ("Frozen Blocks", "Every Bar"). The longest name is Songstruct, 10 characters.
+- [x] P5 Inner operators follow the COMP's parameters through expressions (`parent().par.Amount`), not scripts copying values; values only the inside needs are kept off the pages (`ipar`). [Internal Parameters](https://docs.derivative.ca/Internal_Parameters)
+  Every shader uniform, Select CHOP channel name and Trigger CHOP length is an expression on parent().par. The only script, pulses, turns the Keyframe and Skip Keyframe pulses into Trigger CHOP pulses and copies no values. Inside-only values (block size, cut thresholds) are constants in the builder, not on the pages.
+- [x] P6 Related parameters are grouped with `startSection`; parameters that don't apply in the current mode are grayed out with `enableExpr`.
+  Sections: the mosh (Mode to Hold), keyframes (Mosh Cuts to Skip Keyframe), input 2 (Skip On to Song Structure), Flashing, the window. Frozen Blocks is grayed out unless Mode is Blocks; nothing else depends on the mode.
+- [x] I4 The audio input goes through `audio_in()`, which reads it by channel name with fallbacks and takes a pulse from its count channel when one exists, because a one-frame pulse is lost on any frame nothing pulls the CHOP; the effect reads the counts (`beat_count`, `bar_count`...) for logic, not `beat`. [Cook](https://docs.derivative.ca/Cook), [Logic CHOP](https://docs.derivative.ca/Logic_CHOP)
+  Input 2 is read only through audio_in(). Skips and keyframes come from beat_count, bar_count, drop_count and section_count through a Logic CHOP (On When Value Changed); level and build are read as values. Checked in TouchDesigner with a Fosfora-shaped signal and the sample MP3.
+- [x] E2 Only capitalized members are promoted; state lives on `self` and the extension can be reinitialized at any time; no module globals; `onInitTD`/`onDestroyTD`, the 2025 names. [Release Notes 2025](https://docs.derivative.ca/Release_Notes/2025.30000)
+  Not applicable: datamosh has no extension.
+- [x] C4 Motion and timing follow seconds (`absTime.seconds`, `me.time.seconds`), not frame counts, so dropped frames don't change the speed. [AbsTime Class](https://docs.derivative.ca/AbsTime_Class)
+  Recovery, Fade and the Chroma pull scale by absTime.stepSeconds; skip envelopes and keyframe ramps are Trigger CHOPs in seconds; the unwired sample cut, frozen-block reshuffles and the cut refractory follow absTime.seconds. The motion steps once per new input frame, at the footage's own rate.
+- [x] C5 Nothing cooks while the output is unused: checked with dev/idle.py (nothing downstream, the node out of view; input 2 unwired and wired to a changing beat), or in the Performance Monitor. [Performance Monitor](https://docs.derivative.ca/Performance_Monitor_Dialog)
+  dev/idle.py on the final 0.1.0 build (node viewer off, nothing downstream): 0 of 94 operators cooked over 60 frames unused with input 2 unwired, and 0 with the clip and a beat changing every frame wired in; the control (pulling out_top) cooked 48. Fixed on the way: size expressions (op('source').width) kept the sample movie cooking; lib's audio_in() no longer uses a time-sliced filter or reads the input's .rate, either of which cooked every frame.
+- [x] C6 Pixel formats are 8-bit unless precision is needed, and 32-bit float for data textures (a CHOP to TOP feeding a shader).
+  Luma, flow, block costs and vectors, the motion field and the clock are 32-bit float data. The decoder (mosh, and so out_top) is 16-bit float because it feeds back into itself every frame: in 8 bits, small corrections round away and the fade back to the input stalls short of it. The previous input frame keeps the input's format.
+- [x] C7 The performance note on the docs page was measured on the reference machine at 1280 x 720, not estimated.
+  dev/perf.py on the final 0.1.0 build, Mac otherwise idle (MacBook Pro M2 Pro 16 GB, macOS 15.6, TouchDesigner 2025.33230), 1280 x 720: Smear (default) GPU 2.84 ms (95th percentile 4.36), CPU 0.36 ms (0.48); Blocks (Mode=blocks) GPU 3.44 ms (4.99), CPU about 0.7 ms; 60 fps held both.
+- [x] D5 The README DAT and docs page say how to update: dragging a `.tox` in embeds a copy, so updating means dragging in the new one (or pointing External .tox at it). [A word about external files](https://derivative.ca/community-post/word-about-external-files-202310k-builds/68166)
+  Both say it: the README DAT's UPDATING section and the docs page's Use it section.
+- [x] A2 The flash limits were measured, not assumed: the output recorded with a beat-heavy input at each Flashing setting, and the flashes in any one second counted.
+  dev/flash.py + dev/flashcount.py on the final 0.1.0 build, Mac otherwise idle, stress beat of 8 beats, 2 bars and 1 drop a second, on b1_dancer and b2_plaza. Worst second, area rule: dancer Off 0.5, Calm 1.0, Up to 3 per second 1.0 (clip alone 1.0); plaza 0.5 at every setting (clip alone 0.5); no red flashes. A separate check confirmed the stress beat drives the gate (in 3 s, Calm passed 3 skips and 3 keyframes, Off none); the moments fade, so they add nothing over the clip.
+- [x] A3 No meaning rests on hue alone (brightness, size or motion carries it too); the palette is colorblind-safe (orange and blue); text is legible at the size it is shown.
+  The effect draws no overlay, colors or text of its own; it moves the input's pixels. Nothing is signaled by hue.
+- [x] A4 Anything unreliable is labeled experimental in its help and docs.
+  Cut detection (Mosh Cuts help, docs, README DAT), Fosfora's drops (Song Structure help, docs, README DAT) and beats from raw audio (Skip On help, docs, README DAT) are all labeled experimental.

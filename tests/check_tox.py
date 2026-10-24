@@ -28,7 +28,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KINDS = ('effects', 'bundles')
-PREVIEW = re.compile(r'\]\(([^)\s]+\.(?:gif|mp4|webm|png|jpg))\)')
+PREVIEW = re.compile(r"\]\(([^)\s]+\.(?:webp|gif|mp4|webm|png|jpg))\)")
 REVIEW_ITEM = re.compile(r'^- \*\*([A-Z]\d+)\*\* \(review\) (.*(?:\n  .*)*)', re.M)
 CHECKED = re.compile(r'^- \[[xX]\] ([A-Z]\d+)\b', re.M)
 REVIEWED = re.compile(r'^Reviewed version: (\S+)', re.M)
@@ -90,7 +90,7 @@ def _docs(root, lib, name, errors):
         errors.append('docs/effects/{}.md does not link {}'.format(name, lib['DOWNLOAD_URL'].format(name)))
     previews = PREVIEW.findall(text)
     if not previews:
-        errors.append('docs/effects/{}.md shows no preview (a .gif or clip)'.format(name))
+        errors.append('docs/effects/{}.md shows no preview (an animated .webp or .gif, or a clip)'.format(name))
     for target in previews:
         if '://' not in target and not os.path.isfile(os.path.join(root, 'docs', 'effects', target)):
             errors.append('docs/effects/{}.md shows {}, which does not exist'.format(name, target))
