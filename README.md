@@ -22,6 +22,7 @@ performance note, and a download link that always points at the latest release.
 | [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines, and beats swap the characters and pop the contrast. |
 | [Blob Track](docs/effects/blob_track.md) | The look of computer vision: whatever moves gets a numbered box that follows it, joined to its neighbors by lines, like surveillance software or a film's targeting display. Beats scramble the labels and spawn links. |
 | [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Bars set off the melts; Fosfora's builds hold them back until the drop. |
+| [Depth Particles](docs/effects/depth_particles.md) | Particles peel off the people in a depth map (from a Kinect, a RealSense or a depth estimator) or a mask and drift away like smoke, in the picture's colors. It finds people by how they stand out from what is beside them, so floors and walls stay out. Loudness thickens the stream, beats kick the cloud outward, bars swing the wind, and a drop sends a shockwave. |
 | [Glitch](docs/effects/glitch.md) | Broken digital video on the beat: every beat tears thin slivers of the picture sideways, and on the one of each bar a burst makes blocks jump, freeze or lose their colors and rows slip, then the picture is whole again. Calm by default: at most one burst a second, or none at all. |
 | *More on the way* | New effects are in the works. Watch or star the repo to see them land. |
 
@@ -50,7 +51,9 @@ still images from [Krea 2](https://github.com/krea-ai/krea-2), brought to life a
 footage is AI-generated and shows no real people, places or brands. Krea 2's weights are
 released under the [Krea 2 Community License](https://www.krea.ai/krea-2-licensing) and Wan
 2.2's under [Apache 2.0](https://github.com/Wan-Video/Wan2.2/blob/main/LICENSE.txt); neither
-claims rights over what it generates.
+claims rights over what it generates. The depth maps behind the depth effects' previews were
+estimated from that footage with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s
+Base model (Apache 2.0).
 
 The beat the effects follow in the previews comes from "Prison of Pixels", a song by Kevin Raymond
 made with [Suno](https://suno.com), licensed like the rest of the media (below). The previews are
@@ -58,7 +61,7 @@ silent, and the song isn't in this repository.
 
 None of it ships inside an effect's `.tox`: with nothing wired in, every effect shows
 TouchDesigner's own sample media. The Showreel is the one exception: it carries the 5-second dancer
-clip, so it shows motion straight away. No `.tox` here makes sound.
+clip and her depth map, so it shows motion (and depth) straight away. No `.tox` here makes sound.
 
 ## License
 

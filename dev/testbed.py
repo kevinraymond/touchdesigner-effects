@@ -3,9 +3,11 @@ exec() it into a script's globals after lib/tox_build.py, then:
 
     names, opts = test_args(TDLIB_ARGS)      # effect names; clip=<name>, beat=none
     clip, beat = testbed(op(TDLIB_PARENT), opts)
+    wire(fx, clip, beat)                     # for each effect
 
 clip plays private/assets/ready/<clip>.mp4, b1_dancer by default (TouchDesigner's sample movie
-when that isn't there). With beat=none, beat is None and input 2 stays unwired, which tells an
+when that isn't there), and clip_depth beside it its depth, <clip>_depth.mp4, when there is one:
+wire() gives it to an effect that takes input 3. With beat=none, beat is None and input 2 stays unwired, which tells an
 effect's own changes from the ones the beat drives. beat is a Constant CHOP shaped like Fosfora's signal and far busier than music: 8 beats,
 2 bars, 1 drop and half a section change a second, a build rising and falling, loud throughout,
 so every flash an effect can make is asked for.
@@ -27,6 +29,9 @@ def testbed(host, opts):
     path = os.path.join(READY, opts['clip'] + '.mp4')
     clip = mk(host, moviefileinTOP, 'clip', -600, 0, comment='The test clip.',
               file=path if os.path.exists(path) else app.samplesFolder + '/Map/Nature/Movie.1.mp4')
+    depth = os.path.join(READY, opts['clip'] + '_depth.mp4')
+    if os.path.exists(path) and os.path.exists(depth):
+        mk(host, moviefileinTOP, 'clip_depth', -600, -150, comment="The test clip's depth.", file=depth)
     if opts['beat'] == 'none':
         return clip, None
     beat = mk(host, constantCHOP, 'stress', -600, -300, comment='A beat far busier than music.')
@@ -38,3 +43,14 @@ def testbed(host, opts):
     for i, (name, expr) in enumerate(chans):
         setpars(beat, **{'const{}name'.format(i): name, 'const{}value'.format(i): Expr(expr)})
     return clip, beat
+
+
+def wire(fx, clip, beat):
+    """Input 1 the clip, input 2 the beat (unless None), input 3 the clip's depth when the effect
+    takes one and the clip has one (with none, the effect uses its own stand-in)."""
+    fx.inputConnectors[0].connect(clip)
+    if beat is not None and len(fx.inputConnectors) > 1:
+        fx.inputConnectors[1].connect(beat)
+    depth = clip.parent().op('clip_depth')
+    if depth is not None and len(fx.inputConnectors) > 2:
+        fx.inputConnectors[2].connect(depth)

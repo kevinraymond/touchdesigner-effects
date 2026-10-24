@@ -57,9 +57,7 @@ def main():
         fx = host.loadTox(path)
         fx.viewer = False
         if wired:
-            fx.inputConnectors[0].connect(clip)
-            if len(fx.inputConnectors) > 1:
-                fx.inputConnectors[1].connect(beat)
+            wire(fx, clip, beat)
         state.update(i=i, fx=fx, n=0, before=None)
         run('args[0]()', tick, delayFrames=1)
 

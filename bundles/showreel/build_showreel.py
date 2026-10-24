@@ -7,8 +7,9 @@ of this; until then tests/check_tox.py fails (embeds_all in the manifest), as it
 effect is rebuilt and this isn't.
 
 The network, left to right:
-  input      the standard shell: source (input 1, or the sample movie) and in2_audio
-  effects    every effect's COMP, fed both inputs, its output through a Null TOP (fx_<name>)
+  input      the standard shell: source (input 1, or the sample movie), in2_audio and in3_top, whose
+             depth (lib depth_in: input 3, else input 1's brightness) feeds the effects that take one
+  effects    every effect's COMP, fed the inputs it takes, its output through a Null TOP (fx_<name>)
   views      grid.glsl tiles the input and every effect with their names; view (a Switch TOP,
              which cooks only the input it shows) picks Grid, Cycle's effect or the one chosen;
              label.glsl names the effect showing
@@ -29,12 +30,18 @@ _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
 VERSION = '0.1.0'
-# Shown while nothing is wired: the dancer, the library's own footage (CC BY 4.0, 5 s, 1.3 MB),
-# carried in the component's Virtual File System and read by a path relative to it, so it plays
-# wherever the .tox is loaded. TouchDesigner's sample movies barely move, and Blob Track and
-# Datamosh need motion. The only media inside any of the library's .tox files; no sound.
-CLIP = 'dancer.mp4'
+# Shown while nothing is wired: the dancer, the library's own footage (CC BY 4.0, 5 s, 1.3 MB), and
+# her depth map (Depth Anything 3 Base, 0.9 MB) for the effects that take input 3, carried in the
+# component's Virtual File System and read by a path relative to it, so they play wherever the .tox
+# is loaded. TouchDesigner's sample movies barely move (Blob Track and Datamosh need motion) and
+# have no depth. The only media inside any of the library's .tox files; no sound.
+CLIP, CLIP_DEPTH = 'dancer.mp4', 'dancer_depth.mp4'
 SAMPLE = "'vfs:' + parent().path + ':{}'".format(CLIP)
+# Both clips are 81 frames at 16 fps. They show the frame the clock picks rather than play on their
+# own, so they stay in step whichever of them cooks: a movie playing by itself starts when something
+# first pulls it, and the depth only cooks while an effect that uses it is showing.
+CLIP_SECONDS = 81 / 16
+IN_STEP = dict(playmode='specify', indexunit='seconds', index=Expr('absTime.seconds % {:g}'.format(CLIP_SECONDS)))
 GRID_W, GRID_H = 1280, 720
 # Cycle's bar while input 2 gives none, and the least time between two of its moves (src/cycle.py
 # keeps them; these are for the help and the README).
@@ -64,9 +71,22 @@ comp, page, source = new_effect(
     'Showreel {}: every effect in the library ({}) in one component; View picks a grid of them all, '
     'a cycle through them, or one.'.format(VERSION, ', '.join(n for n, _ in EFFECTS)),
     'Filled in once the effects are loaded.', tags=('showreel', 'bundle'), audio=True, flashing=True,
-    sample=SAMPLE)
+    sample=SAMPLE, depth=True)
 comp.vfs.addFile(os.path.join(_HERE, 'src', CLIP))
+comp.vfs.addFile(os.path.join(_HERE, 'src', CLIP_DEPTH))
 comp.op('sample').comment = 'Shown until a TOP is wired into input 1: the dancer clip inside this component.'
+setpars(comp.op('sample'), **IN_STEP)
+# Input 3's stand-in: the dancer's depth while she is showing, else input 1's brightness.
+guess = mk(comp, monochromeTOP, 'depth_guess', -1000, -1000, [source],
+           "Input 1's brightness, standing in for depth when input 1 is wired but input 3 is not.")
+sample_depth = mk(comp, moviefileinTOP, 'sample_depth', -1000, -1150,
+                  comment="The dancer's depth map inside this component, in step with the dancer clip.",
+                  file=Expr("'vfs:' + parent().path + ':{}'".format(CLIP_DEPTH)), **IN_STEP)
+stand_in = mk(comp, switchTOP, 'depth_stand_in', -800, -1050, [guess, sample_depth],
+              "The dancer's depth while the dancer clip shows (input 1 unwired), else input 1's brightness.",
+              index=Expr('0 if parent().inputConnectors[0].connections else 1'))
+depth = depth_in(comp, stand_in, x=-600, y=-850)
+depth.comment = 'Input 3 (depth or mask) when it is wired, else the stand-in: for the effects that take one.'
 audio = audio_in(comp, _ROOT, -800, -550)
 audio.comment = "Input 2's bars, for Cycle (read only while View is Cycle, so it cooks only then)."
 clock = mk(comp, constantCHOP, 'clock', -800, -700, comment='The time, so cycle cooks every frame while used.',
@@ -88,6 +108,8 @@ for i, (name, path) in enumerate(EFFECTS):
     fx.inputConnectors[0].connect(source)
     if len(fx.inputConnectors) > 1:
         fx.inputConnectors[1].connect(comp.op('in2_audio'))
+    if len(fx.inputConnectors) > 2:
+        fx.inputConnectors[2].connect(depth)
     # Its node viewer would cook it whenever this network is open on screen.
     fx.viewer = False
     if hasattr(fx.par, 'Flashing'):

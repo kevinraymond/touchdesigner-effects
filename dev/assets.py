@@ -7,8 +7,11 @@ PROMPTS.md there for what each clip is for):
 Each video becomes private/assets/ready/<name>.mp4: 1280 x 720 (scaled to cover, then
 center-cropped, so any aspect works), a constant frame rate (the source's if it is 16, 24, 25,
 30, 50 or 60, else 30; video models often make 16, and doubling frames to reach 30 would judder),
-H.264, no sound. Each audio file becomes ready/<name>.wav, 44.1 kHz 16-bit (dev/record.py's Movie
-File Out saves sound as MP3, which needs 44.1 kHz).
+H.264, no sound. A depth clip named <clip>_depth (grayscale, brighter is nearer) takes its color
+clip's frame rate and frame count, cloning its last frame or dropping extras, so the two loop
+together in TouchDesigner instead of drifting a frame apart on every loop. Each audio file
+becomes ready/<name>.wav, 44.1 kHz 16-bit (dev/record.py's Movie File Out saves sound as MP3,
+which needs 44.1 kHz).
 Clips whose names start d3a and d3b are also joined into ready/d3_cut.mp4, a hard cut. A contact
 sheet of every ready clip (start, middle, end) goes to ready/sheet.png, and the report lists the
 PROMPTS.md IDs that have no clip yet. dev/td.sh copies private/ to the Mac with everything else,
@@ -50,14 +53,32 @@ def fresh(src, dst):
     return os.path.exists(dst) and os.path.getmtime(dst) >= os.path.getmtime(src)
 
 
-def normalize_video(src, dst):
+def frame_count(path):
+    v = next(s for s in probe(path)['streams'] if s['codec_type'] == 'video')
+    if v.get('nb_frames'):
+        return int(v['nb_frames'])
+    _, _, fps, dur = video_info(path)
+    return round(fps * dur)
+
+
+def ready_rate(fps):
+    return min(RATES, key=lambda r: abs(r - fps)) if any(abs(r - fps) < 0.6 for r in RATES) else 30
+
+
+def normalize_video(src, dst, color=None):
+    """color: the clip a depth clip belongs to; the depth clip gets its rate and frame count."""
     w, h, fps, _ = video_info(src)
-    rate = min(RATES, key=lambda r: abs(r - fps)) if any(abs(r - fps) < 0.6 for r in RATES) else 30
-    run('ffmpeg', '-y', '-v', 'error', '-i', src, '-an', '-map_metadata', '-1',
-        '-vf', 'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1',
+    rate, cap, note = ready_rate(fps), [], ''
+    vf = 'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720,setsar=1'
+    if color:
+        rate, frames = ready_rate(video_info(color)[2]), frame_count(color)
+        vf += ',tpad=stop_mode=clone:stop_duration=1'
+        cap = ['-frames:v', str(frames)]
+        note = ', {} frames to match {} (had {})'.format(frames, os.path.basename(color), frame_count(src))
+    run('ffmpeg', '-y', '-v', 'error', '-i', src, '-an', '-map_metadata', '-1', '-vf', vf, *cap,
         '-r', str(rate), '-fps_mode', 'cfr', '-c:v', 'libx264', '-preset', 'slow', '-crf', '17',
         '-pix_fmt', 'yuv420p', '-movflags', '+faststart', dst)
-    return '{}x{} {:.2f} fps -> 1280x720 {} fps'.format(w, h, fps, rate)
+    return '{}x{} {:.2f} fps -> 1280x720 {} fps{}'.format(w, h, fps, rate, note)
 
 
 def normalize_audio(src, dst):
@@ -111,8 +132,12 @@ def main():
         if ext in VIDEO:
             dst = os.path.join(ready, stem + '.mp4')
             names.add(stem)
-            if a.force or not fresh(src, dst):
-                print('video', stem, normalize_video(src, dst))
+            color = None
+            if stem.endswith('_depth'):
+                color = next((c for c in sorted(glob.glob(os.path.join(a.dir, stem[:-6] + '.*')))
+                              if os.path.splitext(c)[1].lower() in VIDEO), None)
+            if a.force or not fresh(src, dst) or (color and not fresh(color, dst)):
+                print('video', stem, normalize_video(src, dst, color))
         elif ext in AUDIO:
             dst = os.path.join(ready, stem + '.wav')
             names.add(stem)

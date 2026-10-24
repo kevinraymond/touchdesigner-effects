@@ -6,11 +6,13 @@ the Mac itself rather than in captured frames:
 It makes /tdlib_demo (once) with a looping test clip, private/assets/ready/b1_dancer.mp4 (or
 TouchDesigner's sample movie when that isn't there), and a beat: Fosfora's signal while
 `fosfora --signal` is sending (private/fosfora/fosfora_signal.tox, copied there from the Fosfora
-repo's integrations/touchdesigner/), else TouchDesigner's sample MP3. Then it puts a copy of
-every effects/<n>/<n>.tox in it, wired to both. Run it again after building
+repo's integrations/touchdesigner/), else TouchDesigner's sample MP3. When the clip has a depth
+clip beside it (<clip>_depth.mp4), clip_depth plays it, restarted with the clip on every run so the
+two stay in step, and goes to input 3 of the effects that take one. Then it puts a copy of
+every effects/<n>/<n>.tox in it, wired to them. Run it again after building
 an effect: only the effects whose .tox changed are reloaded (and any whose .tox is gone are
 removed), so the clip, the track and their settings stay as they are (change the clip in
-/tdlib_demo/clip's File parameter). The track is
+/tdlib_demo/clip's File parameter, then run it again to pick up that clip's depth). The track is
 silent until Sound is turned on on the Demo page, and Sound turns itself off whenever the project
 opens: TouchDesigner saves a playing speaker with the project, which then opens playing.
 
@@ -61,6 +63,24 @@ except OSError:
 if stamp is not None and clip.fetch('mtime', None) not in (None, stamp):
     clip.par.reloadpulse.pulse()  # the file was replaced (a re-generated clip, same name)
 clip.store('mtime', stamp)
+# The clip's depth, for input 3, when it has one. Decided here, not by an expression: a parameter
+# expression can't see the os module to check that the file exists (2025.33230).
+depth_file = os.path.splitext(clip.par.file.eval())[0] + '_depth.mp4'
+depth = demo.op('clip_depth')
+if os.path.exists(depth_file):
+    if depth is None:
+        depth = place(demo.create(moviefileinTOP, 'clip_depth'), -COLUMN, 200,
+                      "The test clip's depth (<clip>_depth.mp4), for the effects' input 3.")
+    if depth.par.file.eval() != depth_file or depth.fetch('mtime', None) != os.path.getmtime(depth_file):
+        depth.par.file = depth_file
+        depth.par.reloadpulse.pulse()
+    depth.store('mtime', os.path.getmtime(depth_file))
+    # Both play sequentially at the same rate and length: restarted together, they stay in step.
+    clip.par.cuepulse.pulse()
+    depth.par.cuepulse.pulse()
+elif depth is not None:
+    depth.destroy()
+    depth = None
 track = demo.op('track')
 if track is None:
     track = place(demo.create(audiofileinCHOP, 'track'), -COLUMN, -400,
@@ -125,6 +145,11 @@ for name in names:
     fx.inputConnectors[0].connect(clip)
     if len(fx.inputConnectors) > 1:
         fx.inputConnectors[1].connect(beat)
+    if len(fx.inputConnectors) > 2:
+        if depth is not None:
+            fx.inputConnectors[2].connect(depth)
+        else:
+            fx.inputConnectors[2].disconnect()
 
 # One effect at a time: the Demo page picks it, and only the chosen one cooks.
 page = next((pg for pg in demo.customPages if pg.name == 'Demo'), None) or demo.appendCustomPage('Demo')
@@ -158,6 +183,8 @@ def follow(par, expr):
 
 
 follow(clip.par.play, 'parent().par.Play')
+if depth is not None:
+    follow(depth.par.play, 'parent().par.Play')
 follow(speaker.par.active, 'parent().par.Sound')
 if signal is not None:  # beat's inputs: 0 Fosfora's signal, 1 the track
     follow(beat.par.index, (
@@ -199,8 +226,8 @@ for name in names:
 
 if relinked:
     print('put back:', ', '.join(relinked))
-print('{}: clip {}; beat from {} (Beat {}); loaded {}'.format(
-    DEMO, os.path.basename(clip.par.file.eval()), 'Fosfora' if beat.par.index.eval() == 0 and signal else 'the track',
+print('{}: clip {}{}; beat from {} (Beat {}); loaded {}'.format(
+    DEMO, os.path.basename(clip.par.file.eval()), ' with its depth' if depth is not None else '', 'Fosfora' if beat.par.index.eval() == 0 and signal else 'the track',
     demo.par.Beat.eval(),
     ', '.join(loaded) or 'nothing new'))
 for fx in demo.findChildren(type=COMP, depth=1):

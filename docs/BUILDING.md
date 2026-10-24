@@ -251,7 +251,7 @@ The other dev tools, each run through `dev/td.sh` (their headers say more):
 | `dev/perf.py` | each effect's CPU and GPU cook time per frame at its defaults, for the performance note |
 | `dev/record.py` + `dev/clips.py` | record effects as video with sound (Motion JPEG: the free license can't encode H.264), then MP4s and docs previews (`uv run dev/clips.py dev/out/record --preview`) |
 | `dev/idle.py` | checks an effect does nothing while its output is unused, input 2 unwired and wired (TD_IDIOMS C5) |
-| `dev/testbed.py` | the clip and stress beat `flash.py`, `perf.py` and `idle.py` feed every effect |
+| `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect |
 | `dev/assets.py` | normalize test footage in `private/assets/` (see `PROMPTS.md` there) |
 
 Nothing under `dev/` goes into a `.tox`.
@@ -290,3 +290,11 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   input's `.rate` (from then on the input cooks every frame; reading channels, names or
   `numpyArray()` doesn't do this, `dev/probes/in_chop_cook.py`); a size expression such as
   `op('source').width` that keeps a sample movie playing.
+- A new Geometry COMP holds a Torus POP and a new Camera COMP a File In POP (2025.33230); a builder
+  that draws its own geometry destroys them, or the readability check flags them for lacking comments.
+- A GLSL TOP writes several buffers with Number of Color Buffers (`numcolorbufs`) and
+  `layout(location = 0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];`; a Render Select TOP (`top`,
+  `bufferindex`) picks one out, and a Feedback TOP can read it back (Depth Particles' three buffers).
+- A Geometry COMP instances from TOPs, one pixel per instance: Default Instance OP sets the count
+  (Instance Count from its length), and Translate, Scale and Color each take their own TOP
+  (`instancetop`, `instancesop`, `instancecolorop`) with channels `r`, `g`, `b`, `a`.

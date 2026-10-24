@@ -21,8 +21,8 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
 - **One .tox, self-contained.** Relative references only. Nothing points outside the
   component except TouchDesigner's own /sys and /ui operators. No absolute file paths;
   bundled sample media comes from `app.samplesFolder`, never shipped. (One exception: the
-  showreel bundle carries one short clip of the library's own CC BY footage, since the samples
-  barely move. No component ever makes sound.)
+  showreel bundle carries short clips of the library's own CC BY footage, the dancer and her
+  depth map, since the samples barely move and have no depth. No component ever makes sound.)
 - **Works the moment it's dragged in**, on the free Non-Commercial license
   (resolution cap 1280 x 1280), and states the oldest TouchDesigner build it was saved in.
   Files saved in a newer build may not open in older ones.

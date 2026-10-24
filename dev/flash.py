@@ -90,9 +90,7 @@ def main():
     for path in paths:
         fx = host.loadTox(path)
         fx.nodeX, fx.nodeY = 0, 300 * len(runs)
-        fx.inputConnectors[0].connect(clip)
-        if beat is not None and len(fx.inputConnectors) > 1:
-            fx.inputConnectors[1].connect(beat)
+        wire(fx, clip, beat)
         for k, v in overrides.items():  # View=cycle and the like: measure a setting other than the default
             if hasattr(fx.par, k):
                 setattr(fx.par, k, int(v) if v.lstrip('-').isdigit() else v)

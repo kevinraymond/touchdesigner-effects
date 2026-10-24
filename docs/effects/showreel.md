@@ -1,6 +1,6 @@
 # Showreel
 
-![The Showreel's Grid view on a dancer in a hazy warehouse: a cell for the input and one for each effect, each named in its corner on a dark plate: ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, and Glitch tearing her on the beat](showreel.webp)
+![The Showreel's Grid view on a dancer in a hazy warehouse: a cell for the input and one for each effect, each named in its corner on a dark plate: ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Depth Particles shedding glowing specks off her (her depth map on input 3), and Glitch tearing her on the beat](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
 in, and the same picture runs through each effect side by side, or one after another in time with
@@ -19,12 +19,16 @@ Non-Commercial license
 ## Use it
 
 1. Drag `showreel.tox` into your network. It shows a 5-second clip of a dancer through every effect
-   straight away. The clip is inside the `.tox` (1.3 MB, no sound): TouchDesigner's own sample
-   movies barely move, and Blob Track and Datamosh need motion.
+   straight away. The clip and her depth map are inside the `.tox` (2.2 MB, no sound):
+   TouchDesigner's own sample movies barely move (Blob Track and Datamosh need motion), and none
+   has a depth map.
 2. Wire any TOP into input 1. Every effect gets it; the result is on output 1.
 3. Optional: wire audio or beat channels into input 2. Every effect gets them too, and Cycle moves
    on with their bars. [Fosfora](https://github.com/kevinraymond/fosfora)'s signal gives the most;
    each effect's page says what it does with it.
+4. Optional: wire a depth map or mask into input 3, grayscale, brighter nearer (or inside), lined up
+   with input 1. The effects that use depth (Depth Particles) get it. Without it they get the
+   dancer's depth while the dancer clip shows, and your picture's brightness once you wire input 1.
 
 Open Window (on the Showreel page) shows it full size; Esc closes the window.
 
@@ -63,10 +67,11 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with the four effects of this release inside. Grid, the default, runs
-every effect at once: 9.18 ms on the GPU per frame (95th percentile 11.22 ms) and 2.17 ms on the
-CPU (95th percentile 2.41 ms). Cycle and the single views run one effect at a time: Cycle took 2.94
-ms on the GPU (95th percentile 5.58 ms; it depends on the effect showing) and 0.78 ms on the CPU. Grid's cost grows with every effect the
+TouchDesigner 2025.33230), with the five effects of this release inside and the dancer clip's depth
+on input 3. Grid, the default, runs every effect at once: 6.59 ms on the GPU per frame (95th
+percentile 7.34 ms) and 2.79 ms on the CPU (95th percentile 2.96 ms). Cycle and the single views
+run one effect at a time: Cycle took 1.74 ms on the GPU (95th percentile 3.41 ms; it depends on the
+effect showing) and 0.82 ms on the CPU. Grid's cost grows with every effect the
 library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -80,14 +85,13 @@ library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
 
   | View and clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Grid, dancer in a hazy warehouse | 0.5 | 1.0 | 2.0 | 1.0 |
-  | Grid, people crossing a plaza | 0.5 | 1.0 | 2.0 | 0.5 |
-  | Cycle at Every 1, dancer | 1.0 | 2.0 | 3.0 | 1.0 |
+  | Grid, dancer in a hazy warehouse | 0.5 | 1.5 | 2.0 | 1.0 |
+  | Grid, people crossing a plaza | 0.5 | 1.5 | 2.0 | 0.5 |
+  | Cycle at Every 1, dancer | 0.5 | 1.5 | 2.0 | 0.5 |
 
   Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
-  setting goes past WCAG's 3, Cycle at its fastest under that beat included (it reaches 3 at Up to 3
-  per second). Red flashes, from Glitch's colored fringes, appeared only in Cycle: half a flash a
-  second at Calm and one at Up to 3 per second, well under WCAG's 3.
+  setting goes past WCAG's 3, Cycle at its fastest under that beat included. No red flashes this
+  time; earlier builds measured half a flash a second in Cycle, from Glitch's colored fringes.
 - **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 2 pixels
   per font pixel in the grid and 3 in the single views (at 720 pixels high; they scale with the
   picture), so they read on light and dark pictures alike.

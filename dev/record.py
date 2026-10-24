@@ -12,7 +12,8 @@ Words in TD_ARGS: effect names (none: every effect), clip=<name> for private/ass
 TouchDesigner's sample MP3; audio=none records silence and feeds no beat).
 
 Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT at its
-defaults, the clip and the track restart together, and the effect hears the track on input 2 while a
+defaults, the clip, its depth (<clip>_depth.mp4, on input 3 of an effect that takes one) and the
+track restart together, and the effect hears the track on input 2 while a
 Movie File Out records its output and the track at 30 fps. One effect at a time, nothing else of
 ours cooking. Writes dev/out/record/<effect>_<clip>.mov, then dev/out/record/done with each file's
 frames written and dropped (TouchDesigner repeats a frame to keep time when it drops one: keep the
@@ -65,6 +66,9 @@ def main():
     paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
               if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip = mk(host, moviefileinTOP, 'clip', -600, 0, comment='The clip.', file=clip_file)
+    depth_file = os.path.splitext(clip_file)[0] + '_depth.mp4'
+    depth = mk(host, moviefileinTOP, 'clip_depth', -600, -150, comment="The clip's depth.",
+               file=depth_file) if os.path.exists(depth_file) else None
     track = mk(host, audiofileinCHOP, 'track', -600, -300, comment='The track.', file=track_file,
                repeat='on') if track_file else None
     view = mk(host, nullTOP, 'view', 400, 0, comment='What gets recorded.')
@@ -81,6 +85,8 @@ def main():
         fx.inputConnectors[0].connect(clip)
         if track and len(fx.inputConnectors) > 1:
             fx.inputConnectors[1].connect(track)
+        if depth is not None and len(fx.inputConnectors) > 2:
+            fx.inputConnectors[2].connect(depth)
         fx.allowCooking = False
         effects.append(fx)
     stem = os.path.splitext(os.path.basename(clip_file))[0]
@@ -92,6 +98,8 @@ def main():
             o.allowCooking = o is fx
         view.inputConnectors[0].connect(fx.outputConnectors[0])
         clip.par.cuepulse.pulse()
+        if depth is not None:
+            depth.par.cuepulse.pulse()
         if track:
             track.par.cuepulse.pulse()
         rec.par.file = os.path.join(OUT, '{}_{}.mov'.format(fx.name, stem))

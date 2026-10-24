@@ -5,11 +5,13 @@ Every effect in the library at the time this was built, each a full copy you can
 {effects}
 
 USE
-Drag showreel.tox into your network: it shows a 5-second clip of a dancer (inside this component,
-AI-generated footage, CC BY 4.0, no sound) through every effect straight away. Wire any TOP into
+Drag showreel.tox into your network: it shows a 5-second clip of a dancer and her depth map (inside
+this component, AI-generated footage, CC BY 4.0, no sound) through every effect straight away. Wire any TOP into
 input 1; every effect gets it. Optionally wire audio or beat channels into input 2 (Fosfora's signal
-is the best; see each effect's docs): every effect gets that too. Open Window shows it full size;
-Esc closes the window.
+is the best; see each effect's docs): every effect gets that too. Optionally wire a depth map or mask
+lined up with input 1 into input 3 (grayscale, brighter nearer or inside): the effects that use depth
+get it. Without it they get the dancer's depth while she is showing, else input 1's brightness. Open Window shows it full size; Esc
+closes the window.
 
 VIEW
 Grid: the input and every effect side by side, each named in its corner. Every effect runs.
@@ -21,7 +23,9 @@ Labels turns the names off. Flashing applies to every effect inside (Off, Calm, 
 to 3 per second, the WCAG 2.3.1 limit); each effect's own help says what it flashes.
 
 INSIDE
-source (input 1, or the sample movie) feeds each effect; in2_audio feeds each effect's input 2 and
+source (input 1, or the sample movie) feeds each effect; depth (input 3, else depth_stand_in: the
+dancer's depth, sample_depth, while she shows, or source's brightness, depth_guess) feeds the input 3
+of each effect that has one; in2_audio feeds each effect's input 2 and
 audio (lib audio_in), whose bars, with a clock, drive cycle (a Script CHOP: when Cycle moves on).
 Each effect's output goes through a Null TOP (fx_<name>) to grid (a GLSL TOP tiling the input and
 every effect with their names) and to view, a Switch TOP that picks Grid, the effect Cycle has
