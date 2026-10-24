@@ -3,7 +3,7 @@
 Before [Fosfora](https://github.com/kevinraymond/fosfora), I had never heard of TouchDesigner.
 While adding the examples for Fosfora's signal mode, I got the free version of TD and poked
 around it a bit. Then I decided I would create some effects based on different things I've
-worked on, in case they are useful for anyone. If nothing else they are examples of solid
+worked on or seen, in case they are useful for anyone. If nothing else they are examples of solid
 working effects. Enjoy!
 
 Ready-to-use TouchDesigner effects you can download and use in a minute: drag in a `.tox`
