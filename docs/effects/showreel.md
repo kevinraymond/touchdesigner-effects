@@ -85,13 +85,14 @@ library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
 
   | View and clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Grid, dancer in a hazy warehouse | 0.5 | 1.5 | 2.0 | 1.0 |
-  | Grid, people crossing a plaza | 0.5 | 1.5 | 2.0 | 0.5 |
-  | Cycle at Every 1, dancer | 0.5 | 1.5 | 2.0 | 0.5 |
+  | Grid, dancer in a hazy warehouse | 0.5 | 1.0 | 2.0 | 1.0 |
+  | Grid, people crossing a plaza | 0.5 | 1.0 | 2.0 | 0.5 |
+  | Cycle at Every 1, dancer | 1.0 | 2.0 | 3.0 | 1.0 |
 
   Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
-  setting goes past WCAG's 3, Cycle at its fastest under that beat included. No red flashes this
-  time; earlier builds measured half a flash a second in Cycle, from Glitch's colored fringes.
+  setting goes past WCAG's 3, Cycle at its fastest under that beat included (it reaches 3 at Up to 3
+  per second). Red flashes, from Glitch's colored fringes, appeared only in Cycle at Up to 3 per
+  second: one a second, well under WCAG's 3.
 - **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 2 pixels
   per font pixel in the grid and 3 in the single views (at 720 pixels high; they scale with the
   picture), so they read on light and dark pictures alike.

@@ -27,14 +27,16 @@ for w in words:
     (opts if k in opts else pars)[k] = v
 
 # Wires can't cross network levels: the test inputs sit beside the effect, as dev/perf.py's do.
-for name in ('clip', 'stress', 'clip_depth'):
+for name in ('clip', 'stress', 'clip_depth', 'clip_depth_at'):
     if host.op(name):
         host.op(name).destroy()
 clip, beat = testbed(host, dict(clip=opts['clip'], beat=opts['beat']))
 for c in fx.inputConnectors:
     c.disconnect()
-if opts['depth'] == 'none' and host.op('clip_depth'):
-    host.op('clip_depth').destroy()
+if opts['depth'] == 'none':
+    for name in ('clip_depth', 'clip_depth_at'):
+        if host.op(name):
+            host.op(name).destroy()
 wire(fx, clip, beat)
 if opts['dfile']:                   # another depth file on input 3 (a path on the Mac, ~ allowed)
     host.op('clip_depth').par.file = os.path.expanduser(opts['dfile'])

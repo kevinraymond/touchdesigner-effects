@@ -16,7 +16,9 @@ without one) it waits SETTLE seconds, then records SECONDS seconds: a GLSL TOP a
 in linear light into a 64 x 36 grid of relative luminance and WCAG's red measure, read back every
 frame. The clip alone is recorded first (clip_source.npz), so its own changes show.
 
-Writes dev/out/flash/<clip>/<n>_<setting>.npz, then dev/out/flash/<clip>/done. Takes about
+Writes dev/out/flash/<clip>/<n>_<setting>.npz, then dev/out/flash/<clip>/done. dev/td.sh returns
+before the recording ends: wait for done (dev/td.sh --pull) before starting another run, since a new
+run clears TDLIB_PARENT and the one still recording then measures the wrong network. Takes about
 (1 + settings x effects) x (SETTLE + SECONDS) s, reading a small texture every frame: keep other
 work off TouchDesigner meanwhile, since a stalled frame is a frame the recording misses.
 """

@@ -55,6 +55,23 @@ downloaded file.
   into the nearest thing in the room.
 - **A mask** (white inside the person, black outside, from any segmentation tool): Find on Stand Out
   works, and Nearer Than Far Limit keeps people who touch the edge of the frame.
+- **A plain webcam:** estimate depth or a person mask live, then wire it into input 3. Each of
+  these needs its own install (a Python environment, a model download or a plugin), which is why
+  none can come inside this `.tox`:
+  - Derivative's [TDDepthAnything](https://github.com/TouchDesigner/TDDepthAnything) runs Depth
+    Anything inside TouchDesigner (PyTorch, through TDPyEnvManager);
+    [olegchomp's version](https://github.com/olegchomp/TDDepthAnything) runs it with TensorRT on
+    Windows and NVIDIA, and [appletd](https://github.com/ojrgb/appletd) runs Apple's Vision models on
+    macOS. Check each one's model license if your work is commercial.
+  - [MediaPipe for TouchDesigner](https://github.com/torinmb/mediapipe-touchdesigner) (MIT, Mac and
+    Windows) gives a person mask; on Windows with an NVIDIA RTX card, so does TouchDesigner's own
+    NVIDIA Background TOP. Set Find to Nearer Than Far Limit for a mask.
+  - With none of them, input 1's brightness stands in: fine for a lit performer on a dark stage,
+    poor in an ordinary room.
+- **Two movie files** (a recording and its depth): make the depth show the recording's frame, or the
+  two drift apart whenever the recording plays without the effect (when it also feeds something
+  else). Set the depth's Movie File In to Play Mode Specify Index, Index Unit Indices, and its Index
+  to an Info CHOP on the recording's Movie File In: `op('info1')['index']`.
 
 ### How it finds people
 
@@ -149,9 +166,9 @@ the flashes in the worst second, by WCAG's area rule:
 
 | Clip | The effect | The clip alone |
 |---|---|---|
-| Dancer in a hazy warehouse, with her depth | 0.5 | 1.5 |
+| Dancer in a hazy warehouse, with her depth | 1.0 | 1.0 |
 | Hands against black, with their depth | 0.5 | 1.5 |
-| Dancer in a hazy warehouse, with her depth, no beat | 0.5 | 1.5 |
+| Dancer in a hazy warehouse, with her depth, no beat | 0.5 | 1.0 |
 
 Never more than the footage does by itself (the dimmed backdrop takes some of the footage's own
 flicker away), under a beat eight times busier than music, and well under WCAG's limit of 3. No red

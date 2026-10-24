@@ -7,8 +7,9 @@ It makes /tdlib_demo (once) with a looping test clip, private/assets/ready/b1_da
 TouchDesigner's sample movie when that isn't there), and a beat: Fosfora's signal while
 `fosfora --signal` is sending (private/fosfora/fosfora_signal.tox, copied there from the Fosfora
 repo's integrations/touchdesigner/), else TouchDesigner's sample MP3. When the clip has a depth
-clip beside it (<clip>_depth.mp4), clip_depth plays it, restarted with the clip on every run so the
-two stay in step, and goes to input 3 of the effects that take one. Then it puts a copy of
+clip beside it (<clip>_depth.mp4), clip_depth shows it at the clip's frame (clip_info reads where the
+clip is), so the two stay in step whichever effect is showing, and goes to input 3 of the effects
+that take one. Then it puts a copy of
 every effects/<n>/<n>.tox in it, wired to them. Run it again after building
 an effect: only the effects whose .tox changed are reloaded (and any whose .tox is gone are
 removed), so the clip, the track and their settings stay as they are (change the clip in
@@ -75,11 +76,19 @@ if os.path.exists(depth_file):
         depth.par.file = depth_file
         depth.par.reloadpulse.pulse()
     depth.store('mtime', os.path.getmtime(depth_file))
-    # Both play sequentially at the same rate and length: restarted together, they stay in step.
-    clip.par.cuepulse.pulse()
-    depth.par.cuepulse.pulse()
-elif depth is not None:
-    depth.destroy()
+    # It shows the clip's frame rather than play by itself: a movie playing by itself only moves on
+    # while something pulls it, and only the effects that take input 3 pull this one, so it fell
+    # behind the clip whenever another effect was showing.
+    info = demo.op('clip_info') or place(demo.create(infoCHOP, 'clip_info'), -COLUMN, 350,
+                                         "Where the clip is (index: its frame), for clip_depth.")
+    info.par.op = clip.path
+    depth.par.playmode = 'specify'
+    depth.par.indexunit = 'indices'
+    depth.par.index.expr = "op('clip_info')['index']"
+else:
+    for name in ('clip_depth', 'clip_info'):
+        if demo.op(name) is not None:
+            demo.op(name).destroy()
     depth = None
 track = demo.op('track')
 if track is None:
@@ -183,8 +192,6 @@ def follow(par, expr):
 
 
 follow(clip.par.play, 'parent().par.Play')
-if depth is not None:
-    follow(depth.par.play, 'parent().par.Play')
 follow(speaker.par.active, 'parent().par.Sound')
 if signal is not None:  # beat's inputs: 0 Fosfora's signal, 1 the track
     follow(beat.par.index, (

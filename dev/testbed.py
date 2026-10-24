@@ -7,7 +7,8 @@ exec() it into a script's globals after lib/tox_build.py, then:
 
 clip plays private/assets/ready/<clip>.mp4, b1_dancer by default (TouchDesigner's sample movie
 when that isn't there), and clip_depth beside it its depth, <clip>_depth.mp4, when there is one:
-wire() gives it to an effect that takes input 3. With beat=none, beat is None and input 2 stays unwired, which tells an
+wire() gives it to an effect that takes input 3. clip_depth shows the clip's frame (follow_frame())
+rather than play by itself, so it stays in step even when the clip runs alone first. With beat=none, beat is None and input 2 stays unwired, which tells an
 effect's own changes from the ones the beat drives. beat is a Constant CHOP shaped like Fosfora's signal and far busier than music: 8 beats,
 2 bars, 1 drop and half a section change a second, a build rising and falling, loud throughout,
 so every flash an effect can make is asked for.
@@ -31,7 +32,8 @@ def testbed(host, opts):
               file=path if os.path.exists(path) else app.samplesFolder + '/Map/Nature/Movie.1.mp4')
     depth = os.path.join(READY, opts['clip'] + '_depth.mp4')
     if os.path.exists(path) and os.path.exists(depth):
-        mk(host, moviefileinTOP, 'clip_depth', -600, -150, comment="The test clip's depth.", file=depth)
+        follow_frame(host, clip, mk(host, moviefileinTOP, 'clip_depth', -600, -150, comment="The test clip's depth.",
+                                    file=depth))
     if opts['beat'] == 'none':
         return clip, None
     beat = mk(host, constantCHOP, 'stress', -600, -300, comment='A beat far busier than music.')
@@ -43,6 +45,17 @@ def testbed(host, opts):
     for i, (name, expr) in enumerate(chans):
         setpars(beat, **{'const{}name'.format(i): name, 'const{}value'.format(i): Expr(expr)})
     return clip, beat
+
+
+def follow_frame(host, movie, other):
+    """Make the Movie File In other show movie's current frame (an Info CHOP's index) instead of
+    playing by itself. A movie playing by itself moves on only while something pulls it, so a depth
+    clip that only one effect reads falls behind its picture clip whenever the picture runs without
+    that effect (dev/flash.py records the clip alone first; the demo shows one effect at a time)."""
+    info = mk(host, infoCHOP, other.name + '_at', other.nodeX - 200, other.nodeY,
+              comment='Where {} is (index: its frame), for {}.'.format(movie.name, other.name), op=movie.name)
+    setpars(other, playmode='specify', indexunit='indices', index=Expr("op('{}')['index']".format(info.name)))
+    return info
 
 
 def wire(fx, clip, beat):
