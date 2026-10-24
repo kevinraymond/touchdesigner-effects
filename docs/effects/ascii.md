@@ -1,6 +1,6 @@
 # ASCII
 
-![ASCII on a dancer in a hazy warehouse: orange line glyphs trace her outline over a blue brightness ramp of glyphs, and letters flicker in on the beat](ascii.webp)
+![ASCII on a dancer silhouetted against a white backdrop: the bright backdrop becomes a dense field of glyphs and the dancer a dark cutout, traced by orange line glyphs as she leaps and turns](ascii.webp)
 
 **New to ASCII art?** It draws a picture with nothing but text characters. Each character
 stands in for a small patch of the picture: characters with a lot of ink (`@`, `#`) for bright

@@ -1,6 +1,6 @@
 # Blob Track
 
-![Blob Track on people crossing a plaza seen from above: thin white boxes follow each walker, with an orange number or word above each box, its position in gray below, and thin lines joining neighboring boxes](blob_track.webp)
+![Blob Track on people crossing a plaza seen from above, a crop of the middle at full size: thin white boxes follow walkers, each with an orange number or word above and its position in gray below, lines join neighboring boxes, and on the beat some boxes fill and orange links reach across](blob_track.webp)
 
 **New to blob tracking?** It is one of the basic tricks of computer vision: software finds the
 patches of a picture that stand out from the rest, usually whatever moves, calls each one a blob,
@@ -10,7 +10,8 @@ surveillance software or a targeting display in a film.
 This effect draws that overlay on any picture or video. It finds what moves, puts a thin box around
 each thing, writes a number above the box and its position below, and joins each box to its nearest
 neighbors with thin lines. Boxes glide instead of jumping, show once a thing has lasted a moment,
-and fade out when it is gone. When the detector splits or merges a blob, the box over it carries on.
+and fade out when it is gone. Each box stays with one thing: when the detector loses it for a
+moment, splits it or merges it, the box coasts on and picks it up again.
 It is good for music visuals, dance, crowds and anything that should look watched. TouchDesigner's
 Blob Track TOP can draw plain rectangles on its own; this adds the labels, the links, treatments
 inside the boxes and behavior that follows the music, with extra moments from
@@ -47,12 +48,12 @@ The Blob Track page, top to bottom:
 | Parameter | Default | What it does |
 |---|---|---|
 | Detector | Blob Track TOP | What finds the blobs. Blob Track TOP: TouchDesigner's tracker; boxes fit closely. GPU Grid (cheaper): runs on the GPU only and reads nothing back to the CPU; its boxes snap to a grid of 40 x 22 cells. |
-| Track | Movement | What gets a box. Movement: what moves, light or dark, against a background that follows the picture a second or two behind. Stand Out: brighter or darker than its surroundings, moving or not; use it for still pictures. Bright Areas and Dark Areas: one of the two. |
+| Track | Movement | What gets a box. Movement: what moves, light or dark, against a background that follows the picture a second or two behind (and catches up quickly where the picture has gone still, so the place a thing just left doesn't get a box). Stand Out: brighter or darker than its surroundings, moving or not; use it for still pictures. Bright Areas and Dark Areas: one of the two. |
 | Threshold | 0.25 | How strongly something must move or stand out to get a box. Raise it when everything gets one. |
 | Merge | 0.25 | How far apart parts may be and still count as one blob. It blurs the mask the tracker sees. Grayed out for GPU Grid. |
 | Min Size | 0.03 | Smallest box: its longer side as a fraction of the picture's height. |
 | Max Size | 0.7 | Largest box, the same way. |
-| Max Count | 20 | Most boxes at once, up to 64. The biggest win, and blobs that already have a box count double, so boxes near the limit don't swap in and out. |
+| Max Count | 10 | Most boxes showing at once, up to 64. Boxes stay with what they follow; once the limit is reached, new things wait for room, the longest-lasting first. |
 | Smoothing | 0.3 | How calmly boxes follow. 0 jumps with every frame; 1 glides a quarter second behind. |
 | Picture | Gray | The picture under the overlay: Gray, Original, or Dimmed so the overlay stands out. |
 | Inside | None | What each box does to the picture inside it: None, Invert, Threshold (two tones, the bright parts in the accent color) or Zoom (2x). |
@@ -73,7 +74,9 @@ The Blob Track page, top to bottom:
 The About page has Version, Built With (the TouchDesigner build it was saved in) and Open Docs.
 
 Footage with texture everywhere, such as leaves or water, gets boxes everywhere: raise Threshold
-or Min Size. A crowd seen from above wants a higher Max Count.
+or Min Size. A crowd seen from above wants a higher Max Count. Movement boxes the parts of a large,
+evenly colored thing that change as it moves, such as a fish's fins and tail; Bright Areas or Stand
+Out box the whole thing.
 
 ## Audio input
 
@@ -113,13 +116,14 @@ With any of these inputs:
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with default parameters. Each frame took 2.84 ms on the GPU (95th
-percentile 3.31 ms) and 0.66 ms on the CPU (95th percentile 0.71 ms), and TouchDesigner held
+TouchDesigner 2025.33230), with default parameters. Each frame took 2.28 ms on the GPU (95th
+percentile 3.64 ms) and 0.98 ms on the CPU (95th percentile 1.18 ms), and TouchDesigner held
 60 fps.
 
-Detection runs on a 320 x 180 copy of the picture. The Blob Track TOP is most of the cost (about
-1.8 ms, its GPU time varying from run to run), then the overlay pass (0.4 ms). The GPU Grid detector
-costs about 1.3 ms on the GPU and 0.4 to 0.6 ms on the CPU, measured the same way. The overlay
+Detection runs on a 320 x 180 copy of the picture. The Blob Track TOP (about 0.8 ms in this run;
+its time varies from run to run) and the overlay pass (0.7 ms) are most of the cost; following the
+boxes costs about 0.1 ms. The GPU Grid detector costs 1.37 ms on the GPU (95th percentile 1.93 ms)
+and 0.38 ms on the CPU, measured the same way. The overlay
 only visits the boxes near each part of the picture, so more boxes cost little; a larger input
 costs more in the overlay pass. Nothing inside cooks while the output is unused.
 
@@ -138,7 +142,8 @@ costs more in the overlay pass. Nothing inside cooks while the output is unused.
   second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. After the gate,
   a budget keeps this effect to about 2 flashes a second even at Up to 3, leaving room for what
   the footage does by itself.
-- **No flicker of its own.** A blob gets a box only once it has lasted 0.4 s, boxes fade in and
+- **No flicker of its own.** A blob gets a box only once it has lasted 0.4 s, a box whose blob is
+  lost coasts on for 0.5 s before it fades (so a box doesn't blink out and back), boxes fade in and
   out, and the labels are drawn light enough that boxes and labels coming, going and moving don't
   count as flashes.
 
@@ -148,13 +153,15 @@ rising and falling. The table gives the flashes in the worst second, by WCAG's a
 
 | Clip | Off | Calm | Up to 3 per second | The clip alone |
 |---|---|---|---|---|
-| Dancer in a hazy warehouse | 1.0 | 1.5 | 2.0 | 1.0 |
-| People crossing a plaza | 1.0 | 1.5 | 2.0 | 0.5 |
-| Dancer in a hazy warehouse, no beat | 1.0 | 1.0 | 1.0 | 1.0 |
+| Dancer in a hazy warehouse | 1.0 | 2.0 | 3.0 | 1.0 |
+| People crossing a plaza | 0.5 | 1.5 | 2.0 | 0.5 |
+| Dancer in a hazy warehouse, no beat | 1.5 | 1.5 | 1.5 | 1.0 |
 
-There were no red flashes. Off adds nothing on the dancer and half a flash a second on the plaza
-(one more change of brightness, the smallest step the count has), and Calm adds at most one
-flash a second, as promised.
+There were no red flashes. Under the beat, Off adds nothing to what the clips do by themselves,
+and Calm adds at most one flash a second, as promised. Up to 3 per second reaches WCAG's limit of
+3 on the dancer, whose clip already flashes once a second by itself, and stays at 2 on the plaza.
+With no beat at all, boxes coming and going over the bright haze added half a flash a second on
+the dancer at every setting: one more change of brightness, the smallest step the count has.
 
 ## Experimental
 

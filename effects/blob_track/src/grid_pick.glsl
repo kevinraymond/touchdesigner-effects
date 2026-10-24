@@ -1,9 +1,10 @@
 // Blob Track (touchdesigner-effects, MIT). GPU Grid detector, step 3 of 3: the peaks as a list,
-// strongest first, at most Max Count: the same table bt_pick.glsl writes for the Blob Track TOP.
+// strongest first, at most as many as track.glsl has slots: the same table bt_pick.glsl writes for
+// the Blob Track TOP.
 // A peak's ID is its cell's number (match.glsl lets a box follow it into the next cell).
 // Input 0: grid_peaks.glsl.
 // Out, column i = the i-th strongest: row 0 center u, v, width, height (0-1); row 1 ID, 0, 0, count.
-uniform vec4 uPick;   // z max count
+uniform vec4 uPick;   // z most peaks to pass on
 out vec4 fragColor;
 #define MAXP 128
 

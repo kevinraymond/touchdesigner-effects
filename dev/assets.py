@@ -7,7 +7,8 @@ PROMPTS.md there for what each clip is for):
 Each video becomes private/assets/ready/<name>.mp4: 1280 x 720 (scaled to cover, then
 center-cropped, so any aspect works), a constant frame rate (the source's if it is 16, 24, 25,
 30, 50 or 60, else 30; video models often make 16, and doubling frames to reach 30 would judder),
-H.264, no sound. Each audio file becomes ready/<name>.wav, 48 kHz 16-bit.
+H.264, no sound. Each audio file becomes ready/<name>.wav, 44.1 kHz 16-bit (dev/record.py's Movie
+File Out saves sound as MP3, which needs 44.1 kHz).
 Clips whose names start d3a and d3b are also joined into ready/d3_cut.mp4, a hard cut. A contact
 sheet of every ready clip (start, middle, end) goes to ready/sheet.png, and the report lists the
 PROMPTS.md IDs that have no clip yet. dev/td.sh copies private/ to the Mac with everything else,
@@ -60,9 +61,9 @@ def normalize_video(src, dst):
 
 
 def normalize_audio(src, dst):
-    run('ffmpeg', '-y', '-v', 'error', '-i', src, '-vn', '-map_metadata', '-1', '-ar', '48000',
+    run('ffmpeg', '-y', '-v', 'error', '-i', src, '-vn', '-map_metadata', '-1', '-ar', '44100',
         '-c:a', 'pcm_s16le', dst)
-    return '-> 48 kHz 16-bit WAV'
+    return '-> 44.1 kHz 16-bit WAV'
 
 
 def join(parts, dst):

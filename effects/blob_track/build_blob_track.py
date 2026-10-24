@@ -11,8 +11,8 @@ The network, left to right:
              bt_pick.glsl) or the GPU grid
              (grid -> grid_peaks -> grid_pick), chosen by a Switch TOP so only one cooks
   boxes      track.glsl follows each blob by ID in 64 slots (Feedback TOP: glide, fade in and
-             out; match.glsl lets a box take over the blob that replaced its own), table.glsl
-             packs them and finds each one's nearest neighbors
+             out, coast on through a short loss; match.glsl lets a box take over the blob that
+             replaced its own), table.glsl packs them and finds each one's nearest neighbors
   picture    tiles.glsl lists the boxes near each 20 x 20 pixel tile; draw.glsl draws the
              picture, boxes, insides, links and labels in one pass, visiting only those
   audio      audio_in() -> counts -> Slope CHOP steps -> Trigger CHOP envelopes; fills and drops
@@ -27,7 +27,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 # The tracker and the mask run on a small copy: OpenCV's contour pass and the GPU-to-CPU
 # download scale with pixels (30 ms at full size on a speckly mask, under 3 ms here), and the
 # Blob Track TOP's positions come back normalized anyway.
@@ -41,11 +41,17 @@ MAXB, MAXIN = 64, 128
 WORDS = ('NODE', 'SYNC', 'SCAN', 'LOCK', 'PING', 'ECHO', 'FLUX', 'GRID', 'HALO', 'TRAK', 'BEAT', 'KICK',
          'WAVE', 'DATA', 'SEEK', 'MASS', 'IRIS', 'PEAK', 'BASS', 'LOOP', 'TONE', 'BODY', 'STEP', 'SPIN')
 # The overlay must not flicker by itself (WCAG 2.3.1, measured with dev/flash.py): a blob gets a box
-# only once it has lasted SHOW_AFTER seconds, boxes fade in and out over these times, and the
-# flashes the gate lets through are at least FLASH_SPACING seconds apart (Calm: a little over its
-# one second, so frame jitter can't fit a third swing into any one second; otherwise at most about
-# 2 a second, leaving headroom under WCAG's 3 for what the picture and the overlay do themselves).
-SHOW_AFTER, FADE_IN, FADE_OUT = 0.4, 0.35, 0.6
+# only once it has lasted SHOW_AFTER seconds, a box whose blob is lost coasts on for HOLD seconds
+# before it fades (so it can pick its blob up again rather than blink out and back), boxes fade in
+# and out over these times, and the flashes the gate lets through are at least FLASH_SPACING
+# seconds apart (Calm: a little over its one second, so frame jitter can't fit a third swing into
+# any one second; otherwise at most about 2 a second, leaving headroom under WCAG's 3 for what the
+# picture and the overlay do themselves).
+SHOW_AFTER, HOLD, FADE_IN, FADE_OUT = 0.4, 0.5, 0.35, 0.6
+# Movement's background (state.glsl) follows the picture BG_SLOW seconds behind, and BG_FAST behind
+# where a pixel has stayed still for BG_STILL seconds: the floor a walker has just left stops
+# standing out within about a second, not three, while the walker (never still that long) does.
+BG_SLOW, BG_FAST, BG_STILL = 1.5, 0.25, 0.4
 FLASH_SPACING = {'calm': 1.1, 'other': 0.55}
 T = Expr('absTime.seconds')
 DT = Expr('absTime.stepSeconds')
@@ -113,8 +119,9 @@ custom(page, 'Float', 'Minsize', 'Min Size', 0.03,
        "Smallest box: its longer side as a fraction of the picture's height.", 0, 1, True)
 custom(page, 'Float', 'Maxsize', 'Max Size', 0.7,
        "Largest box: its longer side as a fraction of the picture's height.", 0, 2, True)
-custom(page, 'Int', 'Maxcount', 'Max Count', 20,
-       'Most boxes shown at once; the biggest (or strongest) win.', 1, MAXB, True)
+custom(page, 'Int', 'Maxcount', 'Max Count', 10,
+       'Most boxes shown at once. Boxes stay with what they follow; when it is reached, new ones wait '
+       'for room, the longest-lasting first.', 1, MAXB, True)
 custom(page, 'Float', 'Smoothing', 'Smoothing', 0.3,
        'How calmly boxes follow what they track, 0-1: 0 jumps with every frame, 1 glides (a quarter second behind).',
        0, 1, True)
@@ -163,7 +170,7 @@ mean = mk(comp, blurTOP, 'local_mean', -200, 450, [mono],
 state_fb = mk(comp, feedbackTOP, 'state_fb', -200, 150, [mono], "state's previous frame.", top='state')
 state = glsl(comp, 'state', 0, 300, [mono, state_fb], src('state.glsl'),
              'The current frame and a slow background (for Movement); advances only when the picture changes.',
-             res=(TW, TH), fmt='rgba32float', uClock=(DT, 1.5))
+             res=(TW, TH), fmt='rgba32float', uClock=(DT, BG_SLOW, BG_FAST, BG_STILL))
 mask = glsl(comp, 'mask', 200, 300, [state, mean], src('mask.glsl'),
             'What the detectors look for (Track): movement, or what stands out (lighter, darker), 0-1.',
             res=(TW, TH), fmt='rgba8fixed', uMask=(menu('Track'), 4.0, 6.0))
@@ -193,8 +200,8 @@ bt_clean = glsl(comp, 'bt_clean', 1400, 450, [data, source, comp.op('track_fb')]
                 'Blobs within Min Size and Max Size and not mostly inside a bigger one; boxed ones rank higher.',
                 res=(MAXIN, 2), fmt='rgba32float', uPick=(par('Minsize'), par('Maxsize')))
 bt_pick = glsl(comp, 'bt_pick', 1600, 450, [bt_clean], src('bt_pick.glsl'),
-               'The biggest of them, at most Max Count, as a table.',
-               res=(MAXB, 2), fmt='rgba32float', uPick=(0, 0, par('Maxcount')))
+               'The biggest of them, as many as track has slots, as a table.',
+               res=(MAXB, 2), fmt='rgba32float', uPick=(0, 0, MAXB))
 
 grid_fb = mk(comp, feedbackTOP, 'grid_fb', 400, 150, [mask], "grid's previous frame.", top='grid')
 grid = glsl(comp, 'grid', 600, 300, [mask, grid_fb], src('grid.glsl'),
@@ -205,19 +212,21 @@ peaks = glsl(comp, 'grid_peaks', 800, 300, [grid, source], src('grid_peaks.glsl'
              res=(GW, GH), fmt='rgba32float',
              uPeak=(Expr('0.25 * parent().par.Threshold'), par('Minsize'), par('Maxsize')))
 grid_pick = glsl(comp, 'grid_pick', 1000, 300, [peaks], src('grid_pick.glsl'),
-                 'GPU Grid: the strongest peaks, at most Max Count, as the same table as bt_pick.',
-                 res=(MAXB, 2), fmt='rgba32float', uPick=(0, 0, par('Maxcount')))
+                 'GPU Grid: the strongest peaks, as many as track has slots, as the same table as bt_pick.',
+                 res=(MAXB, 2), fmt='rgba32float', uPick=(0, 0, MAXB))
 detector = mk(comp, switchTOP, 'detector', 1800, 300, [bt_pick, grid_pick],
               'The detector chosen (Detector); a Switch TOP cooks only the one it shows.',
               index=menu('Detector'))
 
-match = glsl(comp, 'match', 2000, 150, [detector, track_fb], src('match.glsl'),
-             'For each box whose blob vanished, the new blob that overlaps it most (to take over).',
+match = glsl(comp, 'match', 2000, 150, [detector, track_fb, source], src('match.glsl'),
+             'For each box whose blob vanished, the new blob that overlaps it or is close by (to take over).',
              res=(MAXB, 1), fmt='rgba32float')
 track = glsl(comp, 'track', 2000, 300, [detector, track_fb, match], src('track.glsl'),
-             'Follows each blob by its ID: boxes glide (Smoothing), show once a blob lasts, fade in and out.',
+             'Follows each blob by its ID: boxes glide (Smoothing), show once a blob lasts, coast through a '
+             'short loss, fade in and out.',
              res=(MAXB, 3), fmt='rgba32float',
-             uClock=(DT, Expr('max(0.001, 0.25 * parent().par.Smoothing)'), FADE_IN, FADE_OUT), uShow=(SHOW_AFTER,))
+             uClock=(DT, Expr('max(0.001, 0.25 * parent().par.Smoothing)'), FADE_IN, FADE_OUT),
+             uShow=(SHOW_AFTER, HOLD, par('Maxcount')))
 table = glsl(comp, 'table', 2200, 300, [track, source], src('table.glsl'),
              'The boxes showing, packed, each with its four nearest neighbors.',
              res=(MAXB, 3), fmt='rgba32float')

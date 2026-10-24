@@ -1,8 +1,9 @@
 // Blob Track (touchdesigner-effects, MIT). The blobs that may get a box (bt_clean.glsl), biggest
-// first (those already boxed count double), at most Max Count of them.
+// first (those already boxed count double), at most as many as track.glsl has slots (Max Count
+// limits the boxes showing there, not the blobs followed).
 // Input 0: bt_clean.glsl.
 // Out, column i = the i-th biggest: row 0 center u, v, width, height (0-1); row 1 ID, 0, 0, count.
-uniform vec4 uPick;   // z max count
+uniform vec4 uPick;   // z most blobs to pass on
 out vec4 fragColor;
 #define MAXIN 128
 

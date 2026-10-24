@@ -1,8 +1,8 @@
 // Blob Track (touchdesigner-effects, MIT). Which of the Blob Track TOP's blobs may get a box: the
 // longer side between Min Size and Max Size (as a fraction of the picture's height), and not
 // mostly inside a bigger one (a part of something already boxed). Their rank (bt_pick.glsl keeps
-// the biggest) favors blobs that already have a box, so boxes near the Max Count cut don't swap in
-// and out from frame to frame.
+// the biggest, as many as track.glsl has slots) favors blobs that already have a box, so in a crowd
+// past that cut boxes don't swap in and out from frame to frame.
 // Input 0: its Info CHOP as a texture, one channel per row: num_blobs, then id, u, v, width and
 // height for each blob (u, v its center, all 0-1). Input 1: the picture (for its shape). Input 2:
 // track.glsl's previous output (which IDs have a box).

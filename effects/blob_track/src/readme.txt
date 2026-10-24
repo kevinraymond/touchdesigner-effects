@@ -8,7 +8,9 @@ as numbered boxes, it gives the look of surveillance software or a targeting dis
 This effect finds what moves in the picture and draws a thin box around each thing, a number above
 it and its position below in a 5 x 7 pixel font, and lines to its nearest neighbors. Boxes glide,
 show once a thing has lasted a moment, fade out when it is gone, and stay with it when the detector
-splits or merges it. Audio on input 2 makes the overlay move with the music.
+loses it for a moment, splits it or merges it: a box coasts on and picks its thing up again. Max
+Count limits the boxes showing; once it is reached, new things wait for room. Audio on input 2
+makes the overlay move with the music.
 
 USE
 Drag blob_track.tox into your network: it shows TouchDesigner's sample movie (grass in the wind)
@@ -49,18 +51,20 @@ FLASHING
 Fill Boxes and the drop's turn-over are flashes. They pass one gate that follows the Flashing
 parameter (Off never flashes; Calm, the default, at most once a second; Up to 3 per second is the
 WCAG 2.3.1 limit) and then a budget that keeps this effect to about 2 a second even at Up to 3.
-The overlay doesn't flicker on its own: a blob gets a box only once it has lasted 0.4 s, boxes
-fade in and out, and labels are drawn light enough not to flash as they come, go and move.
+The overlay doesn't flicker on its own: a blob gets a box only once it has lasted 0.4 s, a lost
+box coasts on for 0.5 s before it fades, boxes fade in and out, and labels are drawn light enough
+not to flash as they come, go and move.
 
 INSIDE
-source -> small (gray, 320 x 180) -> state (the frame and a slow background) -> mask -> merge ->
-blobs (Blob Track TOP) -> blob_info -> blob_cap -> blob_data -> bt_clean -> bt_pick; or grid ->
-grid_peaks -> grid_pick (GPU Grid); detector picks one. track follows each blob in 64 slots
-(match lets a box take over the blob that replaced its own), table packs the boxes with their
-nearest neighbors, tiles lists the boxes near each tile, and draw draws everything. Input 2 goes
-through audio (lib audio_in); counts and steps turn its counts into steps, beat_env, bar_env and
-moment_env shape them, and flash_limit, flash, flash_budget and flash_env gate and shape the
-flashes.
+source -> small (gray, 320 x 180) -> state (the frame and a background, slow where things move,
+quick where the picture has gone still) -> mask -> merge -> blobs (Blob Track TOP) -> blob_info ->
+blob_cap -> blob_data -> bt_clean -> bt_pick; or grid -> grid_peaks -> grid_pick (GPU Grid);
+detector picks one. track follows each blob in 64 slots, shows at most Max Count of them and keeps a
+lost box coasting (match lets a box take over the blob that replaced its own, overlapping or close
+by), table packs the boxes with their nearest neighbors, tiles lists the boxes near each tile, and
+draw draws everything. Input 2 goes through audio (lib audio_in); counts and steps turn its counts
+into steps, beat_env, bar_env and moment_env shape them, and flash_limit, flash, flash_budget and
+flash_env gate and shape the flashes.
 
 UPDATING
 Dragging a .tox in embeds a copy. To update, delete this one and drag in the new blob_track.tox

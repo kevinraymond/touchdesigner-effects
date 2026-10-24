@@ -30,8 +30,8 @@ measured against WCAG 2.3.1 and can be turned off.
 
 ## Status
 
-Version 0.1.0 of the first three effects is done; there is no release yet, so the download links
-on their pages start working with the first one.
+The first three effects are done (ASCII and Datamosh-style 0.1.0, Blob Track 0.1.1); there is no
+release yet, so the download links on their pages start working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.
@@ -45,6 +45,9 @@ footage is AI-generated and shows no real people, places or brands. Krea 2's wei
 released under the [Krea 2 Community License](https://www.krea.ai/krea-2-licensing) and Wan
 2.2's under [Apache 2.0](https://github.com/Wan-Video/Wan2.2/blob/main/LICENSE.txt); neither
 claims rights over what it generates.
+
+The beat the effects follow in the previews comes from "Prison of Pixels", a song by Kevin Raymond
+made with [Suno](https://suno.com). The previews are silent, and the song isn't in this repository.
 
 None of it ships inside a `.tox`: with nothing wired in, every effect shows TouchDesigner's own
 sample media.

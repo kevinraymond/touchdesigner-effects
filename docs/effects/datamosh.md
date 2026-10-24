@@ -1,6 +1,6 @@
 # Datamosh
 
-![Datamosh on a dancer in a hazy warehouse: at the clip's loop point her old pose stays on screen while the new pose's arms push through it, then the picture fades back, and a bar of music smears her again](datamosh.webp)
+![Datamosh on a cut from a field of red flowers to a woman's face against blue: at the cut her face surfaces through the flowers and keeps their color while the blue around her breaks into moving blocks, then the picture settles back to her face](datamosh.webp)
 
 **New to datamoshing?** It is a glitch-art technique that breaks video compression on purpose. To
 save space, a compressed video stores a full picture (a keyframe) only now and then; the frames in
