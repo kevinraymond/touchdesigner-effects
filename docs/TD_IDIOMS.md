@@ -36,8 +36,10 @@ Each item is one of:
 
 ## Inputs, outputs and the node
 
-- **I1** (auto: assert_standard_io) Input 1 a TOP, optional input 2 a CHOP, output 1 a TOP. A COMP
-  orders its inputs by the In operators' names, so the names carry the order (`in1_top`, `in2_audio`).
+- **I1** (auto: assert_standard_io) Input 1 a TOP, optional input 2 a CHOP, optional input 3 a TOP
+  (depth or a mask, after the audio, so input 2 is always the audio), output 1 a TOP, and no sound.
+  A COMP orders its inputs by the In operators' names, so the names carry the order (`in1_top`,
+  `in2_audio`, `in3_top`).
 - **I2** (auto: assert_idiomatic) The node shows the output (viewer on, Node View pointing at
   `out_top`) at a size that reads. [Base COMP](https://docs.derivative.ca/Base_COMP)
 - **I3** (auto: assert_loads_clean) It works with nothing wired, as a drag-in leaves it: no errors

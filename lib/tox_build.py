@@ -204,10 +204,11 @@ def custom(page, kind, name, label, default, help_text, lo=None, hi=None, clamp=
 
 
 def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=False, sample=SAMPLE_MEDIA,
-               parent_path=None):
+               parent_path=None, depth=False):
     """The standard shell every effect starts from: a COMP with the library's color, tags and
     node size, a README DAT, input 1 a TOP (sample media until something is wired) and, with
-    audio=True, input 2 an optional CHOP. flashing=True, for an effect that can flash, adds the
+    audio=True, input 2 an optional CHOP. depth=True (with audio=True: input 2 is always the
+    audio) adds input 3, an optional TOP: a depth map or mask, which depth_in() reads. flashing=True, for an effect that can flash, adds the
     standard Flashing parameter (finish_effect() places it); read it from inside the effect as
     parent().par.Flashing, and never flash more often than FLASH_INTERVAL allows. Returns (comp, page, source): the effect's custom
     page and the TOP to start the effect from. finish_effect() adds the rest and saves.
@@ -240,7 +241,24 @@ def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=Fals
     if audio:
         mk(comp, inCHOP, 'in2_audio', -800, -350,
            comment='Input 2 (optional): audio or beat channels, e.g. Fosfora or audio analysis.')
+    if depth:
+        if not audio:
+            raise ValueError('depth=True needs audio=True: input 2 is always the audio, input 3 the depth')
+        mk(comp, inTOP, 'in3_top', -800, -650,
+           comment='Input 3 (optional): a depth map or mask, grayscale: brighter is nearer, or inside.')
     return comp, page, source
+
+
+def depth_in(comp, fallback=None, x=-600, y=-650):
+    """Input 3 (new_effect(..., depth=True)) when a TOP is wired into it, else fallback: a TOP the
+    effect makes from input 1, or by default input 1's brightness (brighter is nearer), so the
+    effect works with nothing on input 3. Returns the Switch TOP to read the depth from."""
+    if fallback is None:
+        fallback = mk(comp, monochromeTOP, 'depth_guess', x - 200, y - 150, [comp.op('source')],
+                      "Input 1's brightness, standing in for depth while nothing is wired into input 3.")
+    return mk(comp, switchTOP, 'depth', x, y, [comp.op('in3_top'), fallback],
+              'Input 3 (depth or mask) when it is wired, else the stand-in.',
+              index=Expr('0 if parent().inputConnectors[2].connections else 1'))
 
 
 def finish_effect(comp, last, version, page=None):
@@ -296,10 +314,12 @@ def finish_effect(comp, last, version, page=None):
 
 
 def save_effect(comp, comp_dir, root):
-    """Save comp as comp_dir/<name>.tox, with the manifest tests/check_tox.py checks."""
+    """Save comp as comp_dir/<name>.tox, with the manifest tests/check_tox.py checks (and its
+    inputs, which a bundle reads to wire each effect)."""
     path, manifest = save_tox(comp, comp_dir, comp.name, {
         'version': comp.par.Version.eval(),
         'sources_sha256': digest(root, component_sources(root, comp_dir)),
+        'inputs': [c.inOP.name for c in comp.inputConnectors],
     })
     print('built', comp.path, 'version', manifest['version'], 'in', app.build, '->', path)
     return path, manifest
@@ -402,14 +422,15 @@ def assert_readable(comp):
 
 
 def assert_standard_io(comp):
-    """Input 1 a TOP, optional input 2 a CHOP, output 1 a TOP, and nothing else: in particular no
-    sound. TouchDesigner saves an Audio Device Out's state with the project, so one that was playing
-    starts again the moment the project opens, and nobody dragging in an effect expects music."""
+    """Input 1 a TOP, optional input 2 a CHOP and after it an optional input 3 TOP (depth or a mask),
+    output 1 a TOP, and nothing else: in particular no sound. TouchDesigner saves an Audio
+    Device Out's state with the project, so one that was playing starts again the moment the
+    project opens, and nobody dragging in an effect expects music."""
     ins = [c.inOP.OPType for c in comp.inputConnectors]
     outs = [c.outOP.OPType for c in comp.outputConnectors]
     problems = []
-    if ins not in (['inTOP'], ['inTOP', 'inCHOP']):
-        problems.append('inputs are {}, expected a TOP, then optionally a CHOP'.format(ins))
+    if ins not in (['inTOP'], ['inTOP', 'inCHOP'], ['inTOP', 'inCHOP', 'inTOP']):
+        problems.append('inputs are {}, expected a TOP, then optionally a CHOP and a second TOP'.format(ins))
     if outs != ['outTOP']:
         problems.append('outputs are {}, expected one TOP'.format(outs))
     for o in comp.findChildren(type=audiodeviceoutCHOP):

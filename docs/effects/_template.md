@@ -20,6 +20,8 @@ Non-Commercial license
 1. Drag `name.tox` into your network. It shows a sample picture straight away.
 2. Wire any TOP into input 1. The result is on output 1.
 3. Optional: wire audio or beat channels into input 2 (see Audio input).
+4. (Effects with `depth=True` only.) Optional: wire a depth map or mask into input 3, grayscale,
+   brighter nearer (or inside). Without it, the effect uses ... (say what stands in).
 
 Open Window (on the effect's page) shows it full size; Esc closes the window.
 

@@ -59,8 +59,11 @@ What the shell provides:
 
 - `new_effect()` creates the COMP with the library's node color, tags and node size, a README
   DAT, and the inputs: `in1_top` (input 1), a Switch TOP `source` that shows a sample picture
-  from `app.samplesFolder` until something is wired in, and with `audio=True`, `in2_audio`
-  (input 2, an optional CHOP).
+  from `app.samplesFolder` until something is wired in, with `audio=True`, `in2_audio`
+  (input 2, an optional CHOP), and with `depth=True` as well, `in3_top` (input 3, an optional
+  TOP: a depth map or mask, brighter nearer or inside). `depth_in()` reads it: input 3 when
+  something is wired in, else a stand-in made from input 1 (its brightness, unless the effect
+  passes its own), so a depth effect works with nothing on input 3.
 - `finish_effect()` adds `out_top`, the Open Window / Full Screen / Display parameters and
   their Window COMP, the About page (Version, Built With, Open Docs), and shows the output
   on the node.
@@ -102,8 +105,9 @@ dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`)
 - a docked DAT is unused (the builder wired its own beside it);
 - it isn't readable inside: no README, an operator without a comment, a parameter without
   help, the About page incomplete, no tags, another node color, a node smaller than 480 x 270;
-- the inputs aren't a TOP then optionally a CHOP, the output isn't one TOP, or anything inside
-  makes sound (an Audio Device Out, whose saved state would play the moment a project opens);
+- the inputs aren't a TOP then optionally a CHOP and a TOP, the output isn't one TOP, or anything
+  inside makes sound (an Audio Device Out, whose saved state would play the moment a project
+  opens);
 - an operator renders larger than the Non-Commercial license's 1280 x 1280;
 - it breaks a TouchDesigner idiom a script can judge (`assert_idiomatic`, items named in
   [TD_IDIOMS.md](TD_IDIOMS.md)): pages out of order, Version editable, a parameter saved off its
@@ -278,7 +282,7 @@ newest.
 Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-things):
 
 - A COMP orders its inputs by the In operators' names, not their positions on the network
-  (2025.33230, `dev/probes/input_order.py`): hence `in1_top`, `in2_audio`.
+  (2025.33230, `dev/probes/input_order.py`): hence `in1_top`, `in2_audio`, `in3_top`.
 - A Switch TOP whose index is `0 if parent().inputConnectors[0].connections else 1` follows
   wiring and unwiring on later frames without a forced cook (`dev/selftest.py`).
 - Things that keep an unused effect cooking every frame (`dev/idle.py` finds them): a

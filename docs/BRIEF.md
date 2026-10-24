@@ -31,7 +31,9 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
   enough that the picture reads on the node.
 - **Standard inputs and outputs:** TOP in, TOP out; an optional CHOP input for audio
   or beat data, so an effect can follow TouchDesigner's own audio analysis or an
-  external analyzer (for example Fosfora's `fosfora_signal` channels).
+  external analyzer (for example Fosfora's `fosfora_signal` channels). An effect that uses
+  depth or a mask takes it as an optional third input, a grayscale TOP (brighter is nearer, or
+  inside), and works without it from the picture alone. Input 2 is always the audio.
 - **Parameters with help text,** sensible defaults, an Open Window button for full-size
   viewing, and a performance note (fps on a stated reference machine).
 - **Accessible by default:** no signal carried by hue alone (also brightness, size or

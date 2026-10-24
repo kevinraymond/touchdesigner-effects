@@ -27,9 +27,9 @@ void main()
 """
 
 
-def good(name='selftest_ok', flashing=False):
+def good(name='selftest_ok', flashing=False, depth=False):
     comp, page, source = new_effect(name, 'Selftest', 'Selftest: inverts its input.', 'Selftest README.\n',
-                                    tags=('selftest',), audio=True, flashing=flashing)
+                                    tags=('selftest',), audio=True, flashing=flashing, depth=depth)
     custom(page, 'Float', 'Amount', 'Amount', 1.0, 'How much to invert.', 0, 1, True)
     glsl = mk(comp, glslTOP, 'glsl', 0, 0, [source], comment='Inverts the picture.')
     docked(glsl, '_pixel', SHADER, 'The pixel shader: one minus the color.')
@@ -150,7 +150,7 @@ BREAKS = [
     ('node too small', _attr('', nodeWidth=100), 'node is'),
     ('no README', lambda c: c.op('README').destroy(), 'README'),
     ('two TOP outputs', _extra(outTOP, 'out_two', 'x'), 'outputs are'),
-    ('a second TOP input', _extra(inTOP, 'in_two', 'x'), 'inputs are'),
+    ('a second TOP input before the audio', _extra(inTOP, 'in1b_top', 'x'), 'inputs are'),
     ('makes sound', _extra(audiodeviceoutCHOP, 'speaker', 'x', active=False), 'makes sound'),
     ('over the Non-Commercial cap', _extra(constantTOP, 'big', 'x', outputresolution='custom', resolutionw=1920,
                                             resolutionh=1080), 'exceeds'),
@@ -237,6 +237,32 @@ def _check_audio_in_saves(host):
     chans.destroy()
     comp.destroy()
     return '{} an effect with audio_in() passes every check, and channels on input 2 warn nothing{}'.format(verdict, why)
+
+
+def _check_depth_in(host):
+    """An effect with input 3 (new_effect(depth=True), depth_in()) passes every check with its
+    inputs in the standard order, and depth shows input 3 once a TOP is wired into it, else the
+    stand-in from input 1."""
+    comp = good('selftest_depth', depth=True)
+    depth = depth_in(comp)
+    try:
+        all_checks(comp)
+        verdict, why = 'ok   ', ''
+    except RuntimeError as e:
+        verdict, why = 'MISS ', ': ' + str(e).splitlines()[-1].strip()
+    unwired = depth.par.index.eval()
+    feed = mk(host, noiseTOP, 'selftest_depth_feed', -700, -400, comment='x', outputresolution='custom',
+              resolutionw=64, resolutionh=36)
+    comp.inputConnectors[2].connect(feed)
+    depth.cook(force=True)
+    wired, size = depth.par.index.eval(), (depth.width, depth.height)
+    if (unwired, wired, size) != (1, 0, (64, 36)):
+        verdict, why = 'MISS ', why + ' (want index 1 unwired, 0 and 64 x 36 wired)'
+    names = [c.inOP.name for c in comp.inputConnectors]
+    feed.destroy()
+    comp.destroy()
+    return '{} an effect with input 3 passes every check; inputs {}; depth index {} unwired, {} wired ({} x {}){}'.format(
+        verdict, names, unwired, wired, size[0], size[1], why)
 
 
 def _check_flash_gate(host):
@@ -410,6 +436,7 @@ def main():
     report.append(_check_many_inputs(host))
     report.append(_check_blob_track_docked())
     report.append(_check_audio_in_saves(host))
+    report.append(_check_depth_in(host))
     _check_flash_gate(host)
     _check_audio_in(host)
     sample = comp.op('sample')
