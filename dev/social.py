@@ -1,86 +1,140 @@
 """DEV ONLY. The repository's social preview (GitHub, Settings, Social preview: what a shared link
-shows): 1280 x 640, the library's name and a line about it in its own 5 x 7 font over the eight cells
-of the tiled preview's still (dev/tile.py --still: the input, its depth map and every effect, 3 x 3
-with the first row centered), laid out as a sum: input + depth map = ASCII, Blob Track, and under
-them the other four effects, the six right-aligned as one block with slight gaps between them, and
-an orange "& MORE" in the last one's bottom-right corner. Upload docs/social-preview.png by hand;
-GitHub has no API for it.
+shows): 1280 x 640, the library's name and a line about it in its own 5 x 7 font, then a sum: input +
+depth map (optional) = every effect, in two rows under it, each row centered, all at one moment of
+dev/record.py's takes (the frames come unlabeled from the recordings and are named here, at a size
+that reads in a small cell), with an orange "& MORE" in the last one's top-right corner. The effects
+are every effects/<n>/ that has a take, in name order. Cells are CELL_W wide, a quarter smaller than
+the 285 px of the eight-cell layout before, so up to 5 fit a row; 11 or 12 effects take 6 a row in
+narrower cells, and more need another layout. Upload docs/social-preview.png by hand; GitHub has no
+API for it.
 
-    uv run --with pillow dev/social.py dev/out/record/hero_still.png docs/social-preview.png
+    uv run --with pillow dev/social.py dev/out/previews_fluid_hero docs/social-preview.png --at 6.5
 """
 
+import argparse
+import glob
 import importlib.util
 import os
-import sys
+import subprocess
+import tempfile
 
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
 W, H = 1280, 640
 BG = (10, 10, 14)
 INK = (230, 230, 230)                       # the labels' 0.9
 ORANGE = (255, 148, 41)                     # ASCII's ORANGE, (1.0, 0.58, 0.16)
-MARGIN, GAP = 16, 8                          # around the cells; between the effects' cells and the rows
-SIGN = 6                                     # pixels per font pixel of the + and =
-SLOT = 5 * SIGN + 20                         # the room a + or = takes between two cells
-MORE, MORE_SCALE, MORE_PAD = '& MORE', 3, 8  # the badge in the last cell's corner: orange, dark text
+CELL_W, MARGIN, GAP = 214, 24, 8             # a cell's width; the least margin; between cells and rows
+LABEL, PAD, PLATE = 2, 3, 0.6                # a label: pixels per font pixel, padding in font pixels, plate opacity
+SIGN = 5                                     # pixels per font pixel of the + and =
+SLOT = 5 * SIGN + 24                         # the room a + or = takes between two cells
+MORE, MORE_SCALE, MORE_PAD = '& MORE', 2, 6  # the badge in the last cell's corner: orange, dark text
 TITLE, LINE = 'TOUCHDESIGNER EFFECTS', 'MIT DROP-IN EFFECTS THAT LOVE YOUR AUDIO'
+TITLE_SCALE, LINE_SCALE = 8, 4
+INPUTS = (('input', ('INPUT',)), ('depth', ('DEPTH MAP', '(OPTIONAL)')))
+TITLES = {'datamosh': 'DATAMOSH-STYLE'}      # as the effects title themselves; the rest are their names
 
 
 def font():
-    spec = importlib.util.spec_from_file_location('font5x7', os.path.join(HERE, '..', 'lib', 'font5x7.py'))
+    spec = importlib.util.spec_from_file_location('font5x7', os.path.join(ROOT, 'lib', 'font5x7.py'))
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)
     return mod
 
 
-def text(im, s, scale, y, color, x0=None):
-    """s in the 5 x 7 font, scale pixels per font pixel, its top at y: centered, or from x0."""
-    f = font()
-    if x0 is None:
-        x0 = (im.width - (len(s) * 6 - 1) * scale) // 2
+GLYPHS = font().GLYPHS
+
+
+def text(im, s, scale, x0, y, color):
+    """s in the 5 x 7 font, scale pixels per font pixel, its top-left corner at x0, y."""
     for i, ch in enumerate(s):
-        for gy, row in enumerate(f.GLYPHS[ch].split()):
+        for gy, row in enumerate(GLYPHS[ch].split()):
             for gx, c in enumerate(row):
                 if c == '#':
                     x, yy = x0 + (i * 6 + gx) * scale, y + gy * scale
                     im.paste(color, (x, yy, x + scale, yy + scale))
 
 
+def width(s, scale):
+    return (len(s) * 6 - 1) * scale
+
+
+def label(cell, lines):
+    """The name in the cell's bottom-left corner, white on a dark plate, as the Showreel names effects."""
+    s = LABEL
+    w = max(width(t, s) for t in lines) + 2 * PAD * s
+    h = (len(lines) * 9 - 2 + 2 * PAD) * s
+    x, y = PAD * s, cell.height - h - PAD * s
+    plate = Image.new('RGB', (w, h), (0, 0, 0))
+    cell.paste(Image.blend(cell.crop((x, y, x + w, y + h)), plate, PLATE), (x, y))
+    for k, t in enumerate(lines):
+        text(cell, t, s, x + PAD * s, y + (PAD + 9 * k) * s, INK)
+
+
+def frame(folder, name, clip, at, tmp):
+    mov = os.path.join(folder, '{}_{}.mov'.format(name, clip))
+    if not os.path.exists(mov):
+        raise SystemExit('no take {} (dev/record.py records <name>_<clip>.mov)'.format(mov))
+    png = os.path.join(tmp, name + '.png')
+    subprocess.run(['ffmpeg', '-y', '-v', 'error', '-ss', str(at), '-i', mov, '-frames:v', '1', png], check=True)
+    return Image.open(png).convert('RGB')
+
+
 def main():
-    still, out = sys.argv[1], sys.argv[2]
-    src = Image.open(still).convert('RGB')
-    cw, ch = src.width // 3, src.height // 3
-    # The still's cells: row 0 holds two, centered (input, depth); rows 1 and 2 three each.
-    boxes = [(cw // 2, 0), (cw // 2 + cw, 0)] + [(c * cw, r * ch) for r in (1, 2) for c in range(3)]
-    cells = [src.crop((x, y, x + cw, y + ch)) for x, y in boxes]
+    ap = argparse.ArgumentParser()
+    ap.add_argument('folder', help="dev/record.py's takes: input, depth and every effect")
+    ap.add_argument('out')
+    ap.add_argument('--clip', default='b1_dancer')
+    ap.add_argument('--at', type=float, default=6.5, help='seconds into the takes')
+    a = ap.parse_args()
+    effects = sorted(os.path.basename(os.path.dirname(p)) for p in glob.glob(os.path.join(ROOT, 'effects', '*', '*.tox')))
+    if len(effects) > 12:
+        raise SystemExit('{} effects: the layout holds 12'.format(len(effects)))
+    top = (len(effects) + 1) // 2
+    rows = [effects[:top], effects[top:]]
+    across = max(len(r) for r in rows)
+    cw = CELL_W if across <= 5 else (W - 2 * MARGIN - (across - 1) * GAP) // across
+    ch = cw * 9 // 16
+
+    tmp = tempfile.mkdtemp()
+    cells = {}
+    for name, lines in INPUTS + tuple((n, (TITLES.get(n, n.upper().replace('_', ' ')),)) for n in effects):
+        cells[name] = frame(a.folder, name, a.clip, a.at, tmp).resize((cw, ch), Image.LANCZOS)
+        label(cells[name], lines)
+
     im = Image.new('RGB', (W, H), BG)
-    # Row 1: input + depth map = ASCII, Blob Track; row 2: the other four effects, right-aligned with
-    # row 1 so the six effects make one block. Every cell 16:9, as wide as row 1 allows.
-    sw = (W - 2 * MARGIN - 2 * SLOT - GAP) // 4
-    sh = sw * 9 // 16
-    row1 = 4 * sw + 2 * SLOT + GAP
-    x1 = (W - row1) // 2
-    x2 = x1 + row1 - (4 * sw + 3 * GAP)
-    y2 = H - MARGIN - sh
-    y1 = y2 - GAP - sh
-    places = [(x1, y1), (x1 + sw + SLOT, y1), (x1 + 2 * sw + 2 * SLOT, y1), (x1 + 3 * sw + 2 * SLOT + GAP, y1)]
-    places += [(x2 + k * (sw + GAP), y2) for k in range(4)]
-    for cell, xy in zip(cells, places):
-        im.paste(cell.resize((sw, sh), Image.LANCZOS), xy)
-    # The library holds more than these: a badge flush in the last cell's bottom-right corner.
-    bw, bh = (len(MORE) * 6 - 1) * MORE_SCALE + 2 * MORE_PAD, 7 * MORE_SCALE + 2 * MORE_PAD
-    bx, by = places[-1][0] + sw - bw, places[-1][1] + sh - bh
+    # Top to bottom: the title, the line, input + depth map =, two rows of effects; centered as a block.
+    title_h, line_h = 7 * TITLE_SCALE, 7 * LINE_SCALE
+    gaps = (24, 36, 18, GAP)                 # title-line, line-sum, sum-effects, between the effect rows
+    total = title_h + line_h + 3 * ch + sum(gaps)
+    y = (H - total) // 2
+    text(im, TITLE, TITLE_SCALE, (W - width(TITLE, TITLE_SCALE)) // 2, y, INK)
+    y += title_h + gaps[0]
+    text(im, LINE, LINE_SCALE, (W - width(LINE, LINE_SCALE)) // 2, y, ORANGE)
+    y += line_h + gaps[1]
+    # The sum: input + depth map =, each sign in its slot after a cell.
+    x = (W - (2 * cw + 2 * SLOT)) // 2
+    for name, sign in (('input', '+'), ('depth', '=')):
+        im.paste(cells[name], (x, y))
+        text(im, sign, SIGN, x + cw + (SLOT - 5 * SIGN) // 2, y + (ch - 7 * SIGN) // 2, ORANGE)
+        x += cw + SLOT
+    y += ch + gaps[2]
+    for row in rows:
+        x = (W - (len(row) * cw + (len(row) - 1) * GAP)) // 2
+        for name in row:
+            im.paste(cells[name], (x, y))
+            x += cw + GAP
+        last = (x - GAP - cw, y)
+        y += ch + gaps[3]
+    # The library grows: a badge in the last cell's top-right corner (the label is bottom-left).
+    bw, bh = width(MORE, MORE_SCALE) + 2 * MORE_PAD, 7 * MORE_SCALE + 2 * MORE_PAD
+    bx, by = last[0] + cw - bw, last[1]
     im.paste(ORANGE, (bx, by, bx + bw, by + bh))
-    text(im, MORE, MORE_SCALE, by + MORE_PAD, BG, bx + MORE_PAD)
-    for k, sign in enumerate('+='):
-        text(im, sign, SIGN, y1 + (sh - 7 * SIGN) // 2, ORANGE, x1 + (k + 1) * sw + k * SLOT + (SLOT - 5 * SIGN) // 2)
-    # The title (8 pixels per font pixel) and the line (4) centered in the band above the cells.
-    y = (y1 - (7 * 8 + 40 + 7 * 4)) // 2
-    text(im, TITLE, 8, y, INK)
-    text(im, LINE, 4, y + 7 * 8 + 40, ORANGE)
-    im.save(out, optimize=True)
-    print(out, im.size, '{:.0f} KB'.format(os.path.getsize(out) / 1024))
+    text(im, MORE, MORE_SCALE, bx + MORE_PAD, by + MORE_PAD, BG)
+    im.save(a.out, optimize=True)
+    print(a.out, im.size, '{} effects, {} x {} cells, {:.0f} KB'.format(len(effects), cw, ch, os.path.getsize(a.out) / 1024))
 
 
 if __name__ == '__main__':
