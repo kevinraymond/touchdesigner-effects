@@ -41,6 +41,7 @@ _ROOT = os.path.dirname(_HERE)
 DEMO = '/tdlib_demo'
 CLIP = os.path.join(_ROOT, 'private', 'assets', 'ready', 'b1_dancer.mp4')
 COLUMN = 600
+FX_W, FX_H, FX_COLUMN = 240, 135, 300   # the effects' nodes: a quarter of their saved 480 x 270, close together
 HEARD, HEARD_HOLD = 0.005, 3  # Fosfora's energy above HEARD within the last ~HEARD_HOLD s: it hears music
 
 
@@ -187,11 +188,13 @@ for i, (path, name) in enumerate(zip(paths, names)):
     if old is not None:
         old.destroy()
     fx = demo.loadTox(path)
-    fx.nodeX, fx.nodeY = i * COLUMN, 0
     fx.store('tox_sha256', sha)
     loaded.append('{} {}'.format(name, fx.par.Version.eval() if hasattr(fx.par, 'Version') else ''))
-for name in names:
+for i, name in enumerate(names):
     fx = demo.op(name)
+    # A quarter of the size they are saved at (their viewers are off here), so the row stays close.
+    fx.nodeX, fx.nodeY = i * FX_COLUMN, 0
+    fx.nodeWidth, fx.nodeHeight = FX_W, FX_H
     fx.inputConnectors[0].connect(picture)
     if len(fx.inputConnectors) > 1:
         fx.inputConnectors[1].connect(beat)

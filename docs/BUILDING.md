@@ -11,7 +11,9 @@ lib/tox_build.py              shared by every builder: the standard effect shell
 lib/font5x7.py                a 5 x 7 bitmap font for text drawn in shaders (labels, glyph grids)
 lib/audio_callbacks.py        the audio input's logic (audio_in() puts it in a Script CHOP)
 lib/glsl/                     shaders several effects share: depth_near.glsl (input 3 as nearness, by Depth Type),
-                              depth_find.glsl (what stands in front of its surroundings)
+                              depth_find.glsl (what stands in front of its surroundings); lum, change, clock and lk
+                              (the input's motion: optical_flow() builds them); common.glsl (Catmull-Rom resampling,
+                              a hash)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -77,7 +79,9 @@ for an expression); `custom()` adds a parameter with its default, range and help
 CHOP's callbacks) instead of adding a second one; `glsl()` makes a GLSL TOP in one call (docked
 shader filled, any number of inputs: past the third they go through its TOPs parameter, the
 only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is the one way
-an effect may flash (below); `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
+an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's motion as Datamosh and
+Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or a cut, and Lucas-Kanade
+optical flow, each size following the input); `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
 the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and
 `lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
 
@@ -174,7 +178,10 @@ it 4 pulses a second for 6 s: Off lets 0 through, Calm 6, Up to 3 per second 16.
 shapes the flash after the gate, and the limits are measured again on its output before release
 (TD_IDIOMS.md A2): `dev/flash.py` records the output's luminance, cell by cell, under a beat
 far busier than music at each setting, and `dev/flashcount.py` counts the flashes with WCAG's
-definitions and area rule (see The dev loop).
+definitions and area rule (see The dev loop). WCAG's red test works in linear light: a color counts
+as saturated red when red is 80% of the three there, so a dark orange (green at 0.35 of red in sRGB,
+0.1 in linear light) still counts. A color that flickers keeps green at 0.6 of red or more (Fluid's
+flames, whose red edges measured 2.5 red flashes a second with Flashing Off).
 
 ## The audio input
 
@@ -337,6 +344,13 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - A GLSL TOP's Input Extend Mode UV (`inputextenduv`) defaults to Zero (2025.33230): `texture()` a
   pixel off an input's edge reads black, so a shader that differences neighbors (a slope, a curl)
   sees a cliff at the frame's edges. Particles' sim sets Hold.
+- A GLSL TOP's Passes (`npasses`) runs its shader that many times a frame, each pass reading the last
+  one's output as `sTD2DInputs[0]` while the other inputs stay put, with `uTDPass` the pass index
+  (2025.33230, `dev/probes/glsl_passes.py`): Fluid's 40 Jacobi iterations of the pressure are one TOP.
+- A GLSL TOP takes its size from input 0 (Output Resolution at its default, Use Input). Fluid starts its
+  Feedback TOPs from a 1 x 1 Constant TOP, so each stateful pass puts a TOP of the size it should be
+  first (the picture, the motion) and reads its feedback by UV as a later input; no expression reads
+  another operator's size (that kept an unwired sample movie cooking, above).
 - A Geometry COMP instances from TOPs, one pixel per instance: Default Instance OP sets the count
   (Instance Count from its length), and Translate, Scale and Color each take their own TOP
   (`instancetop`, `instancesop`, `instancecolorop`) with channels `r`, `g`, `b`, `a`.

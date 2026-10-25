@@ -272,28 +272,11 @@ pulses.text = ('def onPulse(par):\n'
 setpars(pulses, op='..', pars='Keyframe Skip', onpulse=True, valuechange=False)
 
 # ---- Analysis: new frames, cuts, motion -----------------------------------------------------------
-lum = {}
-for k, y in ((8, 750), (4, 600), (2, 450)):
-    lum[k] = glsl(comp, 'lum{}'.format(k), -400, y, [source], src('lum.glsl'), 'Luma at 1/{}.'.format(k),
-                  fmt='mono32float', uK=k)
-    setpars(lum[k], outputresolution={8: 'eighth', 4: 'quarter', 2: 'half'}[k])
-prevlum = {k: mk(comp, cacheTOP, 'lum{}p'.format(k), -200, y + 60, [lum[k]],
-                 'lum{} of the previous input frame.'.format(k), cachesize=2, outputindex=-1)
-           for k, y in ((8, 750), (4, 600), (2, 450))}
-seen = mk(comp, feedbackTOP, 'seen', -200, 1050, [lum[8]], 'What change saw last frame: its g is the luma then.', top='change')
-change = glsl(comp, 'change', -200, 900, [lum[8], seen], src('change.glsl'),
-              'Per pixel, how much the input changed since the last frame seen.', fmt='rgba32float',
-              uTime=Expr('absTime.seconds'))
-change_avg = mk(comp, analyzeTOP, 'change_avg', 0, 900, [change], 'The mean change: 0 when no new frame came.',
-                op='average', analyzechannel='independent')
-clock_fb = mk(comp, feedbackTOP, 'clock_fb', 200, 1050, [change_avg], "The clock's last frame.", top='clock')
-clock = glsl(comp, 'clock', 200, 900, [change_avg, clock_fb], src('clock.glsl'),
-             'One pixel: is this a new input frame, is it a cut (experimental).', fmt='rgba32float',
-             uS=(NEW_FRAME, CUT_FLOOR, CUT_RATIO, 0.1), uC=(Expr('absTime.seconds'), CUT_GAP))
-lk8 = glsl(comp, 'lk8', 0, 750, [lum[8], prevlum[8], lum[8]], src('lk.glsl'), 'Optical flow at 1/8 (Smear).',
-           fmt='rgba32float', uP=(0, 1e-4, 4))
-lk4 = glsl(comp, 'lk4', 200, 650, [lum[4], prevlum[4], lk8], src('lk.glsl'),
-           'Optical flow at 1/4, starting from lk8 (Smear).', fmt='rgba32float', uP=(1, 1e-4, 8))
+# The luma pyramid, the new-frame and cut test, and the optical flow (Smear): lib optical_flow().
+mo = optical_flow(comp, _ROOT, source, levels=(8, 4, 2), new_frame=NEW_FRAME, cut=(CUT_FLOOR, CUT_RATIO, CUT_GAP))
+lum = {k: mo['lum{}'.format(k)] for k in (8, 4, 2)}
+prevlum = {k: mo['lum{}p'.format(k)] for k in (8, 4, 2)}
+clock, lk4 = mo['clock'], mo['lk4']
 # Block matching: every size follows an input through the resolution menu (no expression reads another
 # operator's size: after a first cook, that kept the unwired sample movie cooking while nothing used the effect).
 R_COARSE, R_FINE = 6, 2
@@ -324,7 +307,8 @@ motion = glsl(comp, 'motion', 600, 500, [motion_in, motion_fb, clock], src('moti
 prev = mk(comp, cacheTOP, 'prev', -200, -150, [source], 'The previous input frame: what the residual is measured '
           'against.', cachesize=2, outputindex=-1)
 mosh_fb = mk(comp, feedbackTOP, 'mosh_fb', 200, 150, [source], 'The picture last frame.', top='mosh')
-mosh = glsl(comp, 'mosh', 600, 0, [source, mosh_fb, prev, motion, clock], src('common.glsl') + src('mosh.glsl'),
+mosh = glsl(comp, 'mosh', 600, 0, [source, mosh_fb, prev, motion, clock],
+            lib_glsl(_ROOT, 'common.glsl') + src('mosh.glsl'),
             'The decoder: moves its own picture by the motion, adds part of the residual, fades back.',
             fmt='rgba16float',
             uP1=(Expr(P + 'Mode.menuIndex'), Expr(P + 'Mosh'), Expr(P + 'Motion'), Expr(P + 'Recovery')),

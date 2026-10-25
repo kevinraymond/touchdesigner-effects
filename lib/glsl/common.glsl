@@ -1,4 +1,5 @@
-// Datamosh-style (touchdesigner-effects, MIT): helpers pasted in front of the shaders that use them.
+// touchdesigner-effects (MIT), shared by Datamosh and Fluid (lib/glsl, lib_glsl()): helpers pasted
+// in front of the shaders that use them.
 
 float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 

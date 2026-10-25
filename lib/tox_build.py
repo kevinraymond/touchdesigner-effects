@@ -176,6 +176,46 @@ def audio_in(comp, root, x=-600, y=-350):
     return script
 
 
+def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4.0, 0.25)):
+    """The input's motion, shared by Datamosh and Fluid: its luma at 1/8 and 1/4 (lum8, lum4; lum2 too
+    when levels has 2), each beside the previous input frame's (lum8p...); whether this frame brings a
+    new input frame and whether it is a cut (change, change_avg, clock: r new frame, g cut); and
+    Lucas-Kanade optical flow at 1/8, then 1/4 starting from it (lk8, lk4: rg the displacement in UV
+    units since the last input frame, b its confidence). new_frame is the mean luma change at 1/8 that
+    makes a new frame; cut is (least change that is a cut, how many times the running mean of the
+    changes it must be, seconds between cuts). Every size follows source through the resolution menu:
+    an expression reading another operator's size kept an unwired sample movie cooking while nothing
+    used the effect. The shaders are lib/glsl's lum, change, clock and lk. Returns the operators by name."""
+    ops = {}
+    for k, dy in ((8, 300), (4, 150), (2, 0)):
+        if k not in levels:
+            continue
+        ops['lum{}'.format(k)] = glsl(comp, 'lum{}'.format(k), x, y + dy, [source], lib_glsl(root, 'lum.glsl'),
+                                      'Luma at 1/{}.'.format(k), fmt='mono32float', uK=k)
+        setpars(ops['lum{}'.format(k)], outputresolution={8: 'eighth', 4: 'quarter', 2: 'half'}[k])
+        ops['lum{}p'.format(k)] = mk(comp, cacheTOP, 'lum{}p'.format(k), x + 200, y + dy + 60, [ops['lum{}'.format(k)]],
+                                     'lum{} of the previous input frame.'.format(k), cachesize=2, outputindex=-1)
+    lum8, lum4 = ops['lum8'], ops['lum4']
+    seen = ops['seen'] = mk(comp, feedbackTOP, 'seen', x + 200, y + 600, [lum8],
+                            'What change saw last frame: its g is the luma then.', top='change')
+    ops['change'] = glsl(comp, 'change', x + 200, y + 450, [lum8, seen], lib_glsl(root, 'change.glsl'),
+                         'Per pixel, how much the input changed since the last frame seen.', fmt='rgba32float',
+                         uTime=Expr('absTime.seconds'))
+    avg = ops['change_avg'] = mk(comp, analyzeTOP, 'change_avg', x + 400, y + 450, [ops['change']],
+                                 'The mean change: 0 when no new frame came.', op='average',
+                                 analyzechannel='independent')
+    clock_fb = ops['clock_fb'] = mk(comp, feedbackTOP, 'clock_fb', x + 600, y + 600, [avg], "The clock's last frame.",
+                                    top='clock')
+    ops['clock'] = glsl(comp, 'clock', x + 600, y + 450, [avg, clock_fb], lib_glsl(root, 'clock.glsl'),
+                        'One pixel: is this a new input frame, is it a cut (experimental).', fmt='rgba32float',
+                        uS=(new_frame, cut[0], cut[1], 0.1), uC=(Expr('absTime.seconds'), cut[2]))
+    ops['lk8'] = glsl(comp, 'lk8', x + 400, y + 300, [lum8, ops['lum8p'], lum8], lib_glsl(root, 'lk.glsl'),
+                      'Optical flow at 1/8.', fmt='rgba32float', uP=(0, 1e-4, 4))
+    ops['lk4'] = glsl(comp, 'lk4', x + 600, y + 200, [lum4, ops['lum4p'], ops['lk8']], lib_glsl(root, 'lk.glsl'),
+                      'Optical flow at 1/4, starting from lk8.', fmt='rgba32float', uP=(1, 1e-4, 8))
+    return ops
+
+
 def flash_gate(comp, trigger, x, y, name='flash'):
     """Every flash an effect makes goes through here (docs/TD_IDIOMS.md A1). A Trigger CHOP turns
     trigger's channels into one-frame-wide pulses no closer together than the Flashing parameter

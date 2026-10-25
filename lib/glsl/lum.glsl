@@ -1,6 +1,7 @@
-// Datamosh-style (touchdesigner-effects, MIT): the input's luma, box-averaged down by an even
-// factor uK (2, 4 or 8): (uK / 2)^2 bilinear taps placed on texel corners average a uK x uK block
-// exactly. The motion estimates (optical flow, block matching) and the cut test work on these.
+// touchdesigner-effects (MIT), shared by Datamosh and Fluid (lib/glsl, lib_glsl()): the input's
+// luma, box-averaged down by an even factor uK (2, 4 or 8): (uK / 2)^2 bilinear taps placed on
+// texel corners average a uK x uK block exactly. The motion estimates (optical flow, block
+// matching) and the cut test work on these.
 uniform float uK;
 out vec4 fragColor;
 void main() {

@@ -1,6 +1,6 @@
 # TouchDesigner Effects
 
-![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below, what comes out: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D](docs/effects/showreel.webp)
+![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below, what comes out: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Fluid pouring flames off her as she moves, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D](docs/effects/showreel.webp)
 
 *Every effect on the same clip, all in step. On top, what goes in: the clip and its depth map.*
 
@@ -35,6 +35,7 @@ with a preview, a performance note, and a download link that always points at th
 | [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines; each beat sends a ripple of changed characters out from the middle, and bars pop the contrast. |
 | [Blob Track](docs/effects/blob_track.md) | The look of computer vision: whatever moves gets a numbered box that follows it, joined to its neighbors by lines, like surveillance software or a film's targeting display. Beats scramble the labels and spawn links. |
 | [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Beats make the picture bloom and catch up, bars set off the melts, and Fosfora's builds hold them back until the drop. |
+| [Fluid](docs/effects/fluid.md) | A real fluid simulation over the picture, stirred by its movement: whatever moves pours fire, smoke or ink, which rises, curls into eddies and fades, so a hand trails smoke and a dancer burns. A depth map or mask on input 3 sets a whole silhouette alight. Beats make the flames leap and flare. Runs on any GPU, where NVIDIA Flow needs Windows and an NVIDIA card. |
 | [Glitch](docs/effects/glitch.md) | Broken digital video on the beat: every beat tears thin slivers of the picture sideways, and on the one of each bar a burst makes blocks jump, freeze or lose their colors and rows slip, then the picture is whole again. Calm by default: at most one burst a second, or none at all. |
 | [Particles](docs/effects/particles.md) | Particles peel off a subject and drift away like smoke, in the picture's colors, or fill the frame for the subject to shove through (Push) or for a stream to part round it (Flow): people in a depth map (Kinect, RealSense, a depth estimator) or a mask for the best result, and with only a webcam or a video, whatever moves. Loudness thickens the stream, beats kick the cloud outward with a burst of sparks, bars swing the wind. |
 | [Point Cloud](docs/effects/point_cloud.md) | The picture as a cloud of points in 3D, each at its depth (a depth camera, a depth estimator, or the picture's brightness), seen from a camera that sways round it: people stand out from the wall behind them. Solid dots, glowing dots, or a surface of blended splats. Loudness swells the dots, beats deepen the cloud, bars swing the camera. |
@@ -50,8 +51,8 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Six effects are done (ASCII and Datamosh-style 0.2.0, Glitch 0.1.1, Blob Track and Point Cloud
-0.1.2, Particles 0.3.1), and the Showreel holds them all; there is no release yet, so the download
+Seven effects are done (ASCII and Datamosh-style 0.2.0, Fluid 0.1.0, Glitch 0.1.1, Blob Track and
+Point Cloud 0.1.2, Particles 0.3.1), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.

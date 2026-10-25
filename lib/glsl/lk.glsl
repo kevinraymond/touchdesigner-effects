@@ -1,7 +1,8 @@
-// Datamosh-style (touchdesigner-effects, MIT): iterative Lucas-Kanade optical flow, written from
-// B. D. Lucas and T. Kanade, "An Iterative Image Registration Technique with an Application to
-// Stereo Vision" (1981): a 7 x 7 Gaussian-weighted window, the 2 x 2 normal equations solved per
-// pixel, three Newton steps that re-sample the previous frame at the current estimate.
+// touchdesigner-effects (MIT), shared by Datamosh and Fluid (lib/glsl, lib_glsl()): iterative
+// Lucas-Kanade optical flow, written from B. D. Lucas and T. Kanade, "An Iterative Image
+// Registration Technique with an Application to Stereo Vision" (1981): a 7 x 7 Gaussian-weighted
+// window, the 2 x 2 normal equations solved per pixel, three Newton steps that re-sample the
+// previous frame at the current estimate.
 // Inputs: 0 luma now, 1 luma of the previous input frame (same size), 2 a coarser flow to start
 // from (used when uP.x is 1). Out: rg the displacement v in UV units, current(x) = previous(x - v);
 // b confidence (the structure tensor's smaller eigenvalue, Shi-Tomasi); a 1.
