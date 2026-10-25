@@ -10,14 +10,17 @@ brighter nearer, from a depth camera (Kinect, RealSense) or a depth estimator (D
 running on any video. Without one, the movement in the picture is the next best clue.
 
 This effect sends particles off its subject, each in the picture's color where it was born. The air
-carries them up and swirls them around, and they fade over a few seconds. The music moves the whole
-cloud: loudness thickens and thins the stream, every beat fires a burst and kicks the cloud outward,
-and every bar swings the wind to a new direction; with Fosfora's signal, a build stirs up the air
-and a drop sends a shockwave out. It finds its subject with whatever you give it: depth or a mask on
-input 3 for the best result, and with only a picture, a webcam say, what moves (or what differs from
-the empty room). Find on Auto chooses for itself, and the Subject view says which way it took. The
-free route so far was wiring the Palette's particlesGpu by hand from a Kinect tutorial; this takes any
-depth or mask TOP, or none, and is one MIT `.tox`, up to 65,536 particles on the GPU.
+carries them up and swirls them around, and they fade over a few seconds. Two more behaviors fill
+the whole frame with particles instead: in Push the subject shoves through them and they light up
+where it touches them, and in Flow they stream past and part round it (see Behaviors). The music
+moves the whole cloud: loudness thickens and thins the stream, every beat fires a burst and kicks
+the cloud outward, and every bar swings the wind to a new direction; with Fosfora's signal, a build
+stirs up the air and a drop sends a shockwave out. It finds its subject with whatever you give it:
+depth or a mask on input 3 for the best result, and with only a picture, a webcam say, what moves
+(or what differs from the empty room). Find on Auto chooses for itself, and the Subject view says
+which way it took. The free route so far was wiring the Palette's particlesGpu by hand from a Kinect
+tutorial; this takes any depth or mask TOP, or none, and is one MIT `.tox`, up to 65,536 particles
+on the GPU.
 
 **[Download particles.tox](https://github.com/kevinraymond/touchdesigner-effects/releases/latest/download/particles.tox)**
 · saved in TouchDesigner 2025.33230 (older builds may not open it) · works on the free
@@ -34,12 +37,40 @@ Non-Commercial license
 4. Optional: wire audio or beat channels into input 2 (see Audio input).
 5. Set Show to Subject to see what the particles come from, in orange, with a label saying how it
    was found; tune Find and the settings under it there, then set Show back to Particles.
+6. Pick a Behavior: Emit (particles peel off the subject), Push or Flow (below).
 
 Open Window (on the effect's page) shows it full size; Esc closes the window.
 
 To update, delete your copy and drag in the new `particles.tox`. Dragging a `.tox` in embeds a copy,
 so a new release doesn't reach it on its own. You can also point the COMP's External .tox at a
 downloaded file.
+
+## Behaviors
+
+**Emit** (the default, the picture at the top): particles are born on the subject, or only along its
+outline (Emit From), and leave it outward, then drift on the air (Drift, Direction) and fade.
+
+![Push: the dancer in a dim field of glitter; where her arms move, the particles light up and fly off, and her path through the field stays clear for a moment](particles_push.webp)
+
+**Push**: particles fill the frame, hanging in still air and glowing dimly. The subject is solid: as
+it moves it shoves them aside, and the ones it shoves light up and swell, settling again as they
+slow down. Its path stays clear until new particles fill it in, over about Life seconds. Nothing is
+born on the subject, so it shows as a clean cutout.
+
+![Flow: a stream of glitter rising past the dancer, bending round her body and arms and closing in above her](particles_flow.webp)
+
+**Flow**: particles stream across the frame on the wind, along Direction at Drift's speed, and part
+round the subject, speeding along its sides and closing in again behind it. Where the subject moves
+into the stream, the particles pass behind it instead of being pushed, so it never leaves a hole; the
+ones born behind it take its colors and carry them off when it moves on.
+
+In Push and Flow, three times Rate particles are born each second, all over the frame, so about 3 x
+Rate x Life fill it (37,500 at the defaults); one that leaves an edge comes back at the opposite one.
+A beat's burst still leaves the subject's outline, and a beat pulses the whole field out from the
+subject's middle and back, rather than kicking it outward as Emit does: with particles that come
+back round, a kick would gather them at the edges of the frame. The air parts round each person in
+the frame. Arms and other thin parts let a little air through, out of sight behind them, so the
+stream bends gently round them instead of turning sharply.
 
 ## What you have, what you get
 
@@ -138,19 +169,21 @@ The Particles page, top to bottom:
 | Far Limit | 0.5 | Anything farther than this never counts, from 0 (farthest) to 1 (nearest). Raise it to drop the background; lower it if parts of the subject go missing. |
 | Depth Type | Brighter Is Nearer | What input 3 holds: Brighter Is Nearer (depth estimators, masks), Distance 0-1 (the RealSense and Kinect TOPs; black, no reading, is left out) or Distance in Meters (the Kinect Azure TOP). |
 | Max Distance | 4 | For Distance in Meters: the far end of the depth, in meters (Far Limit and Stand Out are fractions of it). |
-| Emit From | Body | Where particles are born: anywhere on the subject, or only along its outline. |
-| Rate | 5000 | Particles born per second, 0 to 30,000. At most 65,536 are alive at once. |
+| Behavior | Emit | What the particles do: Emit, Push or Flow (see Behaviors). |
+| Emit From | Body | For Emit: where particles are born, anywhere on the subject or only along its outline. |
+| Rate | 5000 | Particles born per second, 0 to 30,000: on the subject in Emit; three times as many, all over the frame, in Push and Flow. At most 65,536 are alive at once. |
 | Life | 2.5 | How long a particle lives, in seconds. Each lives between half and one and a half times this. |
 | Size | 3 | Size of a particle in pixels at 720 high; it scales with the picture. |
-| Speed | 0.15 | How fast particles leave the subject, in frame heights per second. |
-| Drift | 0.1 | How fast the air carries particles up, in frame heights per second; below 0 it carries them down. |
+| Speed | 0.15 | How fast particles leave the subject, in frame heights per second (in Push and Flow, those of a beat's burst). |
+| Drift | 0.1 | For Emit and Flow: how fast the air blows, in frame heights per second, along Direction; below 0 it blows the other way. Push's air is still. |
+| Direction | 0 | For Emit and Flow: which way the air blows, in degrees clockwise from straight up: 90 to the right, 180 down, -90 to the left. |
 | Turbulence | 0.5 | How much the air swirls the particles around. |
 | Color | Picture | The picture's color where each particle is born, lifted so dark clothes still glow, or orange, blue or white. |
 | Glow | 0.5 | How much the particles glow around themselves. |
 | Backdrop | 0.6 | How bright the picture behind the particles is, from 0 (black) to 1. |
 | Loudness | 0.7 | How much the loudness of input 2 thickens and thins the stream. At 1, quiet passages emit a third of Rate and the loudest a fifth more; 0 keeps Rate steady. |
-| Beat Bursts | 0.5 | On each beat of input 2, a burst of particles leaves the subject, up to three times as fast as the rest, and the whole cloud is kicked outward; 0 for neither. |
-| Bar Gusts | 0.5 | On each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new direction, up to about 35 degrees from straight up at 1, and eases there over 0.6 s; 0 keeps it blowing straight. |
+| Beat Bursts | 0.5 | On each beat of input 2, a burst of particles leaves the subject, up to three times as fast as the rest, and the whole cloud is kicked outward (Emit) or pulses out and back (Push, Flow); 0 for neither. |
+| Bar Gusts | 0.5 | For Emit and Flow: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new direction, up to about 35 degrees either side of Direction at 1, and eases there over 0.6 s; 0 keeps it blowing straight. |
 | Song Moments | On | With Fosfora's signal on input 2: a build stirs the air up as it rises, and a drop sends a shockwave out from the subject. |
 | Open Window | | Shows the picture in its own window, 1280 x 720 or filling a display. Esc closes it. |
 | Full Screen | Off | Opens the window filling the whole display, for a projector or a second screen. |
@@ -163,8 +196,9 @@ The About page has Version, Built With (the TouchDesigner build it was saved in)
 **[Fosfora](https://github.com/kevinraymond/fosfora)** gives the most. Run `fosfora --signal`, drag
 `fosfora_signal.tox` (in Fosfora's `integrations/touchdesigner/`) into your project, and wire it
 into input 2. Its loudness thickens and thins the stream (Loudness), every beat fires a burst and
-kicks the cloud outward (Beat Bursts), every bar swings the wind (Bar Gusts), and with Song Moments
-on:
+kicks the cloud outward (Beat Bursts; in Push and Flow the whole field pulses out and back), every bar
+swings the wind (Bar Gusts; in Flow the whole stream turns, and Push has no wind to swing), and with
+Song Moments on:
 
 - **Builds:** the air swirls harder as a build rises, up to three times Turbulence, and calms over
   the two seconds after it.
@@ -177,43 +211,47 @@ against its own recent peak, so the stream follows the music's swells rather tha
 TouchDesigner's audioAnalysis gives beats from its kick or onset channels and loudness from its
 energy.
 
-**Nothing wired:** a steady stream at Rate, the wind straight up, no bursts.
+**Nothing wired:** a steady stream at Rate, the wind along Direction, no bursts.
 
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with default parameters and a beat far busier than music on input 2.
-With a depth clip on input 3, each frame took 2.5 ms on the GPU (95th percentile 3.6 ms) and 0.8 ms
-on the CPU (95th percentile 0.9 ms): 0.9 ms to draw the particles, 0.4 ms to blur their glow, 0.5
-ms to move them and about 0.4 ms to find the subject, on a 320 x 180 copy of the picture and the
-depth whatever their size. Without depth it costs about the same: 2.7 ms on Movement (people
-crossing a plaza, Find on Auto), 2.6 ms on Background. Rate and Life barely change the cost: every
-one of the 65,536 particles is moved and drawn every frame, alive or not, and at Rate 30,000 with
-Life 4 a frame took 2.7 ms on the GPU. A larger picture costs more to draw and blur. Nothing inside
-cooks while the output is unused, and Background's passes run only while Find is Background.
+With a depth clip on input 3, each frame took 2.4 ms on the GPU (95th percentile 3.1 ms) and 1.3 ms
+on the CPU (95th percentile 1.4 ms): 1.0 ms to draw the particles, 0.4 ms to blur their glow, 0.6 ms
+to move them and about 0.4 ms to find the subject, on a 320 x 180 copy of the picture and the depth
+whatever their size. Without depth it costs about the same: 2.4 ms on Movement (people crossing a
+plaza, Find on Auto), 3.1 ms on Background. Push and Flow add about 0.6 ms for the air that goes
+round the subject: 3.0 ms (Push) and 3.1 ms (Flow) with the dancer's depth, 3.1 and 3.2 ms on the
+plaza. Rate and Life barely change the cost: every one of the 65,536 particles is moved and drawn
+every frame, alive or not, and at Rate 30000 with Life 4 a frame took 2.6 ms on the GPU. A larger
+picture costs more to draw and blur. Nothing inside cooks while the output is unused, Background's
+passes run only while Find is Background, and the air only in Push and Flow.
 
 ## Accessibility
 
-- **No flashing.** Particles fade in over a tenth of a second and out over the second half of their
-  lives, and the music moves particles and adds them rather than lighting the picture, so the effect
-  has no Flashing setting. The test below confirms it.
+- **No flashing.** Particles fade in over a tenth of a second (Emit) or nearly half a second (Push,
+  Flow) and out over the second half of their lives, and the music moves particles and adds them
+  rather than lighting the picture, so the effect has no Flashing setting. In Push the particles the
+  subject shoves light up, a few at a time, where it moves. The test below confirms it.
 - **No meaning in color.** Particles take the picture's colors or one color, as decoration. The
   Subject view marks the subject in bright orange and the depth beside it in dim blue, so brightness
   tells them apart as well as hue, and its label says in words how the subject was found.
 
 The flash rates were measured, not assumed. The test recorded the output while it fed a beat far
-busier than music: 8 beats, 2 bars and 1 drop a second, so a burst and a kick 8 times a second and a
-shockwave every second. The table gives the flashes in the worst second, by WCAG's area rule:
+busier than music: 8 beats, 2 bars and 1 drop a second, so a burst and a kick (or pulse) 8 times a
+second and a shockwave every second. The table gives the flashes in the worst second, by WCAG's area
+rule:
 
-| Clip | The effect | The clip alone |
-|---|---|---|
-| Dancer in a hazy warehouse, with her depth | 1.0 | 1.0 |
-| Hands against black, with their depth | 0.5 | 1.5 |
-| Dancer in a hazy warehouse, with her depth, no beat | 0.5 | 1.0 |
-| People crossing a plaza, no depth (Movement) | 0.0 | 0.5 |
+| Clip | Emit | Push | Flow | The clip alone |
+|---|---|---|---|---|
+| Dancer in a hazy warehouse, with her depth | 1.0 | 1.0 | 1.0 | 1.0 |
+| Hands against black, with their depth | 0.5 | 1.0 | 0.5 | 1.5 |
+| People crossing a plaza, no depth (Movement) | 0.0 | 1.0 | 0.5 | 0.5 |
 
-Never more than the footage does by itself (the dimmed backdrop takes some of the footage's own
-flicker away), under a beat eight times busier than music, and well under WCAG's limit of 3. No red
+Push on the plaza adds half a flash a second to the footage's own, the people's shoves and bursts lighting up
+under a beat eight times busier than music; everything else stays at or under the footage (the dimmed
+backdrop takes some of its own flicker away), and all of it well under WCAG's limit of 3. No red
 flashes.
 
 ## Experimental
@@ -224,12 +262,21 @@ flashes.
 
 ## Credits and license
 
-MIT. The shaders and operators are written for this library: Stand Out's row search and
-Background's exposure drift among them. The depth reading (`lib/glsl`) is shared with
+MIT. The shaders and operators are written for this library: Stand Out's row search, Background's
+exposure drift, Flow's particles waiting behind the subject and the beat's pulse among them. The depth reading (`lib/glsl`) is shared with
 [Point Cloud](point_cloud.md).
 
 - **Swirl:** curl noise (Bridson, Hourihan and Nordenstam, "Curl-Noise for Procedural Fluid Flow",
   SIGGRAPH 2007) on TouchDesigner's built-in simplex noise.
+- **Push and Flow's air going round the subject:** the same paper's boundaries: the stream function,
+  whose curl is the air's velocity, ramped down near an obstacle to one value across it.
+- **The air's velocity on a grid:** each component taken on the sides of a cell, as on a staggered
+  grid (Harlow and Welch, "Numerical Calculation of Time-Dependent Viscous Incompressible Flow of
+  Fluid with Free Surface", Physics of Fluids, 1965), so no air is lost or gained in a cell and the
+  particles neither gather nor thin out; they move by the midpoint rule, a standard method.
+- **Push's shove:** a particle inside the subject is put back on its edge and the move becomes its
+  speed, as in position-based dynamics (Müller, Heidelberger, Hennix and Ratcliff, "Position Based
+  Dynamics", VRIPHYS 2006).
 - **Dice:** the PCG hash from Jarzynski and Olano, "Hash Functions for GPU Rendering" (JCGT, 2020).
 - **Movement:** a background that follows the picture a couple of seconds behind (running-average
   background subtraction, a standard method). **Background:** a picture of the empty room.

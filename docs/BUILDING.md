@@ -323,6 +323,9 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - A GLSL TOP writes several buffers with Number of Color Buffers (`numcolorbufs`) and
   `layout(location = 0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];`; a Render Select TOP (`top`,
   `bufferindex`) picks one out, and a Feedback TOP can read it back (Particles' three buffers).
+- A GLSL TOP's Input Extend Mode UV (`inputextenduv`) defaults to Zero (2025.33230): `texture()` a
+  pixel off an input's edge reads black, so a shader that differences neighbors (a slope, a curl)
+  sees a cliff at the frame's edges. Particles' sim sets Hold.
 - A Geometry COMP instances from TOPs, one pixel per instance: Default Instance OP sets the count
   (Instance Count from its length), and Translate, Scale and Color each take their own TOP
   (`instancetop`, `instancesop`, `instancecolorop`) with channels `r`, `g`, `b`, `a`.

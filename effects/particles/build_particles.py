@@ -4,9 +4,11 @@ Particles peel off the subject and drift away like smoke, in the picture's color
 whatever the effect can find: with a depth map or mask on input 3 (a depth camera, a depth
 estimator, a segmentation tool), what stands in front of its surroundings; with only a picture (a
 webcam, a video), what moves, or what differs from the empty room once Capture Background is
-pressed. Find on Auto picks for itself and the Subject view says which it took. Music on input 2
-drives them: loudness thickens the stream, each beat fires a burst and kicks the whole cloud
-outward, each bar swings the wind; Fosfora's signal adds a build's turbulence and a drop's shockwave.
+pressed. Find on Auto picks for itself and the Subject view says which it took. Behavior Push fills
+the frame with particles hanging in still air that the subject shoves aside, lighting them up; Flow
+streams them across the frame on the wind, parting round the subject. Music on input 2 drives them:
+loudness thickens the stream, each beat fires a burst and kicks the whole cloud outward, each bar
+swings the wind; Fosfora's signal adds a build's turbulence and a drop's shockwave.
 
 The network, left to right:
   subject    depth (input 3, or input 1's brightness) -> near (small, as nearness; Depth Type flips a
@@ -16,16 +18,20 @@ The network, left to right:
              at Capture Background, counted by captures; gain, gain_sum and drift: the camera's
              exposure drift since, from a histogram; plate_in and drift_in pass them only for
              Background, so the chain cooks only then); subject picks one by Find -> emit (where
-             particles are born; emit_stats averages it) and subject_blur (which way is out)
-  particles  sim: up to PW x PH particles in three float buffers (sim, then sim_life and sim_color
-             picked out by Render Select TOPs), read back through Feedback TOPs; alive_stats counts
-             the living, so births come to the rate asked for
+             particles are born; emit_stats averages it) and subject_blur (its edge, which way is out)
+  air        for Push and Flow: subject_wide (how near the subject is) and subject_middle (the middle of
+             the subject nearby) -> air (a stream function that goes round the subject); air_in passes
+             it only for Push and Flow, so it cooks only then
+  particles  sim: up to PW x PH particles in four float buffers (sim, then sim_life, sim_color and
+             sim_shove picked out by Render Select TOPs), read back through Feedback TOPs; alive_stats
+             counts the living, so births come to the rate asked for
   drawing    geo instances a square (dot is its texture, dot_mat adds them up) at every particle,
              placed, scaled and colored from the buffers; cam looks at it flat; render draws it at the
              picture's size; glow blurs it; look lays both over the picture, or shows the subject
-  audio      audio_in() -> counts -> steps (Slope CHOP) -> beat_env (bursts and kicks) and drop_env
-             (the shockwave); level_lag (the stream), gust -> gust_lag (the wind's swing on each
-             bar), build_lag (turbulence)
+  audio      audio_in() -> counts -> steps (Slope CHOP) -> beat_env (bursts and kicks; beat_rate, how
+             fast it changes, pulses the field in Push and Flow) and drop_env (the shockwave);
+             level_lag (the stream), gust -> gust_lag (the wind's swing on each bar), build_lag
+             (turbulence)
 """
 import os
 
@@ -36,7 +42,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 # The particles' buffers: at most PW x PH alive at once.
 PW, PH = 256, 256
 # The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
@@ -46,6 +52,10 @@ MW, MH = 320, 180
 # A beat's burst: births per second on top of Rate at its peak (Beat Bursts at 1), falling to none
 # over BURST_TIME seconds; particles born in it leave up to 3 times as fast.
 BURST_RATE, BURST_TIME = 20000, 0.25
+# In Push and Flow a beat moves the field out from the subject's middle by PULSE of its distance at once
+# (Beat Bursts at 1), easing back over BURST_TIME: their particles wrap round the frame, so a kick like
+# Emit's would gather them at its edges.
+PULSE = 0.04
 # A drop's shockwave: a ring that leaves the subject's middle and reaches WAVE_REACH frame heights
 # in WAVE_TIME seconds, shoving less as it goes.
 WAVE_REACH, WAVE_TIME = 1.4, 1.2
@@ -57,6 +67,15 @@ STREAM = (0.3, 0.9)
 # Each bar the wind swings to GUST_ANGLE x sin(bar x 2.4) radians from straight up (about 35 degrees
 # either way at Gusts 1, a new angle each bar), easing there over GUST_EASE seconds.
 GUST_ANGLE, GUST_EASE = 0.6, 0.6
+# Push and Flow: the air's swirl (air.glsl's stream function) is AIR_SWIRL x Turbulence frame heights
+# x frame heights per second, about AIR_SWIRL x 4 x Turbulence frame heights per second of swirl. The
+# air starts to part round the subject about a sixth of a frame height out (subject_wide, a Blur TOP of
+# size WIDE at MW x MH, spreads about 1.3 x WIDE pixels), and takes the middle of the subject within
+# about a third of a frame height (subject_middle, size MIDDLE).
+AIR_SWIRL, WIDE, MIDDLE = 0.01, 24, 48
+# Push and Flow fill the frame: births there come FIELD x Rate a second, so the defaults (Rate 5000, Life
+# 2.5) keep about 37,500 alive, dense enough that the subject's path shows as a gap.
+FIELD = 3
 # Sensitivity 0..1 sets how far from the background (Movement) or the empty room (Background) a pixel
 # must be to count: SENSE[0] luma at 0, SENSE[1] at 1 (a webcam's noise is a few hundredths).
 SENSE = (0.15, 0.02)
@@ -104,7 +123,7 @@ def labels_head():
                 len(LABELS), ', '.join(map(str, at)), ', '.join(str(len(t)) for t in LABELS)))
 
 
-README = src('readme.txt').format(v=VERSION, n=PW * PH)
+README = src('readme.txt').format(v=VERSION, n=PW * PH, field=FIELD, fill=int(FIELD * 5000 * 2.5))
 comp, page, source = new_effect(
     'particles', 'Particles',
     'Particles {}: particles peel off the subject (found by depth on input 3, or by movement) and drift '
@@ -155,21 +174,33 @@ custom(page, 'Float', 'Maxdist', 'Max Distance', 4.0,
        'For Distance in Meters: how far away, in meters, counts as the far end of the depth (Far Limit and '
        'Stand Out are fractions of it).', 0.5, 15, True).enableExpr = "me.par.Depthtype == 'meters'"
 
-emitfrom = choices(custom(page, 'Menu', 'Emitfrom', 'Emit From', None,
-                          'Where particles are born: anywhere on the subject (Body) or only along its edges '
-                          '(Outline).'),
-                   ['body', 'outline'], ['Body', 'Outline'], 'body')
-emitfrom.startSection = True
+behavior = choices(custom(page, 'Menu', 'Behavior', 'Behavior', None,
+                          'What the particles do. Emit: they peel off the subject and drift away. Push: they fill '
+                          'the frame, hanging in still air, and the subject shoves them aside as it moves, lighting '
+                          'them up. Flow: they stream across the frame on the wind (Drift, Direction), parting round '
+                          'the subject and passing behind it where it moves into them.'),
+                   ['emit', 'push', 'flow'], ['Emit', 'Push', 'Flow'], 'emit')
+behavior.startSection = True
+choices(custom(page, 'Menu', 'Emitfrom', 'Emit From', None,
+               'For Emit: where particles are born, anywhere on the subject (Body) or only along its edges '
+               '(Outline).'),
+        ['body', 'outline'], ['Body', 'Outline'], 'body').enableExpr = "me.par.Behavior == 'emit'"
 custom(page, 'Float', 'Rate', 'Rate', 5000,
-       'Particles born per second (at most {:,} alive at once).'.format(PW * PH), 0, 30000, True)
+       'Particles born per second (at most {:,} alive at once): on the subject in Emit; in Push and Flow {} times '
+       'as many, all over the frame, so about {} x Rate x Life fill it.'.format(PW * PH, FIELD, FIELD), 0, 30000, True)
 custom(page, 'Float', 'Life', 'Life', 2.5, 'How long a particle lives, in seconds (each one a little more or less).',
        0.2, 8, True)
 custom(page, 'Float', 'Size', 'Size', 3, 'Size of a particle in pixels at 720 high (scales with the picture).',
        1, 16, True)
-custom(page, 'Float', 'Speed', 'Speed', 0.15, 'How fast particles leave the subject, in frame heights per second.',
-       0, 1, True)
+custom(page, 'Float', 'Speed', 'Speed', 0.15,
+       'How fast particles leave the subject, in frame heights per second (in Push and Flow, those of a beat\'s '
+       'burst).', 0, 1, True)
 custom(page, 'Float', 'Drift', 'Drift', 0.1,
-       'How fast the air carries particles up, in frame heights per second; below 0, down.', -0.5, 0.5, True)
+       'For Emit and Flow: how fast the air blows, in frame heights per second, along Direction (up, unless '
+       'Direction turns it); below 0, the other way.', -0.5, 0.5, True).enableExpr = "me.par.Behavior != 'push'"
+custom(page, 'Float', 'Direction', 'Direction', 0,
+       'For Emit and Flow: which way the air blows, in degrees clockwise from straight up (90 to the right, 180 '
+       'down).', -180, 180, True).enableExpr = "me.par.Behavior != 'push'"
 custom(page, 'Float', 'Turbulence', 'Turbulence', 0.5, 'How much the air swirls the particles around.', 0, 2, True)
 
 color = choices(custom(page, 'Menu', 'Color', 'Color', None,
@@ -188,8 +219,8 @@ custom(page, 'Float', 'Burst', 'Beat Bursts', 0.5,
        'On each beat of input 2, a burst of particles leaves the subject faster than the rest and the whole '
        'cloud is kicked outward; 0 for neither.', 0, 1, True)
 custom(page, 'Float', 'Gusts', 'Bar Gusts', 0.5,
-       'On each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new direction; '
-       '0 keeps it blowing the same way.', 0, 1, True)
+       'For Emit and Flow: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new '
+       'direction; 0 keeps it blowing the same way.', 0, 1, True).enableExpr = "me.par.Behavior != 'push'"
 custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "With Fosfora's signal on input 2: a build stirs the air up as it rises, and a drop sends a shockwave "
        "out from the subject (Fosfora's drop detection is experimental).")
@@ -203,6 +234,9 @@ beat_step = mk(comp, selectCHOP, 'beat_step', 0, -300, [steps], 'A beat.', chann
 beat_env = mk(comp, triggerCHOP, 'beat_env', 200, -300, [beat_step],
               "A beat's burst: 1 at the beat, none {:g} s later.".format(BURST_TIME),
               attack=0, peak=1, peaklen=0, decay=BURST_TIME, dshape='linear', sustain=0, release=0)
+beat_rate = mk(comp, slopeCHOP, 'beat_rate', 400, -300, [beat_env],
+               "How fast beat_env changes, per second: in Push and Flow the field moves out and back with it.",
+               timeslice=True)
 drop_step = mk(comp, selectCHOP, 'drop_step', 0, -450, [steps], 'A drop.', channames='drop_count')
 drop_env = mk(comp, triggerCHOP, 'drop_env', 200, -450, [drop_step],
               "A drop's shockwave: 1 as it leaves the subject, 0 when it is {:g} frame heights out, {:g} s "
@@ -269,7 +303,7 @@ drift = glsl(comp, 'drift', 600, -1450, [gain_sum], src('drift.glsl'),
 # Only Find on Background needs the empty room and the drift: these Switch TOPs show black otherwise,
 # and a Switch TOP cooks only what it shows, so none of that chain runs in the other modes.
 BACKGROUND = Expr("1 if parent().par.Find == 'background' else 0")
-none = mk(comp, constantTOP, 'none', 400, -1750, comment='Black: no empty room, no drift (Find is not Background).',
+none = mk(comp, constantTOP, 'none', 400, -1750, comment='Black: no empty room, no drift (Find is not Background), no air (Behavior is Emit).',
           outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float', colorr=0, colorg=0, colorb=0, alpha=0)
 plate_in = mk(comp, switchTOP, 'plate_in', 400, -1300, [none, plate], 'The empty room, while Find is Background.',
               index=BACKGROUND)
@@ -287,41 +321,63 @@ emit_stats = mk(comp, analyzeTOP, 'emit_stats', 400, -1100, [emit],
                 'How much of the frame the subject and its outline cover, and their middle (the average of emit).',
                 op='average', analyzechannel='independent', format='rgba32float')
 subject_blur = mk(comp, blurTOP, 'subject_blur', 200, -1250, [subject],
-                  'The subject, blurred: particles leave it down its slope, outward.', size=8)
+                  'The subject, blurred: its edge, and which way is out (down its slope).', size=8)
+
+# ---- The air (Push and Flow) -----------------------------------------------------------------------
+subject_wide = mk(comp, blurTOP, 'subject_wide', 400, -800, [subject],
+                  'The subject, blurred widely: how near it is, where the air starts to part round it.', size=WIDE)
+subject_middle = mk(comp, blurTOP, 'subject_middle', 400, -650, [emit],
+                    'emit, blurred more widely still: the middle of the subject nearby, for the air.', size=MIDDLE)
+air = glsl(comp, 'air', 600, -800, [subject_wide, subject_middle], src('air.glsl'),
+           'The air for Push and Flow: a stream function whose curl is the wind and the swirl, going round the subject.',
+           res=(MW, MH), fmt='rgba32float',
+           uAir=(Expr("0 if parent().par.Behavior == 'push' else parent().par.Drift * math.sin(math.radians("
+                      "parent().par.Direction) + op('gust_lag')[0])"),
+                 Expr("0 if parent().par.Behavior == 'push' else parent().par.Drift * math.cos(math.radians("
+                      "parent().par.Direction) + op('gust_lag')[0])"),
+                 Expr("{} * parent().par.Turbulence * (1 + 2 * op('build_lag')[0] * parent().par.Moments)".format(AIR_SWIRL)),
+                 Expr('absTime.seconds')),
+           uFrame=(Expr("op('source').width / max(1, op('source').height)"),))
+air_in = mk(comp, switchTOP, 'air_in', 800, -800, [none, air], 'The air, while Behavior is Push or Flow.',
+            index=Expr("0 if parent().par.Behavior == 'emit' else 1"))
 
 # ---- The particles ---------------------------------------------------------------------------------
 empty = mk(comp, constantTOP, 'empty', -200, 300, comment="The particles' starting state: every one free.",
            outputresolution='custom', resolutionw=PW, resolutionh=PH, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
 fb = [mk(comp, feedbackTOP, name + '_fb', 0, y, [empty], "{}'s last frame.".format(name), top=name)
-      for name, y in (('sim', 450), ('sim_life', 300), ('sim_color', 150))]
+      for name, y in (('sim', 450), ('sim_life', 300), ('sim_color', 150), ('sim_shove', 0))]
 alive = mk(comp, analyzeTOP, 'alive_stats', 200, 600, [fb[1]], 'How many particles were alive last frame (a).',
            op='average', analyzechannel='independent', format='rgba32float')
-sim = glsl(comp, 'sim', 400, 300, fb + [emit, subject_blur, source, alive, emit_stats], src('sim.glsl'),
-           'The particles: born on the subject, carried by the air, the turbulence and the music.',
+sim = glsl(comp, 'sim', 400, 300, fb + [emit, subject_blur, source, alive, emit_stats, air_in], src('sim.glsl'),
+           'The particles: born on the subject (or off it), carried by the air, the turbulence and the music.',
            res=(PW, PH), fmt='rgba32float',
            uClock=(DT, Expr('absTime.seconds'), Expr('absTime.frame % 16777216'),
                    Expr("op('source').width / max(1, op('source').height)")),
-           uEmit=(Expr("(parent().par.Rate * ((1 - parent().par.Loudness + parent().par.Loudness * ({} + {} * op('level_lag')[0]))"
-                       " if op('audio')['source'] > 0 else 1) + {} * parent().par.Burst * op('beat_env')[0])"
-                       " * min(absTime.stepSeconds, 0.1)".format(STREAM[0], STREAM[1], BURST_RATE)),
+           uEmit=(Expr("parent().par.Rate * (1 if parent().par.Behavior == 'emit' else {}) * ((1 - parent().par.Loudness + parent().par.Loudness * ({} + {} * op('level_lag')[0]))"
+                       " if op('audio')['source'] > 0 else 1) * min(absTime.stepSeconds, 0.1)".format(FIELD, STREAM[0], STREAM[1])),
                   par('Life'), par('Speed'), Expr("1 if parent().par.Emitfrom == 'outline' else 0")),
            uMove=(par('Drift'), Expr("parent().par.Turbulence * (1 + 2 * op('build_lag')[0] * parent().par.Moments)"),
                   Expr('parent().par.Size / 720'), Expr("op('beat_env')[0] * parent().par.Burst")),
            uWave=(Expr("(1 - op('drop_env')[0]) * {}".format(WAVE_REACH)), Expr("op('drop_env')[0] * parent().par.Moments"),
-                  Expr("op('gust_lag')[0]")),
-           uLook=(menu('Color'),))
-setpars(sim, numcolorbufs=3)
-for name, i, y, what in (('sim_life', 1, 300, 'age, life, size, alive'), ('sim_color', 2, 150, 'color and how visible')):
+                  Expr("math.radians(parent().par.Direction) + op('gust_lag')[0]"),
+                  Expr("{} * parent().par.Burst * op('beat_env')[0] * min(absTime.stepSeconds, 0.1)".format(BURST_RATE))),
+           uLook=(menu('Color'), menu('Behavior'),
+                  Expr("{} * parent().par.Burst * op('beat_rate')[0] * min(absTime.stepSeconds, 0.1)".format(PULSE))))
+# Hold: a pixel off the edge reads as the edge (the default, Zero, reads black: the air's curl and the
+# subject's slope would jump at the frame's edges).
+setpars(sim, numcolorbufs=4, inputextenduv='hold')
+for name, i, y, what in (('sim_life', 1, 300, 'age, life, size, alive'), ('sim_color', 2, 150, 'color and how visible'),
+                         ('sim_shove', 3, 0, 'shove and size at rest')):
     mk(comp, renderselectTOP, name, 600, y, comment="sim's buffer {}: each particle's {}.".format(i, what),
        top='sim', bufferindex=i)
 
 # ---- Drawing -------------------------------------------------------------------------------------
-dot = mk(comp, circleTOP, 'dot', 600, -100, comment='One particle: a soft white dot.',
+dot = mk(comp, circleTOP, 'dot', 600, -200, comment='One particle: a soft white dot.',
          outputresolution='custom', resolutionw=32, resolutionh=32, radiusx=0.45, radiusy=0.45, radiusunit='fraction',
          softness=0.35, softnessunit='fraction', fillcolorr=1, fillcolorg=1, fillcolorb=1, fillalpha=1,
          bgcolorr=0, bgcolorg=0, bgcolorb=0, bgalpha=0, borderwidth=0)
-mk(comp, constantMAT, 'dot_mat', 800, -100, comment='The dot, its color from the particle, added onto what is drawn.',
+mk(comp, constantMAT, 'dot_mat', 800, -200, comment='The dot, its color from the particle, added onto what is drawn.',
    colormap='dot', blending=True, srcblend='one', destblend='one', depthtest=False, depthwriting=False)
 geo = mk(comp, geometryCOMP, 'geo', 800, 300, comment="A dot at every particle: instancing reads sim's buffers.",
          instancing=True, instancecountmode='oplength', instanceop='sim', instancetx='r', instancety='g',
