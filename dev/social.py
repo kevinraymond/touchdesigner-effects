@@ -2,8 +2,9 @@
 shows): 1280 x 640, the library's name and a line about it in its own 5 x 7 font over the eight cells
 of the tiled preview's still (dev/tile.py --still: the input, its depth map and every effect, 3 x 3
 with the first row centered), laid out as a sum: input + depth map = ASCII, Blob Track, and under
-them the other four effects, the six right-aligned as one block with slight gaps between them. Upload
-docs/social-preview.png by hand; GitHub has no API for it.
+them the other four effects, the six right-aligned as one block with slight gaps between them, and
+an orange "& MORE" in the last one's bottom-right corner. Upload docs/social-preview.png by hand;
+GitHub has no API for it.
 
     uv run --with pillow dev/social.py dev/out/record/hero_still.png docs/social-preview.png
 """
@@ -22,6 +23,7 @@ ORANGE = (255, 148, 41)                     # ASCII's ORANGE, (1.0, 0.58, 0.16)
 MARGIN, GAP = 16, 8                          # around the cells; between the effects' cells and the rows
 SIGN = 6                                     # pixels per font pixel of the + and =
 SLOT = 5 * SIGN + 20                         # the room a + or = takes between two cells
+MORE, MORE_SCALE, MORE_PAD = '& MORE', 3, 8  # the badge in the last cell's corner: orange, dark text
 TITLE, LINE = 'TOUCHDESIGNER EFFECTS', 'MIT DROP-IN EFFECTS THAT LOVE YOUR AUDIO'
 
 
@@ -66,6 +68,11 @@ def main():
     places += [(x2 + k * (sw + GAP), y2) for k in range(4)]
     for cell, xy in zip(cells, places):
         im.paste(cell.resize((sw, sh), Image.LANCZOS), xy)
+    # The library holds more than these: a badge flush in the last cell's bottom-right corner.
+    bw, bh = (len(MORE) * 6 - 1) * MORE_SCALE + 2 * MORE_PAD, 7 * MORE_SCALE + 2 * MORE_PAD
+    bx, by = places[-1][0] + sw - bw, places[-1][1] + sh - bh
+    im.paste(ORANGE, (bx, by, bx + bw, by + bh))
+    text(im, MORE, MORE_SCALE, by + MORE_PAD, BG, bx + MORE_PAD)
     for k, sign in enumerate('+='):
         text(im, sign, SIGN, y1 + (sh - 7 * SIGN) // 2, ORANGE, x1 + (k + 1) * sw + k * SLOT + (SLOT - 5 * SIGN) // 2)
     # The title (8 pixels per font pixel) and the line (4) centered in the band above the cells.
