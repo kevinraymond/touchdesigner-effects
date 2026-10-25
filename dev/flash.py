@@ -7,6 +7,7 @@ flashes (docs/TD_IDIOMS.md A2):
     TD_ARGS='blob_track beat=none' dev/td.sh dev/flash.py   # no beat: into dev/out/flash/b1_dancer_no_beat
     TD_ARGS='datamosh beat=music' dev/td.sh dev/flash.py    # a dance-tempo beat: b1_dancer_beat-music
     TD_ARGS='showreel View=cycle' dev/td.sh dev/flash.py    # a setting off its default: b1_dancer_View-cycle
+    TD_ARGS='bent_cam flashing=off Zoom=1.1' dev/td.sh dev/flash.py   # one Flashing setting only (a quick sweep)
     dev/td.sh --pull dev/out/flash/b1_dancer/done
     uv run --with numpy dev/flashcount.py dev/out/flash/b1_dancer
 
@@ -99,6 +100,8 @@ def main():
                 setattr(fx.par, k, int(v) if v.lstrip('-').isdigit() else v)
         fx.allowCooking = False
         settings = list(fx.par.Flashing.menuNames) if hasattr(fx.par, 'Flashing') else ['fixed']
+        if opts.get('flashing') in settings:  # flashing=off: only that setting, for a quick sweep
+            settings = [opts['flashing']]
         runs += [(fx.name, s, fx, s if s != 'fixed' else None) for s in settings]
 
     state = {'i': -1, 'frames': [], 'start': 0.0}

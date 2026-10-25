@@ -1,6 +1,6 @@
 # Showreel
 
-![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Fluid pouring flames off her as she moves, Glitch tearing her on the beat, Particles shedding glowing specks off her, Point Cloud turning her and the lit wall behind her in 3D, and VHS + CRT playing her off a worn tape on an old TV as a band of torn lines tears across her. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
+![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, the clip and its depth map as inputs. Below them, ASCII draws her in glyphs, Bent Cam turns her through a circuit-bent webcam into purple shadows, contoured light and torn green lines, Blob Track boxes her moving limbs, Datamosh-style smears her pose into the next, Fluid pours flames off her as she moves, Glitch tears her on the beat, Particles shed glowing specks off her, Point Cloud turns her and the lit wall behind her in 3D, and VHS + CRT plays her off a worn tape on an old TV as a band of torn lines crosses her. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
 in, and the same picture runs through each effect in turn, fading from one to the next in time with
@@ -72,11 +72,11 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with the eight effects of this release inside, the dancer clip's depth on
+TouchDesigner 2025.33230), with the nine effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 3.5 ms on the GPU per frame and 1.4 ms on the CPU on average (the median
+runs one effect at a time: 3.5 ms on the GPU per frame and 1.1 ms on the CPU on average (the median
 of three runs), depending on the effect showing; during a fade two effects run, so the 95th
-percentile was 7.4 ms on the GPU and 1.7 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+percentile was 7.1 ms on the GPU and 1.3 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
 grow as the library adds effects. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -92,17 +92,19 @@ grow as the library adds effects. Nothing inside cooks while the output is unuse
 
   | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Dancer in a hazy warehouse | 1.5 | 2.0 | 2.5 | 1.0 |
-  | People crossing a plaza | 0.5 | 1.5 | 1.0 | 0.5 |
-  | Dancer, Every 1 | 1.0 | 2.0 | 2.5 | 1.0 |
+  | Dancer in a hazy warehouse | 1.0 | 1.5 | 2.5 | 1.0 |
+  | People crossing a plaza | 1.0 | 1.5 | 2.0 | 0.5 |
+  | Dancer, Every 1 | 1.0 | 1.5 | 2.5 | 1.0 |
 
   Off adds nothing to what the clips do by themselves (beyond the half flash a second the count
   allows for measuring noise: the dancer at Off has measured 1.0 and 1.5 in different builds, by
   which effects showed), Calm adds at most one flash a second, and no
   setting goes past WCAG's 3 (Up to 3 per second reaches it with the effects flashing as often as
   that allows). The two dancer runs differ by which effects happened to show in the 10 seconds
-  measured. Red flashes: 0.5 a second on the dancer and the plaza at Up to 3 per second, from
-  Glitch's color split (see its page), under WCAG's limit; none otherwise.
+  measured. Red flashes: 1.0 a second on the dancer and 0.5 on the plaza at Up to 3 per second,
+  from Glitch's color split (see its page; it is the only effect that makes red flashes on the
+  dancer), under WCAG's limit; none otherwise. On the plaza, Off measures 1.0 against the clip's
+  0.5, within the half flash a second the count allows for measuring noise.
 - **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 3 pixels
   per font pixel (at 720 pixels high; they scale with the picture), so they read on light and dark
   pictures alike.

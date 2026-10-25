@@ -1,8 +1,14 @@
 # TouchDesigner Effects
 
-![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below, what comes out: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Fluid pouring flames off her as she moves, Glitch tearing her on the beat, Particles shedding glowing specks off her, Point Cloud turning her and the lit wall behind her in 3D, and VHS + CRT playing her off a worn tape on an old TV as a band of torn lines tears across her](docs/effects/showreel.webp)
+Before [Fosfora](https://github.com/kevinraymond/fosfora), I had never heard of TouchDesigner.
+While adding the examples for Fosfora's signal mode, I got the free version of TD and poked
+around it a bit. Then I decided I would create some effects based on different things I've
+worked on or seen, in case they are useful for anyone. If nothing else they are examples of solid
+working effects. Enjoy!
 
-*Every effect on the same clip, all in step. On top, what goes in: the clip and its depth map.*
+![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, the clip and its depth map as inputs. Below them, ASCII draws her in glyphs, Bent Cam turns her through a circuit-bent webcam into purple shadows, contoured light and torn green lines, Blob Track boxes her moving limbs, Datamosh-style smears her pose into the next, Fluid pours flames off her as she moves, Glitch tears her on the beat, Particles shed glowing specks off her, Point Cloud turns her and the lit wall behind her in 3D, and VHS + CRT plays her off a worn tape on an old TV as a band of torn lines crosses her](docs/effects/showreel.webp)
+
+*Every effect on the same clip, all in step, with the clip and its depth map as inputs on top.*
 
 - **Free and MIT-licensed.** Use them in your own work, commercial work included; keep the
   license notice. See [License](#license).
@@ -16,12 +22,6 @@
   estimator) make some effects richer, and each page says what they add. None is needed to
   start.
 
-Before [Fosfora](https://github.com/kevinraymond/fosfora), I had never heard of TouchDesigner.
-While adding the examples for Fosfora's signal mode, I got the free version of TD and poked
-around it a bit. Then I decided I would create some effects based on different things I've
-worked on or seen, in case they are useful for anyone. If nothing else they are examples of solid
-working effects. Enjoy!
-
 Opening a `.tox` shows how it works. Each is a TOP in and a TOP out, with an optional CHOP input
 for audio or beat data (and, for the effects that use depth, an optional depth TOP). Inside
 you'll find a README with its credits, a comment on every operator, help on every parameter, and
@@ -33,6 +33,7 @@ with a preview, a performance note, and a download link that always points at th
 | Effect | What it does |
 |---|---|
 | [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines; each beat sends a ripple of changed characters out from the middle, and bars pop the contrast. |
+| [Bent Cam](docs/effects/bent_cam.md) | A circuit-bent webcam filming a screen that shows its own picture, modeled down to the bytes. Wires across the sensor's pins stick and bridge the data lines the picture travels on, so it breaks into false colors and flat bands, slipped bytes turn it green and pink, and broken JPEG blocks streak it. The camera filming its own screen adds trails, spirals and rainbow moiré, and a mirror folds it into a kaleidoscope. It comes with a lot of 50 cameras, each shorted differently. On the bars of the music a wire touches for a moment. |
 | [Blob Track](docs/effects/blob_track.md) | The look of computer vision: whatever moves gets a numbered box that follows it, joined to its neighbors by lines, like surveillance software or a film's targeting display. Beats scramble the labels and spawn links. |
 | [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Beats make the picture bloom and catch up, bars set off the melts, and Fosfora's builds hold them back until the drop. |
 | [Fluid](docs/effects/fluid.md) | A real fluid simulation over the picture, stirred by its movement: whatever moves pours fire, smoke or ink, which rises, curls into eddies and fades, so a hand trails smoke and a dancer burns. A depth map or mask on input 3 sets a whole silhouette alight. Beats make the flames leap and flare. Runs on any GPU, where NVIDIA Flow needs Windows and an NVIDIA card. |
@@ -52,8 +53,8 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Eight effects are done (ASCII 0.2.0, Datamosh-style and VHS + CRT 0.2.1, Fluid 0.1.1, Glitch 0.1.1,
-Blob Track and Point Cloud 0.1.3, Particles 0.3.2), and the Showreel holds them all; there is no release yet, so the download
+Nine effects are done (ASCII 0.2.0, Bent Cam 0.1.0, Datamosh-style and VHS + CRT 0.2.1, Fluid 0.1.1,
+Glitch 0.1.1, Blob Track and Point Cloud 0.1.3, Particles 0.3.2), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.

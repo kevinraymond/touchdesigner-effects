@@ -1,18 +1,19 @@
 {
-  "version": "0.1.6",
-  "sources_sha256": "06ae4c0dfe048fd03015668747b817e7c293fca10ded9797174667b0b7c277fc",
+  "version": "0.1.7",
+  "sources_sha256": "03056e469bca748ed4d3bf3cbefac1578cdf127d83ea8887b1099579a2375936",
   "embeds": {
-    "ascii": "1255b8805ea822f66f261112880ce7e1f40dbfdb9d7c482e6d17b18f6bf06954",
-    "blob_track": "ae4cf17a5c3f93d9e08cbd914ca8738023acd4d43aaef6fc16ae8660e810e2a4",
-    "datamosh": "736bec4d72fc05530b68394c6cafcbca8f7065a26c5a40fdb5b57e658ee7d560",
-    "fluid": "098b1eecca9e084efe7022f21b24a262a5a37a635f18ca47195afc44084b33fb",
-    "glitch": "513b4624329c05d681f3eb5e49cb4e404935f84717188a3218cca9a0bff880f1",
-    "particles": "c8d67b6e00ceec12e2a8bc512e84257e6b5f5999eaeb7af999463116da18386b",
-    "point_cloud": "3921ba5190f5de2e6d666ea69a7abb422cd6e32245dd5f5f7ca76923cf4df542",
-    "vhs_crt": "4f68d08c4db994b4fbc9ff5efdfa70d03c4c45c3c78dab87031b601cc9b2d76c"
+    "ascii": "8713d742da9fd0a412da80a509e273fd002b724c840d8c0a771d75d02f2daa7d",
+    "bent_cam": "2ad552e1b427b43816bea476afe4e2c6603d03de2d492d704577f6467d5c0cad",
+    "blob_track": "dfc5b403e3ffe57f867f9f47fda713eaa75dd0dbda1ad5fb8f4fa3bcdb179e4a",
+    "datamosh": "36082955fbf2eed83b56ece56c04132480df522005c02dbd0b699ae64462df24",
+    "fluid": "04c89b9ae20b835647ae41f8dffa9111564d5e3ea5b86bf226029573c2d7b9f3",
+    "glitch": "fe0d95b2c229d43554683fc590f1e3c345346badc24a955f1258fab26eaa2d8c",
+    "particles": "a25b51a0509951d3bb708d7dd9f647fac56ecc5b8ca1d7b33a1be3c952a3288f",
+    "point_cloud": "2aae82fb16faac157cbc87f0118ab45e678d452d2328a5ef9b808d419cd45762",
+    "vhs_crt": "dae11ed2e610bc3fb8a23b015561ab1c1c7b0fc2ed72da1de954f26921b1c0d0"
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "b5c504799714fee95c77e59c5691abf32c385c7708c6bdfc301c4965a479ea0c",
-  "tox_bytes": 1994992
+  "tox_sha256": "ad5dcd93397efe0b15b81eeabae9ce42318c5f085f4b883b2a645aaea09980fb",
+  "tox_bytes": 2023944
 }

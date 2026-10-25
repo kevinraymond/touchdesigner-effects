@@ -13,7 +13,8 @@ lib/audio_callbacks.py        the audio input's logic (audio_in() puts it in a S
 lib/glsl/                     shaders several effects share: depth_near.glsl (input 3 as nearness, by Depth Type),
                               depth_find.glsl (what stands in front of its surroundings); lum, change, clock and lk
                               (the input's motion: optical_flow() builds them); pace and speed (that motion as a
-                              speed: flow_speed()); common.glsl (Catmull-Rom resampling, a hash)
+                              speed: flow_speed()); common.glsl (Catmull-Rom resampling, a hash);
+                              red_guard.glsl (keeps reds short of WCAG's red flash line)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -204,12 +205,20 @@ Three more traps, from VHS + CRT. The red test is all or nothing at that 80%, an
 it per pixel: noise that changes every frame, however faint, makes any red sitting near the line flash
 (the flowers: 2 red flashes a second with Flashing Off), and a CRT mask's red stripes over an orange
 are saturated-red pixels by themselves. VHS + CRT eases every red share past 0.73 toward 0.775 by
-adding green and blue (`effects/vhs_crt/src/red_guard.glsl`), on the picture and again on every
+adding green and blue (`lib/glsl/red_guard.glsl`, which Bent Cam uses too), on the picture and again on every
 output pixel; a share is linear, so no area can average past it. A pattern whose sign flips every
 frame (NTSC's subcarrier phase, every field) flickers wherever it doesn't cancel over a cell, which is
 everywhere on fine detail. And one gated event that moves the whole picture (a roll) passes every
 point through light and dark several times: several flashes, whatever the gate counts. A jump and a
 jump back is one.
+
+Two more from Bent Cam. Damage that runs to the end of a line (a clock slip, or a stream error up to its
+restart marker) piles up on the right edge, where every such slip ends, so that edge flashed when the beat
+added slips everywhere at once: keep slips to stretches spread over the frame, and a beat's to a sliver. And a
+feedback loop that zooms outward echoes every movement outward, so each echo passing a point is another swing
+between light and dark there, with Flashing Off as much as on (Feedback 0.95 at Zoom 1.1 measured 4.5 a second).
+No gate reaches that, so the parameters' ranges have to: measure the corners of every range that feeds a loop
+(`TD_ARGS='<effect> flashing=off Feedback=... Zoom=...' dev/td.sh dev/flash.py` records only that setting).
 
 ## The audio input
 

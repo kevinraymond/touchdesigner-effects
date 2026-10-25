@@ -251,7 +251,7 @@ tape = glsl(comp, 'tape', -200, 150, [line_in, source], common + src('tape.glsl'
 deck = glsl(comp, 'deck', 0, 150, [tape, source], src('deck.glsl'),
             "The deck's steep output filter on the luma (3 MHz): keeps tape noise out of the color subcarrier.",
             res=(RASTER_W, 240), fmt='rgba16float', uDeck=par('Tape'))
-signal = glsl(comp, 'signal', 200, 150, [deck, source], src('red_guard.glsl') + src('signal.glsl'),
+signal = glsl(comp, 'signal', 200, 150, [deck, source], lib_glsl(_ROOT, 'red_guard.glsl') + src('signal.glsl'),
               'Into the TV: composite (dots, rainbows), S-Video or RGB, back to RGB.', res=(RASTER_W, 240),
               fmt='rgba16float', uSig=(Expr('parent().par.Signal.menuIndex'), 0, par('Lines')))
 for o in (line_in, tape, deck, signal):
@@ -261,7 +261,7 @@ glow_src = glsl(comp, 'glow_src', 200, 0, [source, signal], src('glow.glsl'),
 glow_src.par.outputresolution = 'eighth'
 glow = mk(comp, blurTOP, 'glow', 400, 0, [glow_src], 'The light the glass spreads around bright parts.',
           type='gaussian', size=GLOW_SIZE)
-screen = glsl(comp, 'screen', 600, 150, [source, signal, glow], src('red_guard.glsl') + src('screen.glsl'),
+screen = glsl(comp, 'screen', 600, 150, [source, signal, glow], lib_glsl(_ROOT, 'red_guard.glsl') + src('screen.glsl'),
               'The tube: each line a beam that widens as it brightens, the phosphor mask, the glow, the curved face '
               '(Screen CRT); the signal, flat (None).',
               uScr=(Expr("1 if parent().par.Screen == 'crt' else 0"), Expr('parent().par.Mask.menuIndex'),
@@ -277,13 +277,13 @@ lcd_fb = mk(comp, feedbackTOP, 'lcd_fb', 600, 600, [still], "lcd_state's last fr
 lcd_state = glsl(comp, 'lcd_state', 600, 450, [source, signal, lcd_fb], panel + src('lcd_state.glsl'),
                  "The LCD's crystal: each cell turning toward the signal over milliseconds, more slowly to lighter.",
                  fmt='rgba16float', uLcd=(par('Masksize'), par('Response'), DT))
-lcd = glsl(comp, 'lcd', 800, 450, [source, lcd_state], src('red_guard.glsl') + panel + src('lcd.glsl'),
+lcd = glsl(comp, 'lcd', 800, 450, [source, lcd_state], lib_glsl(_ROOT, 'red_guard.glsl') + panel + src('lcd.glsl'),
            "The LCD's face: the cells in their black matrix, the backlight, the tones the viewing angle shifts.",
            uLcd=(par('Masksize'), 0, 0, par('Angle')))
 mo = optical_flow(comp, _ROOT, source, x=0, y=800)
 pace, motion = flow_speed(comp, _ROOT, mo, still, x=800, y=800)
 plasma = glsl(comp, 'plasma', 1000, 800, [source, signal, glow, motion],
-              src('red_guard.glsl') + panel + src('plasma.glsl'),
+              lib_glsl(_ROOT, 'red_guard.glsl') + panel + src('plasma.glsl'),
               "The plasma panel: grays made of a frame's pulses, read along the eye's path (false contours), the "
               "phosphors' afterglow, the cells, the glass's glow.",
               uPl=(par('Masksize'), Expr('parent().par.Subfields.menuIndex'), par('Glow'),

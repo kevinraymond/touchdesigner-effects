@@ -1,10 +1,13 @@
-// VHS + CRT (touchdesigner-effects, MIT). The red guard, pasted in front of signal.glsl and screen.glsl.
+// touchdesigner-effects (MIT), shared by VHS + CRT and Bent Cam (lib/glsl, lib_glsl()): the red guard, pasted
+// in front of the shaders that call redGuard().
 // WCAG 2.3.1 counts a pixel as saturated red once red is 80% of its R + G + B in linear light, all or
 // nothing, so tape noise, which changes every field, makes any red near that line flash however faint it
 // is. Past RED_KNEE a red's share is eased toward RED_MAX, short of the line, by adding green and blue in
 // the proportion the color has them (an orange stays orange, a little lighter). A share is linear, so no
-// area of the picture can average past it either. signal.glsl guards the picture the TV decodes, screen.glsl
-// each pixel it shows: the mask's red stripes over a warm color would cross the line by themselves.
+// area of the picture can average past it either. VHS + CRT's signal.glsl guards the picture the TV
+// decodes and its screens each pixel they show: the mask's red stripes over a warm color would cross the line by
+// themselves. Bent Cam guards its camera's picture inside the feedback loop, where saturation builds up pass after
+// pass, and every pixel it shows.
 #define RED_KNEE 0.73
 #define RED_MAX 0.775
 
