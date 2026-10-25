@@ -1,4 +1,4 @@
-// Datamosh-style (touchdesigner-effects, MIT): block matching, step 1 of 2. The cost of every
+// Datamosh (touchdesigner-effects, MIT): block matching, step 1 of 2. The cost of every
 // (block, candidate offset) pair in parallel: each block owns a tile of uP.w x uP.w output pixels,
 // and pixel (x, y) of its tile tries offset (x, y) - R around a center, for x, y < D = 2R + 1 (the
 // rest of the tile is unused). The cost is the mean absolute luma difference over the block plus

@@ -1,4 +1,4 @@
-// Datamosh-style (touchdesigner-effects, MIT): the motion the decoder applies, at a quarter of
+// Datamosh (touchdesigner-effects, MIT): the motion the decoder applies, at a quarter of
 // the input's size, in UV units with current(x) = previous(x - v). Smear smooths the optical flow
 // (5 x 5, weighted by how textured each place is, so flat areas borrow from their neighbors),
 // zeroes sub-pixel jitter and blends it with the last field; Blocks takes the block vectors as

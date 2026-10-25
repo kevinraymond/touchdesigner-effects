@@ -6,9 +6,9 @@ around it a bit. Then I decided I would create some effects based on different t
 worked on or seen, in case they are useful for anyone. If nothing else they are examples of solid
 working effects. Enjoy!
 
-![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, the clip and its depth map as inputs. Below them, ASCII draws her in glyphs, Bent Cam turns her through a circuit-bent webcam into purple shadows, contoured light and torn green lines, Blob Track boxes her moving limbs, Datamosh-style smears her pose into the next, Fluid pours flames off her as she moves, Glitch tears her on the beat, Particles shed glowing specks off her, Point Cloud turns her and the lit wall behind her in 3D, and VHS + CRT plays her off a worn tape on an old TV as a band of torn lines crosses her](docs/effects/showreel.webp)
+![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, the clip and its depth map (optional) as inputs. Below them, ASCII draws her in glyphs, Bent Cam turns her through a circuit-bent webcam into purple shadows, contoured light and torn green lines, Blob Track boxes her moving limbs, Datamosh smears her pose into the next, Fluid pours flames off her as she moves, Glitch tears her on the beat, Particles shed glowing specks off her, Point Cloud turns her and the lit wall behind her in 3D, and VHS + CRT plays her off a worn tape on an old TV as a band of torn lines crosses her](docs/effects/showreel.webp)
 
-*Every effect on the same clip, all in step, with the clip and its depth map as inputs on top.*
+*Every effect on the same clip, all in step, with the clip and its depth map (optional) as inputs on top.*
 
 - **Free and MIT-licensed.** Use them in your own work, commercial work included; keep the
   license notice. See [License](#license).
@@ -53,7 +53,7 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Nine effects are done (ASCII 0.2.0, Bent Cam 0.1.0, Datamosh-style and VHS + CRT 0.2.1, Fluid 0.1.1,
+Nine effects are done (ASCII 0.2.0, Bent Cam 0.1.0, Datamosh and VHS + CRT 0.2.1, Fluid 0.1.1,
 Glitch 0.1.1, Blob Track and Point Cloud 0.1.3, Particles 0.3.2), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 

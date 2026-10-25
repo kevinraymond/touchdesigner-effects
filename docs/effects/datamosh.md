@@ -39,7 +39,7 @@ at a downloaded file.
 
 ## Parameters
 
-The Datamosh-style page, top to bottom:
+The Datamosh page, top to bottom:
 
 | Parameter | Default | What it does |
 |---|---|---|
@@ -168,7 +168,7 @@ row, so Calm now lets one through a second. There were no red flashes.
 MIT. The shaders and operators are written for this library.
 
 - **The technique:** datamoshing is the glitch art of deleting a compressed video's keyframes, so
-  one shot's motion drags the last shot's pixels. This effect is datamosh-style: it models what a
+  one shot's motion drags the last shot's pixels. This effect models what a
   decoder does with missing keyframes, with no codec.
 - **Smear:** Lucas-Kanade optical flow, written from B. D. Lucas and T. Kanade, "An Iterative
   Image Registration Technique with an Application to Stereo Vision" (1981).

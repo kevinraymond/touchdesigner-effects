@@ -1,4 +1,4 @@
-"""Build Datamosh (datamosh-style). Run from a textport:
+"""Build Datamosh. Run from a textport:
 __file__ = '/path/to/touchdesigner-effects/effects/datamosh/build_datamosh.py'; exec(open(__file__).read())
 
 The picture is a small decoder fed back into itself: each new input frame moves it by the
@@ -42,9 +42,9 @@ def src(name):
     return open(os.path.join(_HERE, 'src', name)).read()
 
 
-SUMMARY = ('Datamosh {}: datamosh-style smear. The picture is pushed around by its own motion while '
+SUMMARY = ('Datamosh {}: the look of datamoshing. The picture is pushed around by its own motion while '
            'keyframes are withheld at cuts, beats and builds, then fades back.').format(VERSION)
-README = '''Datamosh {version}: a datamosh-style effect (touchdesigner-effects, MIT).
+README = '''Datamosh {version}: the look of datamoshing (touchdesigner-effects, MIT).
 {docs}
 
 WHAT IT DOES
@@ -110,8 +110,8 @@ INSIDE
 
 CREDITS
 - Datamoshing is the glitch art of deleting a compressed video's keyframes, so one shot's motion
-  drags the last shot's pixels. This is datamosh-style: it models what a decoder does with missing
-  keyframes, with no codec.
+  drags the last shot's pixels. This effect models what a decoder does with missing keyframes,
+  with no codec.
 - Smear: Lucas-Kanade optical flow, written from B. D. Lucas and T. Kanade, "An Iterative Image
   Registration Technique with an Application to Stereo Vision" (1981).
 - Blocks: block matching as a video encoder does it, a full search refined to a quarter pixel as in
@@ -147,7 +147,7 @@ def menu(page, name, label, items, default, help_text):
     return p
 
 
-comp, page, source = new_effect('datamosh', 'Datamosh-style', SUMMARY, README,
+comp, page, source = new_effect('datamosh', 'Datamosh', SUMMARY, README,
                                 tags=('datamosh', 'glitch', 'feedback', 'audio-reactive'),
                                 audio=True, flashing=True, sample=MOVIE)
 

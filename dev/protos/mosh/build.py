@@ -1,4 +1,4 @@
-"""DEV ONLY. Datamosh-style round 1 prototypes (board #4520). Builds, in TDLIB_PARENT:
+"""DEV ONLY. Datamosh round 1 prototypes (board #4520). Builds, in TDLIB_PARENT:
 
   src     test input: sample movies, a panned/zoomed still and moving shapes, cut by its Source par
   flow    shared motion estimation: Lucas-Kanade flow (2 levels) and macroblock search, cut measure

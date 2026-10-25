@@ -1,4 +1,4 @@
-// Datamosh-style decoder: the effect's picture (touchdesigner-effects, MIT). It imitates what a
+// Datamosh's decoder: the effect's picture (touchdesigner-effects, MIT). It imitates what a
 // video decoder shows when keyframes go missing; it never touches a real codec stream.
 //
 // A codec's P-frame predicts the picture from the previous decoded picture moved by motion

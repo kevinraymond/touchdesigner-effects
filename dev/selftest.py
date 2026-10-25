@@ -313,7 +313,7 @@ def _check_flash_gate(host):
 
 def _check_audio_in(host):
     """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; beat_count and
-    energy; audioAnalysis-style kick pulses and low; Fosfora's signal (beat and bar counts, build,
+    energy; kick pulses as audioAnalysis gives them and low; Fosfora's signal (beat and bar counts, build,
     beat_phase, bar_phase, and bass beside energy: level follows bass); raw audio (the sample MP3)."""
     cases = {}
 

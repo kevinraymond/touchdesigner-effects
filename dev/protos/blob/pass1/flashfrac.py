@@ -1,4 +1,4 @@
-"""DEV ONLY (blob_track pass 1): a finer reading of dev/flash.py-style recordings than the area
+"""DEV ONLY (blob_track pass 1): a finer reading of recordings like dev/flash.py's than the area
 rule's 0.5 steps: for k = 2, 3, 4 transitions in a second, the largest fraction of a window a third
 of the screen wide and high whose cells reach k (WCAG's area rule fails at 25%).
     uv run --with numpy dev/protos/blob/pass1/flashfrac.py <folder>

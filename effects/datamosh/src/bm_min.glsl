@@ -1,4 +1,4 @@
-// Datamosh-style (touchdesigner-effects, MIT): block matching, step 2 of 2. Per block, the
+// Datamosh (touchdesigner-effects, MIT): block matching, step 2 of 2. Per block, the
 // candidate with the least cost; the zero offset gets a bonus, as encoders prefer "skip" blocks.
 // Coarse level (uP.z = 0): rg is the integer offset at this level (content came from x + d), for
 // the fine level to center on; one output pixel per block. Final level (uP.z = 1): a parabola
