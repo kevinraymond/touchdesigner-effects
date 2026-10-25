@@ -29,7 +29,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.8'
+VERSION = '0.1.9'
 # Shown while nothing is wired: the dancer, the library's own footage (CC BY 4.0, 5 s, 1.3 MB), and
 # her depth map (Depth Anything 3 Mono-Large, held steady across frames, 0.5 MB) for the effects that
 # take input 3, carried in the component's Virtual File System and read by a path relative to it, so
@@ -112,8 +112,12 @@ for i, (name, path) in enumerate(EFFECTS):
         fx.inputConnectors[2].connect(depth)
     # Its node viewer would cook it whenever this network is open on screen.
     fx.viewer = False
+    # Its Flashing follows the showreel's, but Up to 3 per second drops to Calm while Cycle fades and for a second
+    # after: a fade changes the whole picture once, and with Blob Track flashing as fast as Up to 3 allows right after
+    # one, a second reached 3.5 (0.1.9, ten effects; earlier versions measured 3.0 at most).
     if hasattr(fx.par, 'Flashing'):
-        fx.par.Flashing.expr = 'parent().par.Flashing'
+        fx.par.Flashing.expr = ("'calm' if parent().par.Flashing == 'wcag' and parent().par.View == 'cycle' and "
+                                "op('cycle')['since'].eval() < {:g} else parent().par.Flashing".format(FADE + 1))
     with open(path, 'rb') as f:
         embeds[name] = hashlib.sha256(f.read()).hexdigest()
     null = mk(comp, nullTOP, 'fx_' + name, 150, fx.nodeY, comment="{}'s picture, for view.".format(name))

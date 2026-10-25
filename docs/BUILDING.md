@@ -220,6 +220,16 @@ between light and dark there, with Flashing Off as much as on (Feedback 0.95 at 
 No gate reaches that, so the parameters' ranges have to: measure the corners of every range that feeds a loop
 (`TD_ARGS='<effect> flashing=off Feedback=... Zoom=...' dev/td.sh dev/flash.py` records only that setting).
 
+Three more from Slit-Scan, whose picture is the input re-timed. A beat that moves an area back and forth in time is a
+jolt wherever the picture moves (a band of extra delay running through the time map flashed red flowers and koi at
+Calm, 3 and 4 red flashes a second), so its beats tear a few thin slivers instead, as Glitch's do. Anything that moves
+the time map sweeps time past each point at the delay times the map's rate, and faster than the picture's own
+movement it shows the picture's changes, flashes included, faster, with Flashing Off as much as on: limit the product,
+not the rate alone (a drift that measured clean at a 1.5 s delay added a flash a second at 8 s). And strip photography
+spreads one line's flicker over a whole area, wider the faster the film runs, so its speed stops where the flowers
+stopped adding flashes, and the red guard covers every pixel it shows (guarding only the film as it was laid still
+measured 2 red flashes a second: resampling the moving film mixed one pixel's red with another's green and blue).
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -388,6 +398,16 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   Feedback TOPs from a 1 x 1 Constant TOP, so each stateful pass puts a TOP of the size it should be
   first (the picture, the motion) and reads its feedback by UV as a later input; no expression reads
   another operator's size (that kept an unwired sample movie cooking, above).
+- A Texture 3D TOP (Type 2D Texture Array works the same) is a ring of Cache Size slots: each cook writes the next
+  slot, whether or not its input changed, and nothing says which slot that was (`uTD3DInfos[0].depth.z` isn't it).
+  Replace Single with a changing Replace Index writes that slot as well as the next one, so it can't steer the writes;
+  Active off skips the write and the ring waits. Slots never written hold garbage, not zeros, and forced cooks inside
+  one Python call write nothing (2025.33230, `dev/probes/texture3d.py`, `texture3d_writes.py`). It writes only while
+  something pulls it, so its history goes stale while the effect is unused. Slit-Scan stamps every slot with which cook
+  wrote it in a third ring beside the picture and its flow, and finds its slots from the stamps.
+- `TOP.gpuMemory` gives a TOP's GPU memory in bytes (Slit-Scan's history: 503 MB for 128 slots of 1280 x 720 8-bit,
+  about 7% over width x height x 4 x slots). `TOP.sample()` returned red in the alpha place on 32-bit float GLSL
+  outputs: don't trust a pixel's alpha read that way.
 - A Geometry COMP instances from TOPs, one pixel per instance: Default Instance OP sets the count
   (Instance Count from its length), and Translate, Scale and Color each take their own TOP
   (`instancetop`, `instancesop`, `instancecolorop`) with channels `r`, `g`, `b`, `a`.

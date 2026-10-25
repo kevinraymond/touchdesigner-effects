@@ -1,6 +1,6 @@
 # Showreel
 
-![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, the clip and its depth map (optional) as inputs. Below them, ASCII draws her in glyphs, Bent Cam turns her through a circuit-bent webcam into purple shadows, contoured light and torn green lines, Blob Track boxes her moving limbs, Datamosh smears her pose into the next, Fluid pours flames off her as she moves, Glitch tears her on the beat, Particles shed glowing specks off her, Point Cloud turns her and the lit wall behind her in 3D, and VHS + CRT plays her off a worn tape on an old TV as a band of torn lines crosses her. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
+![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, the clip and its depth map (optional) as inputs. Below them, ASCII draws her in glyphs, Bent Cam turns her through a circuit-bent webcam into purple shadows, contoured light and torn green lines, Blob Track boxes her moving limbs, Datamosh smears her pose into the next, Fluid pours flames off her as she moves, Glitch tears her on the beat, Particles shed glowing specks off her, Point Cloud turns her and the lit wall behind her in 3D, Slit-Scan shows each row of her from a moment earlier than the one above, so her limbs twist as she turns, and VHS + CRT plays her off a worn tape on an old TV as a band of torn lines crosses her. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
 in, and the same picture runs through each effect in turn, fading from one to the next in time with
@@ -72,12 +72,15 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with the nine effects of this release inside, the dancer clip's depth on
+TouchDesigner 2025.33230), with the ten effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 3.5 ms on the GPU per frame and 1.1 ms on the CPU on average (the median
-of three runs), depending on the effect showing; during a fade two effects run, so the 95th
-percentile was 7.1 ms on the GPU and 1.3 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
-grow as the library adds effects. Nothing inside cooks while the output is unused.
+runs one effect at a time: 3.9 ms on the GPU per frame and 1.1 ms on the CPU on average (the median
+of three runs, 59 fps held), depending on the effect showing; during a fade two effects run, so the
+95th percentile was 7.5 ms on the GPU and 1.3 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+grow as the library adds effects. Nothing inside cooks while the output is unused. GPU memory is the
+exception: Slit-Scan keeps a few seconds of the picture for its history, about 546 MB at 1280 x 720,
+and once it has shown, that memory stays reserved while the other effects show (its page has the
+figures).
 
 ## Accessibility
 
@@ -85,25 +88,27 @@ grow as the library adds effects. Nothing inside cooks while the output is unuse
   page). Cycle fades from one effect to the next over a second, never within 2 s of its last move,
   so even fast bars can't turn its moves into flashing. It used to cut: with six effects inside, a
   cut on top of an effect's own flashes reached 3.5 a second at Up to 3 per second under the test
-  below, past WCAG's 3; the fade brought that down to 2.5.
+  below, past WCAG's 3; the fade brought that down to 2.5. A fade still changes the whole picture
+  once, and with ten effects inside, a fade into Blob Track flashing as fast as Up to 3 per second
+  allows reached 3.5 again. So while Cycle fades and for a second after, Up to 3 per second holds the
+  effects at Calm.
 - **Measured.** The test recorded the output while it fed a beat far busier than music (8 beats,
   2 bars and 1 drop a second) and counted the flashes in the worst second, by WCAG's area rule.
   Under that beat Cycle moves on every 2 s, its fastest, whatever Every says:
 
   | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Dancer in a hazy warehouse | 1.0 | 1.5 | 2.5 | 1.0 |
-  | People crossing a plaza | 1.0 | 1.5 | 2.0 | 0.5 |
-  | Dancer, Every 1 | 1.0 | 1.5 | 2.5 | 1.0 |
+  | Dancer in a hazy warehouse | 1.0 | 1.5 | 2.0 | 1.0 |
+  | People crossing a plaza | 1.0 | 1.0 | 2.0 | 0.5 |
+  | Dancer, Every 1 | 1.0 | 1.5 | 2.0 | 1.0 |
 
   Off adds nothing to what the clips do by themselves (beyond the half flash a second the count
   allows for measuring noise: the dancer at Off has measured 1.0 and 1.5 in different builds, by
   which effects showed), Calm adds at most one flash a second, and no
   setting goes past WCAG's 3 (Up to 3 per second reaches it with the effects flashing as often as
   that allows). The two dancer runs differ by which effects happened to show in the 10 seconds
-  measured. Red flashes: 1.0 a second on the dancer and 0.5 on the plaza at Up to 3 per second,
-  from Glitch's color split (see its page; it is the only effect that makes red flashes on the
-  dancer), under WCAG's limit; none otherwise. On the plaza, Off measures 1.0 against the clip's
+  measured. Red flashes: none in these runs (Glitch's color split, the only effect that makes red
+  flashes on the dancer, has measured up to 1.0 a second in earlier runs that caught it). On the plaza, Off measures 1.0 against the clip's
   0.5, within the half flash a second the count allows for measuring noise.
 - **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 3 pixels
   per font pixel (at 720 pixels high; they scale with the picture), so they read on light and dark
