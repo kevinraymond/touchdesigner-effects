@@ -9,8 +9,8 @@ or stands out in the depth (or mask) on input 3. On the beats the music makes it
 
 The network, left to right:
   motion   lib optical_flow(): lum8, lum4 and the previous frame's (lum8p, lum4p), the new-frame and cut
-           test (change, change_avg, clock), the flow (lk8, lk4) -> pace (when the last frame came, the gap
-           between frames) -> motion (the flow as a speed, held between the input's frames)
+           test (change, change_avg, clock), the flow (lk8, lk4) -> lib flow_speed(): pace (when the last
+           frame came, the gap between frames) -> motion (the flow as a speed, held between the input's frames)
   emit     where the input pours into the fluid: motion, the picture, or input 3 (depth -> near -> find, or
            near alone for a mask; subject passes them only for Depth and Mask, so they cook only then)
   fluid    advect (the velocity carried by itself, swirled, risen and dragged by the motion) -> divergence
@@ -199,14 +199,7 @@ mo = optical_flow(comp, _ROOT, source, x=-400, y=600)
 still = mk(comp, constantTOP, 'still', -400, 300, comment='Nothing, and still: where the fluid starts, and Reset.',
            outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
-pace_fb = mk(comp, feedbackTOP, 'pace_fb', 400, 1200, [still], "pace's last frame.", top='pace')
-pace = glsl(comp, 'pace', 400, 1050, [mo['clock'], pace_fb], src('pace.glsl'),
-            'One pixel: when the last new input frame came, and the gap between frames.', fmt='rgba32float',
-            uP=(Expr('absTime.seconds'), 0.25))
-motion_fb = mk(comp, feedbackTOP, 'motion_fb', 400, 900, [still], "motion's last frame.", top='motion')
-motion = glsl(comp, 'motion', 400, 750, [mo['lk4'], motion_fb, pace], src('motion.glsl'),
-              "The input's motion at the fluid's grid, as a speed, held between the input's frames.",
-              fmt='rgba32float', uM=(Expr('absTime.seconds'), DT, 0.25, 0.3))
+pace, motion = flow_speed(comp, _ROOT, mo, still, x=400, y=750)
 
 # ---- Where it emits ------------------------------------------------------------------------------
 depth = depth_in(comp, x=-600, y=-500)

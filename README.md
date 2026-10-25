@@ -39,7 +39,7 @@ with a preview, a performance note, and a download link that always points at th
 | [Glitch](docs/effects/glitch.md) | Broken digital video on the beat: every beat tears thin slivers of the picture sideways, and on the one of each bar a burst makes blocks jump, freeze or lose their colors and rows slip, then the picture is whole again. Calm by default: at most one burst a second, or none at all. |
 | [Particles](docs/effects/particles.md) | Particles peel off a subject and drift away like smoke, in the picture's colors, or fill the frame for the subject to shove through (Push) or for a stream to part round it (Flow): people in a depth map (Kinect, RealSense, a depth estimator) or a mask for the best result, and with only a webcam or a video, whatever moves. Loudness thickens the stream, beats kick the cloud outward with a burst of sparks, bars swing the wind. |
 | [Point Cloud](docs/effects/point_cloud.md) | The picture as a cloud of points in 3D, each at its depth (a depth camera, a depth estimator, or the picture's brightness), seen from a camera that sways round it: people stand out from the wall behind them. Solid dots, glowing dots, or a surface of blended splats. Loudness swells the dots, beats deepen the cloud, bars swing the camera. |
-| [VHS + CRT](docs/effects/vhs_crt.md) | An old VHS tape played on a CRT TV, modeled the way the signal goes rather than drawn on top: colors bleed to the right, grain and white specks, a band of torn lines where the tracking drifts, composite dots and rainbows, then lines that widen as they brighten, the phosphor mask and the glow of curved glass. The tracking slips on the bars, and a drop makes the TV lose vertical hold for a moment. |
+| [VHS + CRT](docs/effects/vhs_crt.md) | An old VHS tape played on a CRT TV, modeled the way the signal goes rather than drawn on top: colors bleed to the right, grain and white specks, a band of torn lines where the tracking drifts, composite dots and rainbows, then lines that widen as they brighten, the phosphor mask and the glow of curved glass. The tracking slips on the bars, and a drop makes the TV lose vertical hold for a moment. Or show it on an LCD (smearing, its tones shifting with the viewing angle), a plasma panel (false contours on moving gradients) or e-ink (a few updates a second, ghosts, a full refresh on the bar). |
 | *More on the way* | New effects are in the works. Watch or star the repo to see them land. |
 
 To try them all at once, the [Showreel](docs/effects/showreel.md) holds every effect in one
@@ -52,7 +52,7 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Eight effects are done (ASCII and Datamosh-style 0.2.0, Fluid and VHS + CRT 0.1.0, Glitch 0.1.1, Blob
+Eight effects are done (ASCII, Datamosh-style and VHS + CRT 0.2.0, Fluid 0.1.0, Glitch 0.1.1, Blob
 Track and Point Cloud 0.1.2, Particles 0.3.1), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 

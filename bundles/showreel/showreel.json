@@ -1,18 +1,18 @@
 {
-  "version": "0.1.4",
-  "sources_sha256": "389341f98216fb118c6022bdf7838778757ff12f8b5ba2649e6a2098b083a302",
+  "version": "0.1.5",
+  "sources_sha256": "fd2e796662e179e58c5a92dd7bc11074b1e52edf002d98ad99c746359c447e39",
   "embeds": {
-    "ascii": "d47d3a457dbfa4076b8088f1ff94ae7bd086670fa1127154c5aac66ca3858b5a",
-    "blob_track": "4f15c75735ff2eb0fd95c61b9d8c5d5daef251ebe7df97a845c6b347f24b3567",
-    "datamosh": "7d07fba4ebf580ef05a966fbe27a0a61139f7baa629f4dd6f80657c66cd4b812",
-    "fluid": "8c50357c33ce1a9fdcfe8cfcd7805df76a5e40d4434bc31539bce17b56020660",
-    "glitch": "366fa94f659e91af94d724e2fe7c04a691cf404e73eac2e8f3453bfee44614c6",
-    "particles": "12e9679fea4394cd82f3e019f1afc7cf4afb7e4617209227ff557069032f5ab6",
-    "point_cloud": "627cb524ff0171ba5b533ebf78e217cb2d0a5eda1db1dc7a43197e56726d7248",
-    "vhs_crt": "bffdf2de481218a8316a12433919b81b5eeab43c84f7c7f1ccae0ad812ae4880"
+    "ascii": "26bfe09225e9325763735b484e947e7c2c734908a97c89456c01f803612d179a",
+    "blob_track": "ceefdf95678a587b3aec9cc499ff23a3dfd84b3bf104557564a8d7073efb083d",
+    "datamosh": "e214fe33c53d141822ee376a5c4afb81ae78ccfe9073a0fbcd0a26240e60d56f",
+    "fluid": "c4134960f2f7a367a87312613b049f8cf0de1f212439867a99d42b2b19b3b69e",
+    "glitch": "09c00babf9f182716f111e32634cb66d2bc67c13b3a4907d24894176ed9179bd",
+    "particles": "f2f02a7dadc1c3b7194437a1b4ac004751b114dafef893a25d53c92290bdae34",
+    "point_cloud": "3cbc743fd0450e991618aec9ca179c5346cc8e50070bed56dbcc6765ecf2e204",
+    "vhs_crt": "1af37f12b5aaf249a3e2b324657322cd6c6dce70c3abe7462cf406074e18cc7f"
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "8b065d06f711c7f13bf51704b8f5867b4fd40eeab5b4b3f99fa9096ccab77a04",
-  "tox_bytes": 1973392
+  "tox_sha256": "a4d9d99db95d3e2b8a4a2fbac489f71c7356c093ab1705f7628441441df5626c",
+  "tox_bytes": 1994816
 }

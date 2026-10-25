@@ -216,6 +216,24 @@ def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-
     return ops
 
 
+def flow_speed(comp, root, mo, start, x=400, y=750, dead=0.25, hold=0.3):
+    """The input's motion as a speed, shared by Fluid and VHS + CRT, from optical_flow()'s ops (mo): pace (one
+    pixel: when the last new input frame came, and the gap between frames) and motion (lk4 smoothed over 5 x 5
+    and divided by that gap: rg cells per second at a quarter of the input's size, b confidence), held between
+    the input's frames, so a slow clip moves like a live camera, dying away hold seconds after the last new frame,
+    and nothing across a cut; dead is a dead zone in cells per frame. start is a 1 x 1 32-bit TOP both Feedback
+    TOPs (pace_fb, motion_fb) start from. The shaders are lib/glsl's pace and speed. Returns (pace, motion)."""
+    pace_fb = mk(comp, feedbackTOP, 'pace_fb', x, y + 450, [start], "pace's last frame.", top='pace')
+    pace = glsl(comp, 'pace', x, y + 300, [mo['clock'], pace_fb], lib_glsl(root, 'pace.glsl'),
+                'One pixel: when the last new input frame came, and the gap between frames.', fmt='rgba32float',
+                uP=(Expr('absTime.seconds'), 0.25))
+    motion_fb = mk(comp, feedbackTOP, 'motion_fb', x, y + 150, [start], "motion's last frame.", top='motion')
+    motion = glsl(comp, 'motion', x, y, [mo['lk4'], motion_fb, pace], lib_glsl(root, 'speed.glsl'),
+                  "The input's motion at a quarter of its size, as a speed, held between the input's frames.",
+                  fmt='rgba32float', uM=(Expr('absTime.seconds'), Expr('min(absTime.stepSeconds, 0.05)'), dead, hold))
+    return pace, motion
+
+
 def flash_gate(comp, trigger, x, y, name='flash'):
     """Every flash an effect makes goes through here (docs/TD_IDIOMS.md A1). A Trigger CHOP turns
     trigger's channels into one-frame-wide pulses no closer together than the Flashing parameter

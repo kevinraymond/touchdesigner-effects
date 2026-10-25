@@ -12,8 +12,8 @@ lib/font5x7.py                a 5 x 7 bitmap font for text drawn in shaders (lab
 lib/audio_callbacks.py        the audio input's logic (audio_in() puts it in a Script CHOP)
 lib/glsl/                     shaders several effects share: depth_near.glsl (input 3 as nearness, by Depth Type),
                               depth_find.glsl (what stands in front of its surroundings); lum, change, clock and lk
-                              (the input's motion: optical_flow() builds them); common.glsl (Catmull-Rom resampling,
-                              a hash)
+                              (the input's motion: optical_flow() builds them); pace and speed (that motion as a
+                              speed: flow_speed()); common.glsl (Catmull-Rom resampling, a hash)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -85,7 +85,8 @@ shader filled, any number of inputs: past the third they go through its TOPs par
 only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is the one way
 an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's motion as Datamosh and
 Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or a cut, and Lucas-Kanade
-optical flow, each size following the input); `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
+optical flow, each size following the input), and `flow_speed()` turns that flow into a speed, held between
+the input's frames, as Fluid and VHS + CRT's plasma use it; `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
 the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and
 `lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
 

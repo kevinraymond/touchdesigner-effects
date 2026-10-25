@@ -1,7 +1,7 @@
-// Fluid (touchdesigner-effects, MIT): the input's pace, one pixel. When the last new input frame
-// came and how long the input takes between frames, smoothed: a 16 fps clip in a 60 fps project
-// brings a frame every third or fourth frame, and the optical flow measures the movement over that
-// whole gap, so motion.glsl divides by it to get a speed.
+// touchdesigner-effects (MIT), shared by Fluid and VHS + CRT (lib/glsl, flow_speed()): the input's
+// pace, one pixel. When the last new input frame came and how long the input takes between frames,
+// smoothed: a 16 fps clip in a 60 fps project brings a frame every third or fourth frame, and the
+// optical flow measures the movement over that whole gap, so speed.glsl divides by it to get a speed.
 // Inputs: 0 the clock (lib clock.glsl: r new frame, g cut), 1 this pass's previous output
 // (Feedback TOP). Out: r when the last new frame came (seconds), g the gap between frames
 // (seconds), b new frame now (0/1), a cut now (0/1).

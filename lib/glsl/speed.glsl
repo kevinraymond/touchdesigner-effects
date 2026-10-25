@@ -1,9 +1,10 @@
-// Fluid (touchdesigner-effects, MIT): the input's motion as a speed, at the fluid's grid (a quarter
-// of the input's size), in grid cells per second. On a new input frame it takes the optical flow
-// (lib lk.glsl: the displacement since the last input frame) smoothed over 5 x 5, each pixel
-// weighted by how textured it is so flat areas borrow from their neighbors, and divides it by the
-// gap between frames (pace.glsl). Between new frames it holds, so the fluid keeps being pushed while
-// a slow clip repeats a frame; when no new frame has come for a while (a paused clip) it dies away.
+// touchdesigner-effects (MIT), shared by Fluid and VHS + CRT (lib/glsl, flow_speed()): the input's
+// motion as a speed, at a quarter of the input's size, in cells (its pixels) per second. On a new
+// input frame it takes the optical flow (lk.glsl: the displacement since the last input frame)
+// smoothed over 5 x 5, each pixel weighted by how textured it is so flat areas borrow from their
+// neighbors, and divides it by the gap between frames (pace.glsl). Between new frames it holds, so
+// a slow clip that repeats a frame keeps moving like a live camera; when no new frame has come for
+// a while (a paused clip) it dies away.
 // A cut brings no motion: the flow across a cut is meaningless.
 // Inputs: 0 the flow (lk4: rg displacement in UV units, b confidence), 1 this pass's previous output
 // (Feedback TOP), 2 the pace (1 x 1). Out: rg the speed (cells per second), b the confidence, a 1.

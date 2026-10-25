@@ -74,9 +74,9 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with the eight effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 4.0 ms on the GPU per frame and 1.2 ms on the CPU on average (the median
+runs one effect at a time: 3.5 ms on the GPU per frame and 1.4 ms on the CPU on average (the median
 of three runs), depending on the effect showing; during a fade two effects run, so the 95th
-percentile was 7.5 ms on the GPU and 1.7 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+percentile was 7.4 ms on the GPU and 1.7 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
 grow as the library adds effects. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -92,11 +92,13 @@ grow as the library adds effects. Nothing inside cooks while the output is unuse
 
   | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Dancer in a hazy warehouse | 1.0 | 2.0 | 2.0 | 1.0 |
-  | People crossing a plaza | 0.5 | 1.5 | 1.5 | 0.5 |
+  | Dancer in a hazy warehouse | 1.5 | 2.0 | 2.5 | 1.0 |
+  | People crossing a plaza | 0.5 | 1.5 | 1.0 | 0.5 |
   | Dancer, Every 1 | 1.0 | 2.0 | 2.5 | 1.0 |
 
-  Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
+  Off adds nothing to what the clips do by themselves (beyond the half flash a second the count
+  allows for measuring noise: the dancer at Off has measured 1.0 and 1.5 in different builds, by
+  which effects showed), Calm adds at most one flash a second, and no
   setting goes past WCAG's 3 (Up to 3 per second reaches it with the effects flashing as often as
   that allows). The two dancer runs differ by which effects happened to show in the 10 seconds
   measured. Red flashes: 0.5 a second on the dancer and the plaza at Up to 3 per second, from

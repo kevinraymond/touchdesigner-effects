@@ -4,17 +4,24 @@ The picture as a VHS tape played into a CRT television shows it, modeled as the 
 over the top: the deck's time base wobbles each line sideways; its luma and chroma channels lowpass and
 sharpen the picture (causal filters, so colors bleed to the right) and add their noise, specks, dropouts and
 mistracking; the composite cable and the TV's decoder add dots and rainbows; the tube draws each line with
-a beam that widens as it brightens, through a phosphor mask, and the glass glows around the light. On the
-music the heads lose tracking for a moment, and a drop slips the picture down a third of a frame.
+a beam that widens as it brightens, through a phosphor mask, and the glass glows around the light. Or another
+screen shows it: an LCD (slow crystal, smearing; tones that shift with the viewing angle), a plasma panel (grays
+made of pulses, false contours on moving gradients) or e-ink (a few updates a second, ghosts, a full refresh on
+each burst). On the music the heads lose tracking for a moment, and a drop slips the picture down a third of a
+frame; on e-ink, each of those is a full refresh instead.
 
 The network, left to right:
   picture  source -> line_in (each line read where the deck's time base puts it, as YIQ) -> tape (the deck's
            filters, noise, specks, dropouts, mistracking) -> deck (its steep output filter) -> signal
            (composite, S-Video or RGB into the TV)
            -> glow_src -> glow (the light the glass spreads) -> screen (beams, mask, glow, curvature)
+  screens  lcd_state (the crystal, read back through lcd_fb) -> lcd; lib optical_flow() and flow_speed() (the
+           picture's motion) -> plasma; eink_state (read back through eink_fb) -> eink; shown picks one by
+           Screen (only that one cooks); still is where every Feedback TOP starts
   audio    audio_in() -> counts -> steps (Slope CHOP); steady counts the time; beat_on, bar_on, steady_on,
            drop_on pick the bursts asked for -> flash_gate() -> flash_budget -> burst (the heads mistracking,
-           held for Length), burst_count (the seed), drop_kind (a drop's burst: the picture slips);
+           held for Length), burst_count (the seed), drop_kind (a drop's burst: the picture slips), refresh
+           (e-ink's full refresh, which takes a burst's place);
            beats (or steady ticks with nothing wired) -> beat_pulse -> beat_env: the time base kicks
 """
 import os
@@ -26,7 +33,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 # The tape's raster: this many samples a line, whatever the picture's size (each a fraction of the width;
 # the shaders turn the deck's bandwidths into samples from the picture's aspect).
 RASTER_W = 1280
@@ -43,6 +50,12 @@ GLOW_SIZE = 9        # the glow's blur, in pixels at an eighth of the size (72 a
 FLASH_SPACING = {'calm': 1.1, 'other': 0.55}
 SIGNALS = (('composite', 'Composite'), ('svideo', 'S-Video'), ('rgb', 'RGB'))
 MASKS = (('aperture', 'Aperture Grille'), ('slot', 'Slot Mask'), ('shadow', 'Shadow Mask'), ('none', 'None'))
+SCREENS = (('crt', 'CRT'), ('lcd', 'LCD'), ('plasma', 'Plasma'), ('eink', 'E-Ink'), ('none', 'None'))
+SUBFIELDS = (('binary', '8 (Binary)'), ('redundant', '12 (Redundant)'))
+INK_MODES = (('gray16', '16 Grays'), ('gray4', '4 Grays'), ('fast', 'Fast'))
+# E-ink's full refresh, in seconds: to black, held there, back to the picture. One dark flash, through the gate.
+REFRESH = (0.12, 0.12, 0.3)
+DT = Expr('min(absTime.stepSeconds, 0.05)')
 
 
 def src(name):
@@ -69,7 +82,7 @@ comp, page, source = new_effect(
     README, tags=('vhs', 'crt', 'analog', 'audio-reactive'), audio=True, flashing=True, sample=SAMPLE_MOVIE)
 
 # ---- Parameters -------------------------------------------------------------------------------
-TAPE_ON, SCREEN_ON = 'me.par.Tape', 'me.par.Screen'
+TAPE_ON = 'me.par.Tape'
 p = custom(page, 'Toggle', 'Tape', 'Tape', True,
            'Play the picture off a VHS tape: soft, bleeding color, noise, a wobbly time base. Off: straight '
            'into the TV.')
@@ -97,37 +110,70 @@ p.startSection = True
 custom(page, 'Int', 'Lines', 'Lines', 240,
        'How many lines the picture has, top to bottom, on tape and on the screen. 240: one field of NTSC, '
        'as old consoles drew it.', 120, 576, True)
-p = custom(page, 'Toggle', 'Screen', 'Screen', True,
-           'Show it on a CRT: scanlines, the phosphor mask, glow and a curved face. Off: the signal, flat.')
+p = menu(page, 'Screen', 'Screen', SCREENS, 'crt',
+         'What shows the picture. CRT: a tube (scanlines, the phosphor mask, glow, a curved face). LCD: liquid '
+         'crystal, slow to change, so moving things smear, its tones shifting with the angle it is seen from. '
+         'Plasma: cells of glowing gas that make each gray from pulses, so moving gradients break into false bands. '
+         'E-Ink: paper-like grays updating a few times a second, leaving ghosts, cleared by a full refresh (a black '
+         'flash) on each burst. None: the signal, flat.')
 p.startSection = True
+CRT = "me.par.Screen == 'crt'"
 p = menu(page, 'Mask', 'Mask', MASKS, 'aperture',
-         'The pattern of red, green and blue phosphors. Aperture Grille: fine stripes (Trinitron). Slot Mask: '
-         'stripes broken into staggered slots (most TVs). Shadow Mask: dot triads (older sets, monitors).')
-p.enableExpr = SCREEN_ON
+         'The pattern of the CRT\'s red, green and blue phosphors. Aperture Grille: fine stripes (Trinitron). Slot '
+         'Mask: stripes broken into staggered slots (most TVs). Shadow Mask: dot triads (older sets, monitors).')
+p.enableExpr = CRT
 p = custom(page, 'Float', 'Masksize', 'Mask Size', 3.0,
-           'Width of one red-green-blue triad, in pixels at 720 high (scales with the picture).', 2, 8, True)
-p.enableExpr = SCREEN_ON + " and me.par.Mask != 'none'"
+           "Width of one red-green-blue triad of the CRT's mask, or of one pixel of the LCD or plasma panel, in "
+           'pixels at 720 high (scales with the picture).', 2, 8, True)
+p.enableExpr = "(me.par.Screen == 'crt' and me.par.Mask != 'none') or me.par.Screen in ('lcd', 'plasma')"
 p = custom(page, 'Float', 'Scanlines', 'Scanlines', 0.6,
-           'How much the lines stand apart, 0-1: dark lines thin with black between them, bright lines '
+           'How much the CRT\'s lines stand apart, 0-1: dark lines thin with black between them, bright lines '
            'wide enough to touch, as a CRT\'s beam grows with its brightness.', 0, 1, True)
-p.enableExpr = SCREEN_ON
+p.enableExpr = CRT
 p = custom(page, 'Float', 'Curvature', 'Curvature', 0.3,
-           'How much the glass bows, 0-1, with rounded corners and darker edges. 0: flat.', 0, 1, True)
-p.enableExpr = SCREEN_ON
-p = custom(page, 'Float', 'Glow', 'Glow', 0.3, 'Light spreading in the glass around bright parts (halation), 0-1.',
-           0, 1, True)
-p.enableExpr = SCREEN_ON
+           'How much the CRT\'s glass bows, 0-1, with rounded corners and darker edges. 0: flat.', 0, 1, True)
+p.enableExpr = CRT
+p = custom(page, 'Float', 'Glow', 'Glow', 0.3,
+           "Light spreading in the glass around bright parts (halation), 0-1: the CRT's, or the plasma panel's "
+           'front glass.', 0, 1, True)
+p.enableExpr = "me.par.Screen in ('crt', 'plasma')"
+p = custom(page, 'Float', 'Response', 'Response', 0.5,
+           "How slowly the LCD's crystal follows, 0-1: 0 a later panel, 1 an early one. Moving things leave trails, "
+           'longest where cells turn lighter (behind dark things moving over light ones), since a cell turns to '
+           'let light through more slowly than to block it.', 0, 1, True)
+p.enableExpr = "me.par.Screen == 'lcd'"
+p = custom(page, 'Float', 'Angle', 'Viewing Angle', 0.0,
+           'Where the LCD is seen from, -1 (well below) to 1 (well above). From above the picture washes out; from '
+           'below it darkens and its light tones invert. At 0 the top is seen a little from below and the bottom '
+           'from above, as on an old laptop.', -1, 1, True)
+p.enableExpr = "me.par.Screen == 'lcd'"
+p = menu(page, 'Subfields', 'Sub-Fields', SUBFIELDS, 'binary',
+         'How the plasma panel makes each gray: lighting a cell for some of a frame\'s pulses. 8 (Binary): pulses '
+         'of 1, 2, 4 ... 128, as early panels did: where a gradient moves, the eye adds pulses from different grays '
+         'and sees false bands (dynamic false contours). 12 (Redundant): seven pulses of 32 for the upper grays, as '
+         'later panels did: fainter bands.')
+p.enableExpr = "me.par.Screen == 'plasma'"
+p = menu(page, 'Inkmode', 'Ink Mode', INK_MODES, 'gray4',
+         'How the e-ink panel updates, after E Ink\'s own modes. 16 Grays: about twice a second. 4 Grays: about '
+         'three times a second. Fast: black and white, dithered, about eight times a second, a little less contrast.')
+p.enableExpr = "me.par.Screen == 'eink'"
+p = custom(page, 'Float', 'Ghosting', 'Ghosting', 0.5,
+           'How much of what the e-ink panel showed stays behind after each update, 0-1. Where a pixel then holds '
+           'still, its ghost stays, so ghosts pile up until a full refresh (each burst) clears them.', 0, 1, True)
+p.enableExpr = "me.par.Screen == 'eink'"
 p = menu(page, 'Bursts', 'Bursts', (('beats', 'On Beats'), ('bars', 'On Bars'), ('steady', 'Steady'), ('off', 'Off')),
          'bars',
-         "When the heads lose tracking for a moment: a big torn band full of streaks. On Bars (the one of each "
-         "bar) or On Beats: input 2's (with nothing wired, every {s:g} s). Steady: every {s:g} s. Off: never. "
-         "Every burst is a flash, so Flashing limits how often they come.".format(s=STEADY))
+         "When the heads lose tracking for a moment: a big torn band full of streaks (on e-ink, a full refresh "
+         "instead: black and back, the ghosts cleared). On Bars (the one of each bar) or On Beats: input 2's (with "
+         "nothing wired, every {s:g} s). Steady: every {s:g} s. Off: never. Every burst is a flash, so Flashing "
+         "limits how often they come.".format(s=STEADY))
 p.startSection = True
 custom(page, 'Float', 'Length', 'Length', 0.3, 'How long a burst lasts, in seconds.', 0.1, 1.0, True).enableExpr = \
     "me.par.Bursts != 'off'"
 custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "With Fosfora's signal on input 2: a build throws the tracking off further as it rises, and a drop slips "
-       "the picture down for a moment, as a TV losing vertical hold (Fosfora's drop detection is experimental).")
+       "the picture down for a moment, as a TV losing vertical hold (on e-ink, a full refresh; Fosfora's drop "
+       "detection is experimental).")
 
 # ---- Audio (input 2) and the bursts -------------------------------------------------------------
 audio = audio_in(comp, _ROOT)
@@ -166,6 +212,10 @@ drop_env = mk(comp, triggerCHOP, 'drop_env', 1800, -650, [drop_step], 'How recen
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
 drop_kind = mk(comp, holdCHOP, 'drop_kind', 2000, -600, [drop_env, budget],
                "1 when the burst that passed was a drop's: it slips the picture.")
+refresh = mk(comp, triggerCHOP, 'refresh', 1800, -200, [budget],
+             "E-ink's full refresh, a burst's place on e-ink: to black over {} s, held {} s, back over {} s.".format(
+                 *REFRESH),
+             attack=REFRESH[0], peak=1, peaklen=REFRESH[1], decay=REFRESH[2], sustain=0, release=0)
 
 tick = mk(comp, mathCHOP, 'steady_tick', 800, -100, [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
           gain=Expr('0 if ' + WIRED + ' else 1'))
@@ -178,14 +228,18 @@ beat_env = mk(comp, triggerCHOP, 'beat_env', 1400, -150, [beat_pick], 'Falls fro
 # ---- Picture ----------------------------------------------------------------------------------
 # A drop's slip: the whole of it at once and back at once, so each part of the picture changes once and back
 # (one flash); a roll sweeping the picture past every point made several.
-SLIPPED = ("{} if op('burst')[0] > 0.5 and op('drop_kind')[0] > 0.5 and parent().par.Moments else 0").format(SLIP)
+# On e-ink a burst is a full refresh instead, so the tape neither bursts nor slips there.
+INK = "parent().par.Screen == 'eink'"
+SLIPPED = ("{} if not {} and op('burst')[0] > 0.5 and op('drop_kind')[0] > 0.5 and parent().par.Moments "
+           "else 0").format(SLIP, INK)
 KICK = "op('beat_env')[0] if parent().par.Flashing != 'off' and parent().par.Bursts != 'off' else 0"
 TAPE = dict(
     uT=(Expr('absTime.seconds'), par('Lines'), Expr(KICK), Expr(SLIPPED)),
     uTape=(par('Tape'), par('Wear'),
            Expr("min(1, parent().par.Tracking + (0.5 * op('audio')['build'] if parent().par.Moments else 0))"),
            par('Headswitch')),
-    uBurst=(Expr("op('burst')[0]"), Expr("op('burst_count')[0]"), Expr("op('audio')['level']")))
+    uBurst=(Expr("0 if {} else op('burst')[0]".format(INK)), Expr("op('burst_count')[0]"),
+            Expr("op('audio')['level']")))
 common = lib_glsl(_ROOT, 'common.glsl') + src('common.glsl')
 line_in = glsl(comp, 'line_in', -400, 150, [source], common + src('line_in.glsl'),
                "Each line of the picture where the deck's time base puts it, as YIQ.", res=(RASTER_W, 240),
@@ -208,9 +262,46 @@ glow_src.par.outputresolution = 'eighth'
 glow = mk(comp, blurTOP, 'glow', 400, 0, [glow_src], 'The light the glass spreads around bright parts.',
           type='gaussian', size=GLOW_SIZE)
 screen = glsl(comp, 'screen', 600, 150, [source, signal, glow], src('red_guard.glsl') + src('screen.glsl'),
-              'The tube: each line a beam that widens as it brightens, the phosphor mask, the glow, the curved face.',
-              uScr=(par('Screen'), Expr('parent().par.Mask.menuIndex'), par('Masksize'), par('Scanlines')),
+              'The tube: each line a beam that widens as it brightens, the phosphor mask, the glow, the curved face '
+              '(Screen CRT); the signal, flat (None).',
+              uScr=(Expr("1 if parent().par.Screen == 'crt' else 0"), Expr('parent().par.Mask.menuIndex'),
+                    par('Masksize'), par('Scanlines')),
               uScr2=(par('Lines'), par('Curvature'), par('Glow')))
 
-finish_effect(comp, screen, VERSION, page)
+# ---- The other screens ---------------------------------------------------------------------------
+panel = src('panel.glsl')
+still = mk(comp, constantTOP, 'still', 400, 450, comment='Nothing: where every Feedback TOP starts.',
+           outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float',
+           colorr=0, colorg=0, colorb=0, alpha=0)
+lcd_fb = mk(comp, feedbackTOP, 'lcd_fb', 600, 600, [still], "lcd_state's last frame.", top='lcd_state')
+lcd_state = glsl(comp, 'lcd_state', 600, 450, [source, signal, lcd_fb], panel + src('lcd_state.glsl'),
+                 "The LCD's crystal: each cell turning toward the signal over milliseconds, more slowly to lighter.",
+                 fmt='rgba16float', uLcd=(par('Masksize'), par('Response'), DT))
+lcd = glsl(comp, 'lcd', 800, 450, [source, lcd_state], src('red_guard.glsl') + panel + src('lcd.glsl'),
+           "The LCD's face: the cells in their black matrix, the backlight, the tones the viewing angle shifts.",
+           uLcd=(par('Masksize'), 0, 0, par('Angle')))
+mo = optical_flow(comp, _ROOT, source, x=0, y=800)
+pace, motion = flow_speed(comp, _ROOT, mo, still, x=800, y=800)
+plasma = glsl(comp, 'plasma', 1000, 800, [source, signal, glow, motion],
+              src('red_guard.glsl') + panel + src('plasma.glsl'),
+              "The plasma panel: grays made of a frame's pulses, read along the eye's path (false contours), the "
+              "phosphors' afterglow, the cells, the glass's glow.",
+              uPl=(par('Masksize'), Expr('parent().par.Subfields.menuIndex'), par('Glow'),
+                   Expr('int(absTime.seconds * 60) % 4096')))
+# E-ink's updates, counted in Python (double precision): which one this is (mod 1024) and how far through it.
+WAVE = "(0.45, 0.29, 0.12)[parent().par.Inkmode.menuIndex]"
+INK_PARS = dict(uInk=(Expr('int(absTime.seconds / {}) % 1024'.format(WAVE)), Expr('absTime.seconds / {} % 1'.format(WAVE)),
+                      Expr('parent().par.Inkmode.menuIndex'), par('Ghosting')),
+                uInk2=(Expr("op('refresh')[0]"),))
+eink_fb = mk(comp, feedbackTOP, 'eink_fb', 1000, 600, [still], "eink_state's last frame.", top='eink_state')
+eink_state = glsl(comp, 'eink_state', 1000, 450, [source, signal, eink_fb], panel + src('eink_state.glsl'),
+                  'The e-ink panel: the gray each pixel is driven to a few times a second, and the ghosts it leaves.',
+                  fmt='rgba16float', **INK_PARS)
+eink = glsl(comp, 'eink', 1200, 450, [source, eink_state], lib_glsl(_ROOT, 'common.glsl') + src('eink.glsl'),
+            "The e-ink panel's face: ink and paper grays, each update easing in, the full refresh.", **INK_PARS)
+shown = mk(comp, switchTOP, 'shown', 1000, 150, [screen, lcd, plasma, eink],
+           'The screen Screen picks (None is the flat signal, from screen): only that one cooks.',
+           index=Expr("{'lcd': 1, 'plasma': 2, 'eink': 3}.get(parent().par.Screen.eval(), 0)"))
+
+finish_effect(comp, shown, VERSION, page)
 save_effect(comp, _HERE, _ROOT)
