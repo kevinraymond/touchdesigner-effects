@@ -1,19 +1,32 @@
 # TouchDesigner Effects
 
+![Every effect in the library on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below, what comes out: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D](docs/effects/showreel.webp)
+
+*Every effect on the same clip, all in step. On top, what goes in: the clip and its depth map.*
+
+- **Free and MIT-licensed.** Use them in your own work, commercial work included; keep the
+  license notice. See [License](#license).
+- **Nothing to install.** Each effect is one self-contained `.tox`: no plugins, no C++
+  operators, no Python packages, no files beside it. Drag it into your network and it runs,
+  showing TouchDesigner's own sample movie until you wire in your picture.
+- **Runs on the free license.** Every effect works on TouchDesigner's free Non-Commercial
+  license.
+- **Extras are optional.** Music on input 2 ([Fosfora](https://github.com/kevinraymond/fosfora)'s
+  signal, any audio, TouchDesigner's audio analysis) and depth on input 3 (a depth camera or
+  estimator) make some effects richer, and each page says what they add. None is needed to
+  start.
+
 Before [Fosfora](https://github.com/kevinraymond/fosfora), I had never heard of TouchDesigner.
 While adding the examples for Fosfora's signal mode, I got the free version of TD and poked
 around it a bit. Then I decided I would create some effects based on different things I've
 worked on or seen, in case they are useful for anyone. If nothing else they are examples of solid
 working effects. Enjoy!
 
-Ready-to-use TouchDesigner effects you can download and use in a minute: drag in a `.tox`
-and it works, and opening it shows how it works.
-
-Every effect is one self-contained `.tox` that works on the free Non-Commercial license:
-a TOP in, a TOP out, and an optional CHOP input for audio or beat data. Inside you'll find a
-README, a comment on every operator, help on every parameter, and an About page that names
-the TouchDesigner build it was saved in. Each effect has a page here with a preview, a
-performance note, and a download link that always points at the latest release.
+Opening a `.tox` shows how it works. Each is a TOP in and a TOP out, with an optional CHOP input
+for audio or beat data (and, for the effects that use depth, an optional depth TOP). Inside
+you'll find a README with its credits, a comment on every operator, help on every parameter, and
+an About page that names the TouchDesigner build it was saved in. Each effect has a page here
+with a preview, a performance note, and a download link that always points at the latest release.
 
 ## Effects
 

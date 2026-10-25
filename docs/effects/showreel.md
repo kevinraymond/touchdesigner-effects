@@ -1,6 +1,6 @@
 # Showreel
 
-![Every effect in the Showreel on a dancer in a hazy warehouse, side by side and each named in the library's pixel font: ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
+![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
 in, and the same picture runs through each effect in turn, fading from one to the next in time with
@@ -10,7 +10,8 @@ The Showreel embeds the released `.tox` of every effect, unchanged, behind one V
 default, shows one effect at a time, full size and named in its corner, fading to the next every few
 bars of the music on input 2. Or pick one effect by name. Only the effect showing runs, so the
 Showreel costs about what one effect does, however many the library holds. (The preview above shows
-them side by side: each was recorded on its own and tiled for this page.)
+them side by side under the clip and its depth map: each was recorded on its own and tiled for
+this page.)
 Each effect inside is a full copy you can open and change, with its own page of parameters. It is
 generated from the effects themselves, so a new effect in the library comes with a new Showreel.
 
