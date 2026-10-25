@@ -32,7 +32,8 @@ screen shows. Zoom, Rotate and Focus place the camera and its lens before the sc
 much the screen's pixels show. Contrast and Saturation are what the camera adds on every pass, and Noise
 is its sensor's grain. Mirror tiles the picture (Left-Right, Four Ways or Kaleidoscope, with Segments
 wedges). Bursts says when a wire touches (On Bars, On Beats, Steady every {steady:g} s, or Off), Length
-how long it touches, and Song Moments follows Fosfora's builds and drops.
+how long it touches, Beat Kick how hard each beat hits the rig, and Song Moments follows Fosfora's builds
+and drops.
 
 THE CAMERA
 The screen has red, green and blue stripes for pixels, 1.25 of them for each of the sensor's pixels (a
@@ -56,8 +57,11 @@ shorts on the four highest lines, and Shorts connects them in turn. The one bein
 and off, in pieces of lines that come and go. Read one byte late, brightness bytes land where color
 belongs, so dark parts turn green and light parts pink. A clock slip moves the bytes a place until the
 clock gains or loses a tick back, so a stretch of the line turns to false color. A quarter of them never
-recover and run to the end of the line, and the bridge starts each line afresh. Lines that run long start each one later in the stream than the last,
-so the picture shears and slips a byte every few lines, in bands.
+recover and run to the end of the line, and the bridge starts each line afresh. Lines that run long start
+each one later in the stream than the last, so the picture shears and slips a byte every few lines, in
+bands. On every beat the loose wires crackle. For a moment one of D3 to D7 flips on a scattering of
+bytes all over the picture, a new scattering every camera frame and fewer as the beat fades (Beat Kick),
+and the clock slips and block errors jump to new places.
 
 THE LOT
 Each camera's six shorts, in the order Shorts connects them. Grounded lines read 0, lines tied to power
@@ -81,18 +85,22 @@ input 2. Bars bring the bursts, when a wire touches for a moment: the bytes slip
 once, or the JPEG stream breaks from a block to the end of the frame. With Song Moments on, a build
 connects more shorts as it rises, and a drop throws the frame's start off, so the picture jumps down a
 third for a moment (Fosfora's drop detection is experimental). With any input, bursts come on its bars or
-beats, and every beat sets off a few more clock slips. Raw audio (Audio File In, Audio Device In) gives
+beats, and every beat makes the wires crackle and moves the slips and block errors. Raw audio (Audio File In, Audio Device In) gives
 beats from a kick detector and a beat clock that locks to the kicks' tempo (experimental: it can still
 add or miss beats), and a bar every 4 beats. TouchDesigner's audioAnalysis gives beats from its kick or
 onset channels. With nothing wired, a burst comes every {steady:g} s.
 
 FLASHING
 Every burst is a flash, and each goes through one gate that follows the Flashing parameter: Off lets
-none through and turns off the beat's clock slips, Calm (the default) allows at most one a second, and Up
+none through and turns off what beats do, Calm (the default) allows at most one a second, and Up
 to 3 per second is the WCAG 2.3.1 limit. A budget after the gate keeps this effect to about 1.3 a second
 even at Up to 3. A burst's damage holds still while it lasts and the jump is one jump and one jump back,
 since damage that changed every frame would flash every frame. Clock slips, shorts touching on and off and
 block errors each cover part of a line or a few blocks and stay a moment, too small and too slow to flash.
+The beat's crackle comes on every beat without the gate because it is fine-grained, single bytes
+scattered over the picture, so the light over any area hardly moves. A jolt of the camera on each beat and
+a jump of its white balance were tried first, and both flashed at Calm under a fast beat, since the
+shorts' hard-edged bands moved with them.
 Saturation builds up round the loop, and WCAG counts a pixel as saturated red, all or nothing, once red is
 80% of its light, so reds are kept a little short of that line, inside the loop and on every pixel shown.
 With Zoom above 1, every movement echoes outward, and each echo that passes a point is another swing
@@ -111,7 +119,8 @@ slips and sync) -> dct (the JPEG's blocks, quantized, and the block errors) -> i
 counts into steps, and steady counts the time for Steady. beat_on, bar_on, steady_on and drop_on pick the
 bursts Bursts and Song Moments ask for. flash_limit and flash gate them, flash_budget spaces them, burst
 holds each one for Length, burst_count numbers them (each burst's seed) and drop_kind marks a drop's.
-beat_pulse and beat_env turn beats (or steady ticks, steady_tick) into the extra clock slips.
+beat_pulse, beat_env and beat_n turn beats (or steady ticks, steady_tick) into the crackle, the sliver
+and the new places of the slips and block errors.
 
 CREDITS
 - The idea: dusty_whale's post "Circuit bent feedback loop - The fractal microscope" on r/vjing

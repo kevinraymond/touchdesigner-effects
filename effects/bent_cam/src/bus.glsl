@@ -11,14 +11,19 @@
 //   brightness as color (1 or 3) or swaps U and V (2). Brightness bytes read as color turn the dark parts green
 //   and the light parts pink.
 // - Clock Slips: the pixel clock gains or loses a tick here and there, so from that point the bytes come a place
-//   early or late, until it loses or gains one back, or to the end of the line (the bridge starts each line afresh). Each beat slips a sliver of a
+//   early or late, until it loses or gains one back, or to the end of the line (the bridge starts each line afresh).
+//   The slips move to new places on each beat, as if the beat shook the loose wires.
+// - Each beat makes the loose wires crackle (Beat Kick): for a moment one of D3 to D7 flips on a scattering of bytes
+//   all over the picture, a new scattering every camera frame, fewer and fewer as the beat fades. It is fine-grained,
+//   so the light over any area hardly moves (no flash), but the picture fizzes with colored static on every beat. Each beat slips a sliver of a
 //   few lines, somewhere new each time: too small to count as a flash.
 // - Sync: the sensor's lines are longer than the bridge counts, so each line starts a little later in the stream
 //   than the one before. The picture shears, and every few lines the bytes slip a place, in bands.
 // Inputs: 0 the camera's picture (R'G'B'). Out: Y, U, V as the bridge read them (bytes / 255).
 uniform vec4 uBus;    // x Camera, y Shorts 0-1, z Byte Slip (bytes, 0-3), w Clock Slips 0-1
-uniform vec4 uBus2;   // x Sync 0-1, y seconds (lib clock_seconds()), z the beat's kick (1 on the beat, falling to 0), w the beat's number
+uniform vec4 uBus2;   // x Sync 0-1, y seconds (lib clock_seconds()), z the beat's kick (1 on the beat, falling to 0), w the beat's number (0 while beats do nothing)
 uniform vec4 uBurst;  // x the burst's envelope (0-1), y its number, z 1 if it was a drop's
+uniform vec4 uBeat;   // x the share of bytes a beat's crackle flips a data line of (Beat Kick, falling to 0), y the camera frame (its seed)
 out vec4 fragColor;
 #define PIECE 7           // a short touching on and off does it in pieces of 2^PIECE bytes (64 pixels)
 #define SLIPS 2           // places on each line where the pixel clock may slip
@@ -94,7 +99,7 @@ int clockSlip(int n, int i) {
     for (int s = 0; s < SLIPS; s++) {
         uint id = uint(n * SLIPS + s);
         float life = 0.4 + 0.8 * die(id, 31u, 0u);
-        uint ep = uint(floor(uBus2.y / life + die(id, 32u, 0u)));
+        uint ep = uint(floor(uBus2.y / life + die(id, 32u, 0u))) + uint(uBus2.w + 0.5) * 7919u;
         if (die(id, ep, 33u) < rate) off += slip(i, ihash(id * 0x9E3779B9u ^ ep));
     }
     return off;
@@ -102,7 +107,12 @@ int clockSlip(int n, int i) {
 
 int bridgeByte(int start, int n, int i) {
     int k = wrap(start + i + clockSlip(n, i));
-    return bend(sensorByte(k), k);
+    int v = bend(sensorByte(k), k);
+    if (uBeat.x > 0.0) {                                     // the beat's crackle: one of D3 to D7 flips on this byte
+        uint h = ihash(uint(k) ^ ihash(uint(uBeat.y + 0.5) + 0x51ED27u));
+        if (float(h & 0xffffu) / 65536.0 < uBeat.x) v ^= 1 << (3 + int((h >> 16) % 5u));
+    }
+    return v;
 }
 
 void main() {

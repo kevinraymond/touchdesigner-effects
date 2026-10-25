@@ -1,9 +1,9 @@
 {
-  "version": "0.1.7",
-  "sources_sha256": "03056e469bca748ed4d3bf3cbefac1578cdf127d83ea8887b1099579a2375936",
+  "version": "0.1.8",
+  "sources_sha256": "2a98ba2ceb2fce22de5ba10f3da1846e2b4d85379474989b84b2ba23d09ba43d",
   "embeds": {
     "ascii": "8713d742da9fd0a412da80a509e273fd002b724c840d8c0a771d75d02f2daa7d",
-    "bent_cam": "c1d6ea8f90c620aea84d10a7bb736b40642ebbff847c72a6207f2d3c570bbfb8",
+    "bent_cam": "65eee9c74d89129011cdfae0d6101fb04cfd7220b639369929e67b2811fbedb4",
     "blob_track": "dfc5b403e3ffe57f867f9f47fda713eaa75dd0dbda1ad5fb8f4fa3bcdb179e4a",
     "datamosh": "be3f1c35e332cf9b044d07e1530cca08b05c4a1af9dcb88f5b2a3c05ef11b9bb",
     "fluid": "04c89b9ae20b835647ae41f8dffa9111564d5e3ea5b86bf226029573c2d7b9f3",
@@ -14,6 +14,6 @@
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "ba11bc2aabf1607689e1bb7b8ec56da8c0052394fde5a4dd995c8da0af7ed5d1",
-  "tox_bytes": 2023952
+  "tox_sha256": "4958d9c47b5515a50e609c61d2dbfe7e2e083f7b2df38e12462d156a14de8f65",
+  "tox_bytes": 2024680
 }

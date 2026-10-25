@@ -18,7 +18,8 @@ and blue filters on its sensor, then processes the picture as webcams do, 30 tim
 picture goes round the loop. On its way out the picture travels as bytes over the sensor's bus, where
 the shorts bend it. The camera compresses each frame as a JPEG, the cable loses bits, and the
 computer decodes what arrives and scales it up. A lot of 50 cameras, each shorted differently, gives
-50 different looks (see [The lot](#the-lot)). On the bars of the music a wire touches for a moment.
+50 different looks (see [The lot](#the-lot)). On every beat of the music the loose wires crackle with
+colored static, and on the bars a wire touches for a moment.
 Circuit-bending components for TouchDesigner exist as tutorials and a tutorial-derived `.tox`, which
 imitate the look with displacement and color shifts. None models the bytes, the compression or the
 camera filming its screen, and none follows the music. This one is MIT and runs on any GPU.
@@ -73,8 +74,9 @@ the camera filming its screen, the mirror, and the music.
 | Segments | 6 | How many wedges the Kaleidoscope makes (2 to 16). Grayed out unless Mirror is Kaleidoscope. |
 | Bursts | On Bars | When a wire touches for a moment. Each burst does one of three things: the bytes slip a place (the frame turns green and pink), every one of the camera's shorts connects at once, or the JPEG stream breaks from a block in the top half to the end of the frame. On Bars (the one of each bar) and On Beats follow input 2, and with nothing wired a burst comes every 2 s. Steady is every 2 s, Off never. |
 | Length | 0.3 | How long a burst lasts, in seconds (0.1 to 1). |
+| Beat Kick | 0.5 | How hard each beat hits the rig, 0 to 1. The loose wires crackle, which flips data lines on a scattering of bytes all over the picture as colored static that fades with the beat, and the torn lines and broken blocks jump to new places. Flashing Off stops it. |
 | Song Moments | On | With Fosfora's signal on input 2, a build connects more of the shorts as it rises, and a drop throws the frame's start off for a moment, so the picture jumps down a third. |
-| Flashing | Calm | How often a burst may come. Off never, Calm at most once a second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. Off also stops the beat's slivers. |
+| Flashing | Calm | How often a burst may come. Off never, Calm at most once a second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. Off also stops what beats do (the crackle, the slips moving, the sliver). |
 | Open Window | | Shows the picture in its own window, 1280 x 720 or filling a display. Esc closes it. |
 | Full Screen | Off | Opens the window filling the whole display, for a projector or a second screen. |
 | Display | 0 | Which display the window opens on. 0 is the primary display. |
@@ -132,7 +134,10 @@ brightness and the pair's red difference, in BT.601's 8-bit ranges. It reads the
 chip does, one byte per tick of the pixel clock over eight data lines, and puts the faults where the
 wires are. A short changes a data line in every byte that passes. A byte slip moves the bridge's
 count. A clock slip moves the bytes a place for a stretch of a line, and Sync starts each line a
-little later in the stream than the last. On the beat, a sliver of six lines slips somewhere new.
+little later in the stream than the last. On each beat the loose wires crackle: one of D3 to D7 flips
+on a scattering of bytes all over the picture (an eighth of them as the beat lands at the default Beat
+Kick, a quarter at 1), a new scattering every camera frame and fewer as the beat fades over 0.3 s. The
+clock slips and block errors jump to new places, and a sliver of six lines slips somewhere new.
 
 **The JPEG.** `dct` cuts the frame into blocks of 8 x 8 pixels for brightness and 16 x 8 for color
 (the stream's color already covers pairs of pixels), turns each block into its 64 cosine coefficients
@@ -158,19 +163,18 @@ Moments on, two more things happen:
   step, and it snaps back after Length, through the same Flashing gate as every burst. Fosfora's drop
   detection is experimental.
 
-**Any input** brings bursts on its bars (On Bars) or beats (On Beats), and a sliver of slipped lines
-on every beat. Raw audio (an Audio File In or Audio Device In CHOP) gives beats from a kick detector
+**Any input** brings bursts on its bars (On Bars) or beats (On Beats), and on every beat the crackle,
+new places for the clock slips and block errors, and a sliver of slipped lines. Raw audio (an Audio File In or Audio Device In CHOP) gives beats from a kick detector
 and a beat clock. Once the kicks keep to a tempo, the clock locks to them, beats then come on the
 beat even when a kick is missed, a kick between beats is left out, and a bar is every 4 beats (which
 beat starts the bar is a guess). It stops 8 beats after the kicks do, and while it isn't locked every
 kick is a beat. TouchDesigner's audioAnalysis gives beats from its kick or onset channels.
 
-On the library's test song (`dev/reaction.py`), the bars are what shows. In the half second after a
-bar the picture is 4.4 times as far from the clip as in the half second before it, the strongest
-response to bars in the library. The beat's sliver is small on purpose (a few lines, too little to
-count as a flash) and gets lost in the camera's own noise, which changes every frame: the picture
-changes no more in the 0.5 s after a beat than before it (0.98 times as much). Loudness doesn't drive
-anything.
+On the library's test song (`dev/reaction.py`), both show. In the 0.2 s after a beat the picture
+changes 1.58 times as much as in the 0.2 s before it, close to Glitch's tears (1.8), from the crackle.
+In 0.1.0 a beat only slipped a sliver of lines, which got lost in the camera's own noise (0.98). In the
+half second after a bar the picture is 3.0 times as far from the clip as in the half second before it.
+Loudness doesn't drive anything.
 
 **Nothing wired:** a burst every 2 s, so the effect shows itself.
 
@@ -178,7 +182,8 @@ anything.
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with default parameters. Each frame took 1.44 ms on the GPU (95th
-percentile 2.2 ms) and 0.33 ms on the CPU, the median of three runs. The JPEG costs the most: the
+percentile 2.4 ms) and 0.44 ms on the CPU (95th percentile 0.52 ms), the median of three runs
+(0.1.0 measured 0.33 ms on the CPU; CPU times on this Mac swing that much between runs). The JPEG costs the most: the
 decoder 0.8 ms and the encoder 0.3 ms, each reading 128 values for every pixel. Everything before the
 last step works at the Sensor's resolution, so 1280 x 720 costs about four times as much as the
 default 640 x 480, and the input's size matters only for the last step. Nothing inside cooks while
@@ -190,7 +195,12 @@ the output is unused.
   never bursts, Calm (the default) allows at most one a second, and Up to 3 per second is the WCAG
   2.3.1 limit, which no setting exceeds. After the gate, a budget keeps this effect to about 1.3
   bursts a second even at Up to 3, since each kind of burst changes the whole frame differently. Off
-  also stops the beat's slivers.
+  also stops what beats do.
+- **Beats.** The crackle comes on every beat without the gate, because it is fine-grained: single
+  bytes scattered over the picture, so the light over any area hardly moves. Two bigger beat responses
+  were tried first for 0.1.1, a jolt of the camera on each beat and a jump of its white balance. Under
+  8 beats a second they measured 4.0 and 3.5 flashes a second at Calm, since the shorts' hard-edged
+  bands moved with them, so neither shipped.
 - **No flicker of its own.** A burst's damage holds still while it lasts, and a drop's jump is one
   jump and one jump back. Clock slips, shorts touching on and off, and block errors each cover part of
   a line or a few blocks and stay a moment, too small and too slow to count. Clock slips are mostly
@@ -215,21 +225,24 @@ second, by WCAG's area rule:
 
 | Clip | Off | Calm | Up to 3 per second | The clip alone |
 |---|---|---|---|---|
-| Dancer in a hazy warehouse (worse of two runs) | 1.5 | 2.0 | 2.0 | 1.0 |
+| Dancer in a hazy warehouse | 1.0 | 2.0 | 2.0 | 1.0 |
 | Dancer, a dance-tempo beat (140 BPM) | 1.0 | 1.5 | 1.5 | 1.0 |
 | Dancer, no beat (steady bursts) | 1.0 | 1.5 | 1.5 | 1.0 |
 | People crossing a plaza | 0.5 | 1.5 | 1.5 | 0.5 |
-| Red flowers against the sky | 1.0 | 1.5 | 1.5 | 1.0 |
-| Koi in a black pond | 1.0 | 2.0 | 2.0 | 0.5 |
-| Red flowers, every fault at 1, Feedback 0.85, Zoom 1.03, Rotate 2 | 1.0 | 1.5 | 1.5 | 1.0 |
+| Red flowers against the sky | 1.0 | 1.5 | 2.0 | 1.0 |
+| Koi in a black pond | 1.5 | 2.0 | 2.0 | 0.5 |
+| Dancer, Beat Kick 1 | 1.5 | 2.0 | 2.0 | 1.0 |
+| Red flowers, every fault at 1, Feedback 0.85, Zoom 1.03, Rotate 2, Beat Kick 1 | 1.0 | 2.5 | 2.5 | 1.0 |
 
 Each is within its setting's rule: Off adds nothing to what the clip does by itself beyond the
-measurement's half-flash margin, and Calm at most one a second. On the koi, Off measures 1.0 where the
+measurement's half-flash margin, and Calm at most one a second. On the koi, Off measures 1.5 where the
 clip's brightness measures 0.5, under the clip's own red flashing (1.5 a second), which is what the
 rule holds it to. Red flashes, which WCAG counts separately, measured none at any setting on any clip.
-Four earlier versions failed these tests and changed: beat slips on every line measured 4 flashes a
-second at Calm, the loop at Feedback 0.95 and Zoom 1.1 measured 4.5 with Flashing Off, Feedback 0.8 at
-Zoom 1.05 still added one, and bursts 0.55 s apart measured 4 at Up to 3 on the dancer.
+Six earlier versions failed these tests and changed. In 0.1.0, beat slips on every line measured 4
+flashes a second at Calm, the loop at Feedback 0.95 and Zoom 1.1 measured 4.5 with Flashing Off,
+Feedback 0.8 at Zoom 1.05 still added one, and bursts 0.55 s apart measured 4 at Up to 3 on the
+dancer. In 0.1.1, a jolt of the camera on each beat measured 4.0 at Calm and a jump of its white
+balance 3.5 (see Beats above).
 
 ## Experimental
 

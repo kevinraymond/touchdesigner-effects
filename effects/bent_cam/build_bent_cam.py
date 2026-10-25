@@ -23,7 +23,8 @@ The network, left to right:
   audio    audio_in() -> counts -> steps (Slope CHOP); steady counts the time; beat_on, bar_on, steady_on, drop_on
            pick the bursts asked for -> flash_gate() -> flash_budget -> burst (held for Length), burst_count (the
            seed), drop_kind (a drop's burst: the frame jumps); beats (or steady ticks with nothing wired) ->
-           beat_pulse -> beat_env, beat_n: each beat's sliver of slipped lines
+           beat_pulse -> beat_env, beat_n: each beat crackles (Beat Kick), moves the slips and the block errors,
+           and slips a sliver of lines
 """
 import os
 
@@ -34,7 +35,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 STEADY = 2.0         # bursts this many seconds apart for Steady, and for On Beats or On Bars with nothing wired
 CAM_FPS = 30         # the camera's frame rate: the loop goes round this many times a second
 # The sensor's sizes; the picture's aspect is fitted into the one picked (640 x 480 takes a 16:9 picture at 640 x 360).
@@ -46,6 +47,11 @@ MIRRORS = (('off', 'Off'), ('lr', 'Left-Right'), ('four', 'Four Ways'), ('kaleid
 # and Zoom 1.1 measured 4.5 flashes a second, 0.8 and 1.05 still added one; at these limits nothing is added, all
 # the faults at 1 included (dev/flash.py, 2026-10-25). A tunnel (Zoom below 1) shrinks its echoes and stays calm.
 LOOP = dict(feedback=0.85, zoom=1.03, rotate=2)
+# At Beat Kick 1, the share of bytes a beat's crackle flips a data line of, as the beat lands; it falls with the
+# beat over 0.3 s. A jolt of the camera on each beat (0.02 picture heights) and a jump of its white balance (20 steps)
+# were tried first: both showed little and flashed at Calm under 8 beats a second (4.0, 3.5: the shorts' hard bands
+# move with them). The crackle is fine-grained, so a cell's light hardly moves.
+CRACKLE = 0.25
 BLUR = 4.0           # the lens's blur at Focus 0, sigma in pixels of the sensor; it falls as (1 - Focus)^2
 # After the gate, bursts at least this far apart (s): Calm a little over its one second, else about 1.3 a second.
 # A burst changes the whole frame, each kind differently, so two of different kinds 0.55 s apart (Glitch's and VHS +
@@ -156,6 +162,10 @@ p = menu(page, 'Bursts', 'Bursts', (('beats', 'On Beats'), ('bars', 'On Bars'), 
 p.startSection = True
 custom(page, 'Float', 'Length', 'Length', 0.3, 'How long a burst lasts, in seconds.', 0.1, 1.0, True).enableExpr = \
     "me.par.Bursts != 'off'"
+custom(page, 'Float', 'Kick', 'Beat Kick', 0.5,
+       "How hard each beat hits the rig, 0-1: the loose wires crackle (data lines flip on a scattering of bytes "
+       'all over the picture, colored static that fades with the beat), and the torn lines and broken blocks jump '
+       'to new places. Flashing Off stops it.', 0, 1, True)
 custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "With Fosfora's signal on input 2: a build connects more of the shorts as it rises, and a drop throws the "
        "frame's start off for a moment, so the picture jumps down a third (Fosfora's drop detection is "
@@ -205,9 +215,15 @@ beat_pick = mk(comp, mathCHOP, 'beat_pulse', 1200, -150, [beat_in], "One channel
                chanop='max')
 beat_env = mk(comp, triggerCHOP, 'beat_env', 1400, -150, [beat_pick], 'Falls from 1 to 0 over the 0.3 s after a beat.',
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
-beat_n = mk(comp, countCHOP, 'beat_n', 1400, -50, [beat_pick], "Beats so far: where each beat's sliver goes.")
+beat_n = mk(comp, countCHOP, 'beat_n', 1400, -50, [beat_pick],
+            "Beats so far: where each beat's sliver goes, where the slips and block errors move.")
 
 # ---- The loop: the camera filming the screen -----------------------------------------------------
+# Beats move the picture only while Flashing and Bursts are on: the kick (beat_env, 1 on the beat and falling
+# to 0 over 0.3 s), and the beat's number, which re-places the slips and errors (0 while beats do nothing).
+BEATING = "parent().par.Flashing != 'off' and parent().par.Bursts != 'off'"
+KICK = "op('beat_env')[0] if {} else 0".format(BEATING)
+BEAT_N = "op('beat_n')[0] % 4096 if {} else 0".format(BEATING)
 common = lib_glsl(_ROOT, 'common.glsl') + src('common.glsl')
 guard = lib_glsl(_ROOT, 'red_guard.glsl')
 still = mk(comp, constantTOP, 'still', -400, 450, comment="Nothing: where feed_fb starts, before the camera's first frame.",
@@ -237,7 +253,6 @@ isp = glsl(comp, 'isp', 200, 150, [camera, feed_fb], guard + src('isp.glsl'),
            fmt='rgba16float', uIsp=(Expr(NEW_FRAME), par('Contrast'), par('Saturation')))
 
 # ---- Out: the bus, the JPEG, the computer -------------------------------------------------------
-KICK = "op('beat_env')[0] if parent().par.Flashing != 'off' and parent().par.Bursts != 'off' else 0"
 BURST = dict(uBurst=(Expr("op('burst')[0]"), Expr("op('burst_count')[0]"),
                      Expr("op('drop_kind')[0] if parent().par.Moments else 0")))
 bus = glsl(comp, 'bus', 400, 150, [isp], common + LOT['glsl_table']() + src('bus.glsl'),
@@ -245,10 +260,12 @@ bus = glsl(comp, 'bus', 400, 150, [isp], common + LOT['glsl_table']() + src('bus
            'slips, the lines out of sync.', fmt='rgba8fixed',
            uBus=(par('Camera'), Expr("min(1, parent().par.Shorts + (0.5 * op('audio')['build'] if parent().par.Moments "
                                      "else 0))"), Expr('parent().par.Byteslip.menuIndex'), par('Clockslip')),
-           uBus2=(par('Sync'), clock_seconds(), Expr(KICK), Expr("op('beat_n')[0] % 4096")), **BURST)
+           uBus2=(par('Sync'), clock_seconds(), Expr(KICK), Expr(BEAT_N)),
+           uBeat=(Expr('{} * parent().par.Kick * ({})'.format(CRACKLE, KICK)),
+                  Expr('int(absTime.seconds * {}) % 4096'.format(CAM_FPS))), **BURST)
 dct = glsl(comp, 'dct', 600, 150, [bus], common + src('dct.glsl'),
            "The bridge's JPEG: each block's cosine coefficients, rounded to Compression's steps; the cable's block "
-           'errors.', fmt='rgba16float', uJpg=(par('Compress'), par('Blockerr'), clock_seconds()), **BURST)
+           'errors.', fmt='rgba16float', uJpg=(par('Compress'), par('Blockerr'), clock_seconds(), Expr(BEAT_N)), **BURST)
 idct = glsl(comp, 'idct', 800, 150, [dct], common + src('idct.glsl'),
             "The computer's decoder: each pixel from its blocks' coefficients, then BT.601 back to R'G'B'.",
             fmt='rgba8fixed')

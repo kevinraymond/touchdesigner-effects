@@ -33,7 +33,7 @@ with a preview, a performance note, and a download link that always points at th
 | Effect | What it does |
 |---|---|
 | [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines; each beat sends a ripple of changed characters out from the middle, and bars pop the contrast. |
-| [Bent Cam](docs/effects/bent_cam.md) | A circuit-bent webcam filming a screen that shows its own picture, modeled down to the bytes. Wires across the sensor's pins stick and bridge the data lines the picture travels on, so it breaks into false colors and flat bands, slipped bytes turn it green and pink, and broken JPEG blocks streak it. The camera filming its own screen adds trails, spirals and rainbow moiré, and a mirror folds it into a kaleidoscope. It comes with a lot of 50 cameras, each shorted differently. On the bars of the music a wire touches for a moment. |
+| [Bent Cam](docs/effects/bent_cam.md) | A circuit-bent webcam filming a screen that shows its own picture, modeled down to the bytes. Wires across the sensor's pins stick and bridge the data lines the picture travels on, so it breaks into false colors and flat bands, slipped bytes turn it green and pink, and broken JPEG blocks streak it. The camera filming its own screen adds trails, spirals and rainbow moiré, and a mirror folds it into a kaleidoscope. It comes with a lot of 50 cameras, each shorted differently. On every beat the loose wires crackle with colored static, and on the bars a wire touches for a moment. |
 | [Blob Track](docs/effects/blob_track.md) | The look of computer vision: whatever moves gets a numbered box that follows it, joined to its neighbors by lines, like surveillance software or a film's targeting display. Beats scramble the labels and spawn links. |
 | [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Beats make the picture bloom and catch up, bars set off the melts, and Fosfora's builds hold them back until the drop. |
 | [Fluid](docs/effects/fluid.md) | A real fluid simulation over the picture, stirred by its movement: whatever moves pours fire, smoke or ink, which rises, curls into eddies and fades, so a hand trails smoke and a dancer burns. A depth map or mask on input 3 sets a whole silhouette alight. Beats make the flames leap and flare. Runs on any GPU, where NVIDIA Flow needs Windows and an NVIDIA card. |
@@ -53,7 +53,7 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Nine effects are done (ASCII 0.2.0, Bent Cam 0.1.0, Datamosh and VHS + CRT 0.2.1, Fluid 0.1.1,
+Nine effects are done (ASCII 0.2.0, Bent Cam 0.1.1, Datamosh and VHS + CRT 0.2.1, Fluid 0.1.1,
 Glitch 0.1.1, Blob Track and Point Cloud 0.1.3, Particles 0.3.2), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 

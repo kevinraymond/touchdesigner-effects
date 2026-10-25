@@ -6,11 +6,11 @@
 // stream from some block on. Each block's average is stored as a change from the block before, so every block
 // after the error is off by its errors added up, and their detail turns to stripes, up to the next restart marker,
 // which puts the decoder right (every RESTART blocks). A burst's error runs to the end of the frame.
-// Each error holds still while it lasts, and each lasts a while.
+// Each error holds still while it lasts, and each lasts a while, or until a beat moves the errors to new places.
 // Inputs: 0 Y, U, V (bytes / 255). Out: at each pixel, the coefficient of its own place in its blocks: r for the
 // brightness block (u, v the pixel's place in its 8 x 8 block), g and b for the color blocks (u is half the
 // pixel's place across its 16 x 8 block).
-uniform vec4 uJpg;    // x Compression 0-1, y Block Errors 0-1, z seconds (lib clock_seconds())
+uniform vec4 uJpg;    // x Compression 0-1, y Block Errors 0-1, z seconds (lib clock_seconds()), w the beat's number (0 while beats do nothing)
 uniform vec4 uBurst;  // x the burst's envelope (0-1), y its number, z 1 if it was a drop's
 out vec4 fragColor;
 #define DC_STEP 160.0     // how far a misread average may go each block, in DC units (8 per level of the byte)
@@ -67,7 +67,7 @@ void main() {
     uint seed = 0u;
     uint iv = uint(g / RESTART);
     float life = 0.3 + 0.7 * die(iv, 41u, 0u);
-    uint ep = uint(floor(uJpg.z / life + die(iv, 42u, 0u)));
+    uint ep = uint(floor(uJpg.z / life + die(iv, 42u, 0u))) + uint(uJpg.w + 0.5) * 7919u;
     if (die(iv, ep, 43u) < 0.3 * uJpg.y * uJpg.y) {
         from = int(iv) * RESTART + int(die(iv, ep, 44u) * float(RESTART));
         seed = ihash(iv * 7919u + ep);
