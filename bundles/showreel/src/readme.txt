@@ -36,7 +36,8 @@ CREDITS
 - The effects inside are this library's own; each one's README has its credits.
 - The built-in clip: Kevin Raymond, touchdesigner-effects, CC BY 4.0. It is AI-generated (stills
   from Krea 2 brought to life with Wan 2.2, both run locally) and shows no real person. Her depth
-  map: Depth Anything 3's Base model (Apache 2.0).
+  map: Depth Anything 3's Mono-Large model (Apache 2.0), one frame at a time, held steady from frame
+  to frame by fitting each frame's scale to the one before (written for this library).
 - Names: a 5x7 pixel font drawn for this library.
 - Beats from raw audio (the library's audio input, which Cycle's bars come from): a kick is a jump in
   the low band's loudness; the beat clock takes its tempo from the gaps between kicks, each voting

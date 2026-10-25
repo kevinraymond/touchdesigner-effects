@@ -29,11 +29,11 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 # Shown while nothing is wired: the dancer, the library's own footage (CC BY 4.0, 5 s, 1.3 MB), and
-# her depth map (Depth Anything 3 Base, 0.9 MB) for the effects that take input 3, carried in the
-# component's Virtual File System and read by a path relative to it, so they play wherever the .tox
-# is loaded. TouchDesigner's sample movies barely move (Blob Track and Datamosh need motion) and
+# her depth map (Depth Anything 3 Mono-Large, held steady across frames, 0.5 MB) for the effects that
+# take input 3, carried in the component's Virtual File System and read by a path relative to it, so
+# they play wherever the .tox is loaded. TouchDesigner's sample movies barely move (Blob Track and Datamosh need motion) and
 # have no depth. The only media inside any of the library's .tox files; no sound.
 CLIP, CLIP_DEPTH = 'dancer.mp4', 'dancer_depth.mp4'
 SAMPLE = "'vfs:' + parent().path + ':{}'".format(CLIP)

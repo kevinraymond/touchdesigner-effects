@@ -27,7 +27,8 @@ saying how it was found.
   Background, which keeps input 1's picture as the empty room; then everything that isn't the empty
   room emits, still or moving. It needs a moment with nobody in the frame: for a video where someone
   is always there, use Movement.
-- A lit performer on a dark stage: Find on Stand Out reads the picture's brightness as depth.
+- A lit performer on a dark stage: Find on Stand Out reads the picture's brightness as depth (only
+  what is brighter than half counts).
 Auto goes by what input 3 carries: a depth input that goes black falls back to Movement on its own.
 
 BEHAVIOR
@@ -48,7 +49,9 @@ FIND
 Stand Out: nearer than Far Limit and, by Stand Out, than what lies to its left and right in the same
 row; floors and walls drop out, while someone cut off by the left or right edge of the frame drops
 out too and feet merge with the floor. Nearer Than Far Limit: everything nearer, for a mask or a
-camera that sees no floor (at a desk, close up: set Far Limit just behind you). Depth Type: Brighter
+camera that sees no floor (at a desk, close up: set Far Limit just behind you). With nothing on input
+3, both read input 1's brightness as depth, and only what is brighter than half (or than Far Limit,
+when that is higher) counts: leaves and walls in the light are bright too. Depth Type: Brighter
 Is Nearer for depth estimators and masks; Distance 0-1 for the RealSense and Kinect TOPs and Distance
 in Meters (Max Distance) for the Kinect Azure TOP, whose black (no reading) is then left out; don't
 invert a camera's depth yourself. Movement: what differs from a background that follows the scene a

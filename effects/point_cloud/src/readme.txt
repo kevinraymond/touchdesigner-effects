@@ -23,7 +23,9 @@ reading) is left out of the cloud; don't invert a camera's depth yourself. Point
 jumps (the edge of a person against the wall) go to whichever side they are closer to, so nothing
 streaks between them; small steps in 8-bit depth are smoothed so walls don't show terraces.
 Points From: Everything, The Subject (what stands in front of what is beside it: people, without
-the floor and walls; Stand Out sets how much nearer) or Nearer Than Far Limit.
+the floor and walls; Stand Out sets how much nearer) or Nearer Than Far Limit. With nothing on input
+3 these two read input 1's brightness as depth, and only what is brighter than half (or than Far
+Limit, when that is higher) counts.
 
 THE PAGE
 Look: Points (solid dots), Glow (soft dots added up, glowing where they crowd) or Surface (Gaussian

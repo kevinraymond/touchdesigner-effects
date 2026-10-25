@@ -42,13 +42,19 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 # The particles' buffers: at most PW x PH alive at once.
 PW, PH = 256, 256
 # The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
 # reads a whole row per pixel, and particles are born across a pixel, so finer would cost more and
 # show nothing.
 MW, MH = 320, 180
+# With nothing on input 3, input 1's brightness stands in for depth, and brightness isn't depth: a lit
+# subject is bright, but so are leaves and walls in the light. Below BRIGHT_FAR it never counts, whatever
+# Far Limit says (Far Limit's default suits depth estimators, whose subjects can sit a fifth of the way up;
+# on TouchDesigner's birch sample Far Limit 0.15 took the leaves, 29% of the frame, against the trunk's
+# 2.5% at 0.5).
+BRIGHT_FAR = 0.5
 # A beat's burst: births per second on top of Rate at its peak (Beat Bursts at 1), falling to none
 # over BURST_TIME seconds; particles born in it leave up to 3 times as fast, as sparks (sim.glsl: drawn
 # 2.5 times their size, shrinking back over about 0.3 s).
@@ -158,12 +164,13 @@ custom(page, 'Float', 'Sense', 'Sensitivity', 0.5,
        'For Movement and Background (and Auto with no depth): how small a change counts. Raise it to catch '
        'slight movement; lower it if a still picture or camera noise emits.', 0, 1, True).enableExpr = \
     "me.par.Find in ('auto', 'movement', 'background')"
-custom(page, 'Float', 'Standout', 'Stand Out', 0.08,
+custom(page, 'Float', 'Standout', 'Stand Out', 0.1,
        'How much nearer than what lies to its left and right something must be to count, 0-1 of the depth '
        'range.', 0, 0.3, True).enableExpr = "me.par.Find in ('auto', 'standout')"
-custom(page, 'Float', 'Far', 'Far Limit', 0.5,
+custom(page, 'Float', 'Far', 'Far Limit', 0.15,
        'Anything farther than this never counts, 0 (farthest) to 1 (nearest). Raise it to drop the background, '
-       'lower it if parts of the subject go missing.', 0, 1, True).enableExpr = "me.par.Find in ('auto', 'standout', 'nearer')"
+       'lower it if parts of the subject go missing. Brightness standing in for depth (nothing on input 3) '
+       'counts only above {:g}, or above Far Limit when that is higher.'.format(BRIGHT_FAR), 0, 1, True).enableExpr = "me.par.Find in ('auto', 'standout', 'nearer')"
 choices(custom(page, 'Menu', 'Depthtype', 'Depth Type', None,
                'What input 3 holds. Brighter Is Nearer: depth estimators (Depth Anything) and masks. Distance '
                '0-1: the RealSense and Kinect TOPs, 0 near to 1 far, black where the camera got no reading (left '
@@ -275,7 +282,9 @@ depth_stats = mk(comp, analyzeTOP, 'depth_stats', -400, -1250, [near],
 people = glsl(comp, 'find', -200, -1100, [near], lib_glsl(_ROOT, 'depth_find.glsl'),
               'In the depth: nearer than Far Limit and (Stand Out) than what lies left and right of it.',
               res=(MW, MH), fmt='rgba16float',
-              uFind=(Expr("1 if parent().par.Find == 'nearer' else 0"), par('Standout'), par('Far')))
+              uFind=(Expr("1 if parent().par.Find == 'nearer' else 0"), par('Standout'),
+                     Expr('parent().par.Far.eval() if parent().inputConnectors[2].connections else '
+                          'max(parent().par.Far.eval(), {:g})'.format(BRIGHT_FAR))))
 small = glsl(comp, 'small', -400, -1450, [source], src('small.glsl'),
              'The picture, {} x {}, for Movement and Background.'.format(MW, MH), res=(MW, MH), fmt='rgba16float')
 motion_start = mk(comp, constantTOP, 'motion_start', -400, -1600, comment="motion's starting state: no frame yet.",

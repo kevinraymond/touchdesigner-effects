@@ -85,7 +85,7 @@ other ways are a menu choice away.
 | A mask on input 3 (MediaPipe, the NVIDIA Background TOP) | Auto: Stand Out | Inside the mask. Nearer Than Far Limit keeps people who touch the edge of the frame. |
 | Only a picture, from a camera that stays still: a webcam, a video | Auto: Movement | Whatever moves: hands, faces, edges and patterns as they move; a plain shirt barely counts, since a flat color looks the same when it shifts. Someone who holds still fades out within a couple of seconds; moving shadows count too. If the camera itself moves, everything moves: then only depth helps. |
 | Only a picture, from a fixed camera, with a moment when the frame is empty | Background, then press Capture Background | Everything that isn't the empty room, still or moving, as long as the camera and the light stay put. A video where someone is always in the frame has no empty room to keep: use Movement. |
-| A lit performer on a dark stage, no depth | Stand Out (it reads the picture's brightness as depth) | Bright things that stand out from what is beside them. |
+| A lit performer on a dark stage, no depth | Stand Out (it reads the picture's brightness as depth) | Bright things that stand out from what is beside them; only what is brighter than half counts. |
 | Nothing wired (TouchDesigner's sample movie) | Auto: the sample's brightness as depth | The birch trunk: a first look, nothing more. |
 
 The Subject view's label names the row in use, such as `AUTO: DEPTH ON INPUT 3 - STAND OUT` or
@@ -142,6 +142,10 @@ Set Depth Type to what input 3 holds:
   specks of a depth camera's noise are left out.
 - **Nearer Than Far Limit** counts everything nearer than Far Limit: for a mask, or a depth camera
   mounted so that it doesn't see the floor.
+- **With nothing on input 3**, both read input 1's brightness as depth, and only what is brighter
+  than half (or than Far Limit, when that is higher) counts. Brightness isn't depth: leaves and
+  walls in the light are bright too, and Far Limit's default, low enough for a depth estimator's
+  subject a fifth of the way up its range, would take them all.
 - **Movement** keeps a picture of the background that follows the scene a couple of seconds behind,
   and counts what differs from it by more than Sensitivity allows. Where something has just left,
   the background catches up within about a second, so no ghost trails behind. A gesture keeps
@@ -165,8 +169,8 @@ The Particles page, top to bottom:
 | Find | Auto | What the particles come from: Auto, Stand Out, Nearer Than Far Limit, Movement or Background (see What you have, what you get). |
 | Capture Background | | For Background: with the subject out of the frame, keeps input 1's picture as the empty room. Grayed out unless Find is Background. |
 | Sensitivity | 0.5 | For Movement and Background (and Auto with no depth): how small a change counts. Raise it to catch slight movement; lower it if a still picture or camera noise emits. |
-| Stand Out | 0.08 | How much nearer than what lies to its left and right something must be to count, as a share of the depth range (0 to 0.3). Grayed out unless Find is Auto or Stand Out. |
-| Far Limit | 0.5 | Anything farther than this never counts, from 0 (farthest) to 1 (nearest). Raise it to drop the background; lower it if parts of the subject go missing. |
+| Stand Out | 0.1 | How much nearer than what lies to its left and right something must be to count, as a share of the depth range (0 to 0.3). Grayed out unless Find is Auto or Stand Out. |
+| Far Limit | 0.15 | Anything farther than this never counts, from 0 (farthest) to 1 (nearest). Raise it to drop the background; lower it if parts of the subject go missing. Brightness standing in for depth (nothing on input 3) counts only above 0.5, or above Far Limit when that is higher. |
 | Depth Type | Brighter Is Nearer | What input 3 holds: Brighter Is Nearer (depth estimators, masks), Distance 0-1 (the RealSense and Kinect TOPs; black, no reading, is left out) or Distance in Meters (the Kinect Azure TOP). |
 | Max Distance | 4 | For Distance in Meters: the far end of the depth, in meters (Far Limit and Stand Out are fractions of it). |
 | Behavior | Emit | What the particles do: Emit, Push or Flow (see Behaviors). |
@@ -305,5 +309,6 @@ exposure drift, Flow's particles waiting behind the subject and the beat's pulse
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the
 [repository README](../../README.md#demo-footage)) and shows no real person. Its depth map was
-estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Base model
-(Apache 2.0).
+estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Mono-Large
+model (Apache 2.0), one frame at a time, and held steady from frame to frame by fitting each frame's
+scale to the one before (written for this library).

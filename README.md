@@ -50,8 +50,8 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Six effects are done (ASCII and Datamosh-style 0.2.0, Glitch and Point Cloud 0.1.1, Blob Track
-0.1.2, Particles 0.3.0), and the Showreel holds them all; there is no release yet, so the download
+Six effects are done (ASCII and Datamosh-style 0.2.0, Glitch 0.1.1, Blob Track and Point Cloud
+0.1.2, Particles 0.3.1), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
@@ -67,7 +67,8 @@ released under the [Krea 2 Community License](https://www.krea.ai/krea-2-licensi
 2.2's under [Apache 2.0](https://github.com/Wan-Video/Wan2.2/blob/main/LICENSE.txt); neither
 claims rights over what it generates. The depth maps behind the depth effects' previews were
 estimated from that footage with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s
-Base model (Apache 2.0).
+Mono-Large model (Apache 2.0), one frame at a time, and held steady from frame to frame by fitting
+each frame's scale to the one before (written for this library).
 
 The beat the effects follow in the previews comes from "Prison of Pixels", a song by Kevin Raymond
 made with [Suno](https://suno.com), licensed like the rest of the media (below). The previews are

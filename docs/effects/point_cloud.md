@@ -88,6 +88,10 @@ Set Depth Type to what input 3 holds:
 - **Nearer Than Far Limit:** everything nearer than Far Limit, for a mask or a depth camera that
   sees no floor.
 
+With nothing on input 3, The Subject and Nearer Than read input 1's brightness as depth, and only
+what is brighter than half (or than Far Limit, when that is higher) counts: brightness isn't depth,
+and leaves and walls in the light are bright too.
+
 ## Looks
 
 | Look | What it draws | Cost |
@@ -111,8 +115,8 @@ The Point Cloud page, top to bottom:
 |---|---|---|
 | Look | Points | Points, Glow or Surface (see Looks). |
 | Points From | Everything | Everything, The Subject (Stand Out) or Nearer Than Far Limit (see Points From). |
-| Stand Out | 0.08 | For The Subject: how much nearer than what lies to its left and right something must be to count, as a share of the depth range (0 to 0.3). |
-| Far Limit | 0.5 | For The Subject and Nearer Than: anything farther is left out, from 0 (farthest) to 1 (nearest). |
+| Stand Out | 0.1 | For The Subject: how much nearer than what lies to its left and right something must be to count, as a share of the depth range (0 to 0.3). |
+| Far Limit | 0.15 | For The Subject and Nearer Than: anything farther is left out, from 0 (farthest) to 1 (nearest). Brightness standing in for depth (nothing on input 3) counts only above 0.5, or above Far Limit when that is higher. |
 | Depth Type | Brighter Is Nearer | What input 3 holds: Brighter Is Nearer (depth estimators, masks), Distance 0-1 (the RealSense and Kinect TOPs; black, no reading, is left out) or Distance in Meters (the Kinect Azure TOP). |
 | Max Distance | 4 | For Distance in Meters: the far end of the depth, in meters. |
 | Depth | 1.5 | How deep the cloud is: the farthest points lie this many times farther than the nearest, plus one. 0 is flat, 4 the most. |
@@ -237,5 +241,6 @@ shared with [Particles](particles.md).
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the
 [repository README](../../README.md#demo-footage)) and shows no real person. Its depth map was
-estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Base model
-(Apache 2.0).
+estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Mono-Large
+model (Apache 2.0), one frame at a time, and held steady from frame to frame by fitting each frame's
+scale to the one before (written for this library).

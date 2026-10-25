@@ -33,12 +33,16 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 # Detail: rows of points (columns follow the picture's shape), at most 640 x 360 = 230,400 points.
 ROWS = (180, 270, 360)
 # Depth Type's Stand Out search runs on a small copy of the depth, as in Particles: it reads a whole
 # row per pixel.
 MW, MH = 320, 180
+# With nothing on input 3, input 1's brightness stands in for the depth The Subject and Nearer Than
+# search, and brightness isn't depth: below BRIGHT_FAR it never counts, whatever Far Limit says (as in
+# Particles, whose builder has the measurements).
+BRIGHT_FAR = 0.5
 # Whether input 3 carries any depth is judged on a copy this small (each pixel averages 4 x 4 samples).
 TINY = (80, 45)
 # The camera: its vertical field of view, and so its distance to the picture plane where the
@@ -113,12 +117,13 @@ pfrom = choices(custom(page, 'Menu', 'Pointsfrom', 'Points From', None,
                 ['everything', 'standout', 'nearer'], ['Everything', 'The Subject (Stand Out)', 'Nearer Than Far Limit'],
                 'everything')
 pfrom.startSection = True
-custom(page, 'Float', 'Standout', 'Stand Out', 0.08,
+custom(page, 'Float', 'Standout', 'Stand Out', 0.1,
        'For The Subject: how much nearer than what lies to its left and right something must be to count, '
        '0-1 of the depth range.', 0, 0.3, True).enableExpr = "me.par.Pointsfrom == 'standout'"
-custom(page, 'Float', 'Far', 'Far Limit', 0.5,
-       'For The Subject and Nearer Than: anything farther than this is left out, 0 (farthest) to 1 (nearest).',
-       0, 1, True).enableExpr = "me.par.Pointsfrom != 'everything'"
+custom(page, 'Float', 'Far', 'Far Limit', 0.15,
+       'For The Subject and Nearer Than: anything farther than this is left out, 0 (farthest) to 1 (nearest). '
+       'Brightness standing in for depth (nothing on input 3) counts only above {:g}, or above Far Limit when '
+       'that is higher.'.format(BRIGHT_FAR), 0, 1, True).enableExpr = "me.par.Pointsfrom != 'everything'"
 choices(custom(page, 'Menu', 'Depthtype', 'Depth Type', None,
                'What input 3 holds. Brighter Is Nearer: depth estimators (Depth Anything) and masks. Distance '
                '0-1: the RealSense and Kinect TOPs, 0 near to 1 far, black where the camera got no reading (left '
@@ -208,7 +213,9 @@ near_small = glsl(comp, 'near_small', -400, -1300, [depth], lib_glsl(_ROOT, 'dep
 find = glsl(comp, 'find', -200, -1300, [near_small], lib_glsl(_ROOT, 'depth_find.glsl'),
             'The subject: nearer than Far Limit and (The Subject) than what lies left and right of it.',
             res=(MW, MH), fmt='rgba16float',
-            uFind=(Expr("1 if parent().par.Pointsfrom == 'nearer' else 0"), par('Standout'), par('Far')))
+            uFind=(Expr("1 if parent().par.Pointsfrom == 'nearer' else 0"), par('Standout'),
+                   Expr('parent().par.Far.eval() if parent().inputConnectors[2].connections else '
+                        'max(parent().par.Far.eval(), {:g})'.format(BRIGHT_FAR))))
 keep_all = mk(comp, constantTOP, 'keep_all', -200, -1450, comment='White: every point stays (Points From Everything).',
               outputresolution='custom', resolutionw=1, resolutionh=1, colorr=1, colorg=1, colorb=1, alpha=1)
 keep = mk(comp, switchTOP, 'keep', 0, -1300, [keep_all, find],

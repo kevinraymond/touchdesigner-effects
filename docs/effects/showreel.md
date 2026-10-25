@@ -74,9 +74,9 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with the six effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 3.69 ms on the GPU per frame and 1.35 ms on the CPU on average, depending
-on the effect showing; during a fade two effects run, so the 95th percentile was 9.13 ms on the GPU
-and 1.92 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+runs one effect at a time: 4.2 ms on the GPU per frame and 1.1 ms on the CPU on average (the median
+of three runs), depending on the effect showing; during a fade two effects run, so the 95th
+percentile was 7.4 ms on the GPU and 1.6 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
 grow as the library adds effects. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -110,8 +110,9 @@ MIT. The effects inside are this library's own (their pages list what they use a
 5 x 7 bitmap font was drawn for this library.
 
 - **The built-in clip and the preview footage:** see below. Her depth map, inside the `.tox`, was
-  estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Base model
-  (Apache 2.0).
+  estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Mono-Large
+  model (Apache 2.0), one frame at a time, and held steady from frame to frame by fitting each frame's
+  scale to the one before (written for this library).
 - **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`, which Cycle's bars come
   from): a kick is a jump in the low band's loudness, and the beat clock takes its tempo from the gaps
   between kicks, each gap voting for the beat lengths it is a whole multiple of: inter-onset-interval
