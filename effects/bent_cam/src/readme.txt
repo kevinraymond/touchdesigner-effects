@@ -126,7 +126,7 @@ CREDITS
 - The idea: dusty_whale's post "Circuit bent feedback loop - The fractal microscope" on r/vjing
   (https://www.reddit.com/r/vjing/comments/1x9wez8/circuit_bent_feedback_loop_the_fractal_microscope/),
   a circuit-bent laptop webcam on a microscope mount filming a 7-inch screen showing its own picture,
-  tiled into a kaleidoscope. Its look and its rig, not its code, which isn't published.
+  tiled into a kaleidoscope.
 - Circuit bending: Reed Ghazala's name and practice for shorting the circuits of cheap electronics.
 - Video feedback as a camera filming its own screen, with zoom, rotation and gain: J. P. Crutchfield,
   "Space-time dynamics in video feedback", Physica D 10 (1984).
