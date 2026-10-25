@@ -1,0 +1,88 @@
+Point Cloud {v}: the picture as a cloud of points in 3D. touchdesigner-effects, MIT.
+Docs: https://github.com/kevinraymond/touchdesigner-effects/blob/main/docs/effects/point_cloud.md
+
+Every point of the picture is placed at its depth and drawn in its color, up to {n:,} of them. From
+the start the cloud looks just like the picture; as the camera sways round it, the depth shows:
+people stand out from the wall behind them, a floor runs back into the room. The music moves it:
+loudness swells the points, each beat deepens the cloud, each bar swings the camera to a new angle;
+with Fosfora's signal a build scatters the points and a drop blows them apart.
+
+USE
+Drag point_cloud.tox into your network: it shows TouchDesigner's sample movie (a birch among dark
+leaves) as a cloud, the bright trunk standing out in front. Wire your picture into input 1 and, for
+real depth, a depth map lined up with it into input 3 (a depth camera, Depth Anything): with
+nothing on input 3, or nothing but black, the picture's brightness stands in for depth (and every
+point stays). The result is on output 1, at the
+input's size. Optionally wire audio or beat channels into input 2 (below). Open Window shows it
+full size; Esc closes it.
+
+INPUT 3
+Brighter Is Nearer (Depth Type) for depth estimators and masks; Distance 0-1 for the RealSense and
+Kinect TOPs; Distance in Meters (Max Distance) for the Kinect Azure TOP. A depth camera's black (no
+reading) is left out of the cloud; don't invert a camera's depth yourself. Points where the depth
+jumps (the edge of a person against the wall) go to whichever side they are closer to, so nothing
+streaks between them; small steps in 8-bit depth are smoothed so walls don't show terraces.
+Points From: Everything, The Subject (what stands in front of what is beside it: people, without
+the floor and walls; Stand Out sets how much nearer) or Nearer Than Far Limit.
+
+THE PAGE
+Look: Points (solid dots), Glow (soft dots added up, glowing where they crowd) or Surface (Gaussian
+splats that blend into one skin, from Botsch, Hornung, Zwicker and Kobbelt 2005). Points From,
+Stand Out, Far Limit, Depth Type, Max Distance (above). Depth: how deep the cloud is; 0 is flat.
+Detail: 180, 270 or 360 rows of points. Size: of a dot, in steps between points. Color: the
+picture's, by depth (orange near, blue far) or white. Brightness. Turn and Tilt: where the camera
+looks from, in degrees; Distance: how near it is (1: the picture fills the frame). Sway: how far the
+camera swings by itself; Sway Time: seconds per swing. Loudness, Beat Swell, Bar Moves, Song
+Moments (below).
+
+AUDIO (input 2, optional)
+Fosfora's signal is the best input: run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's
+integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it
+into input 2. Loudness grows and shrinks the dots; each beat deepens the cloud for a moment and
+pops the dots (Beat Swell); each bar swings the camera to a new angle (Bar Moves); with Song
+Moments on, a build scatters the points off their places as it rises and a drop blows the cloud
+apart, after which it settles back (Fosfora's drop detection is experimental). Raw audio (Audio
+File In, Audio Device In) gives beats from a simple kick detector (experimental: it can add or miss
+beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from its kick or onset
+channels. Nothing wired: the cloud just sways.
+
+INSIDE
+depth (input 3, or input 1's brightness) -> near (the depth at the grid's size, as nearness, by
+Depth Type; near_tiny and depth_stats: is there any? if not, near_pick takes input 1's
+brightness) -> pos (each point in 3D: smoothed, edges put to a side, jittered within its cell so
+rows of dots don't make moire). For Points From The Subject or Nearer Than: near_small -> find, and
+keep picks which points stay. pivot_in, pivot_avg and pivot: the kept points' middle, eased, which
+the cloud turns around (pivot_fb holds last frame's). geo draws a square at every point by
+instancing (one per pixel of pos); dot_mat's shaders place each from pos, turn the cloud, add the
+music's moves and color it from source. cam stays where the picture fills the frame. render draws
+Points and Glow; for Surface, splat_depth draws the splats' depth a little farther back,
+splat_sum adds up their colors and weights over it (splat_mat), splat_norm divides one by the
+other; look picks one. Input 2 goes through audio (lib audio_in); counts and steps turn its counts
+into steps, beat_env is a beat's swell, drop_env a drop's burst, build_lag the build, level_lag the
+loudness, bar and bar_lag the camera's angle for each bar.
+
+CREDITS
+- Surface: Botsch, Hornung, Zwicker and Kobbelt, "High-Quality Surface Splatting on Today's GPUs"
+  (Eurographics Symposium on Point-Based Graphics, 2005), after Zwicker, Pfister, van Baar and
+  Gross, "Surface Splatting" (SIGGRAPH 2001): a depth pass pushed back, the splats' colors and
+  weights added up over it, then divided out.
+- Smoothing: a bilateral filter (Tomasi and Manduchi, "Bilateral Filtering for Gray and Color
+  Images", ICCV 1998).
+- Points jittered within their cells against moire: stochastic sampling (Cook, "Stochastic
+  Sampling in Computer Graphics", ACM TOG 1986).
+- Placing the points: a pinhole camera, reading an estimator's depth as disparity (1 / distance).
+- Depth edges: the "flying pixels" a depth map has between near and far are commonly left out;
+  here each goes to the side it is closer to.
+- Dice and jitter: pcg2d and pcg3d (Jarzynski and Olano, "Hash Functions for GPU Rendering", JCGT
+  2020).
+- Read during the survey, not used: the Palette's kinectPointcloud (Derivative), FollowTheDarkside's
+  td-movie-to-particle (no license stated).
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else is written for this library; the depth reading (lib depth_near and depth_find)
+is shared with Particles. MIT.
+
+UPDATING
+Dragging a .tox in embeds a copy. To update, delete this one and drag in the new point_cloud.tox
+from https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's
+External .tox at a downloaded copy). The version and the build it was saved in are on the About
+page.

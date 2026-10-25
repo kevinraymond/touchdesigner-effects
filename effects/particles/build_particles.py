@@ -39,7 +39,7 @@ exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build
 VERSION = '0.1.0'
 # The particles' buffers: at most PW x PH alive at once.
 PW, PH = 256, 256
-# The subject is found on a small copy of the picture and the depth: the row search in find.glsl
+# The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
 # reads a whole row per pixel, and particles are born across a pixel, so finer would cost more and
 # show nothing.
 MW, MH = 320, 180
@@ -222,13 +222,13 @@ gust_lag = mk(comp, lagCHOP, 'gust_lag', 200, -900, [gust], 'The wind easing to 
 
 # ---- The subject ---------------------------------------------------------------------------------
 depth = depth_in(comp, x=-600, y=-1100)
-near = glsl(comp, 'near', -400, -1100, [depth], src('near.glsl'),
+near = glsl(comp, 'near', -400, -1100, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
             'The depth, {} x {}, as nearness; Depth Type flips distance (black: no reading).'.format(MW, MH),
             res=(MW, MH), fmt='rgba16float', uNear=(menu('Depthtype'), par('Maxdist')))
 depth_stats = mk(comp, analyzeTOP, 'depth_stats', -400, -1250, [near],
                  'The nearest reading in the depth: none (black) means input 3 carries no depth.',
                  op='maximum', analyzechannel='independent', format='rgba16float')
-people = glsl(comp, 'find', -200, -1100, [near], src('find.glsl'),
+people = glsl(comp, 'find', -200, -1100, [near], lib_glsl(_ROOT, 'depth_find.glsl'),
               'In the depth: nearer than Far Limit and (Stand Out) than what lies left and right of it.',
               res=(MW, MH), fmt='rgba16float',
               uFind=(Expr("1 if parent().par.Find == 'nearer' else 0"), par('Standout'), par('Far')))

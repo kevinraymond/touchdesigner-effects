@@ -84,14 +84,20 @@ Each item is one of:
   own `/sys` and `/ui`. [Global OP Shortcut](https://docs.derivative.ca/Global_OP_Shortcut)
 - **D2** (auto: assert_no_unused_docked) The DATs TouchDesigner docks to an operator are filled,
   not duplicated.
-- **D3** (auto: assert_readable) A README DAT, a comment on every operator, tags, the library
-  color, a node large enough to read. [OP Snippets](https://docs.derivative.ca/OP_Snippets)
+- **D3** (auto: assert_readable) A README DAT with a CREDITS section, a comment on every operator,
+  tags, the library color, a node large enough to read. [OP Snippets](https://docs.derivative.ca/OP_Snippets)
 - **D4** (auto: check_tox.py) The docs page states the build the `.tox` was saved in (newer builds
   open older files, not the reverse) and links `releases/latest/download/<name>.tox`.
   [Release Notes 2023](https://docs.derivative.ca/Release_Notes/2023.10000)
 - **D5** (review) The README DAT and docs page say how to update: dragging a `.tox` in embeds a
   copy, so updating means dragging in the new one (or pointing External .tox at it).
   [A word about external files](https://derivative.ca/community-post/word-about-external-files-202310k-builds/68166)
+- **D6** (review) Provenance: the README DAT's CREDITS and the docs page's Credits and license name
+  every paper, technique, project, code, font, model and media the effect uses, follows or was
+  built after, with links and licenses, and call original only what was designed here and has no
+  earlier source after a search. Code recalled from elsewhere that can't be traced is replaced,
+  never called original; code taken from elsewhere is also credited where it sits (a comment in
+  the shader or script). D3 and check_tox.py only see that the sections exist.
 
 ## Accessibility and honesty
 

@@ -44,11 +44,14 @@ _EXTENSION_PAR = re.compile(r'ext\d+object$')
 # ---- Sources and hashes (also used outside TouchDesigner) -----------------------------------
 def component_sources(root, comp_dir):
     """What a component's .tox is built from, as patterns relative to root: the shared library
-    (every lib/*.py), the component's builder (build_<name>.py) and everything in its src/. A
-    change to any of them needs a rebuild, and tests/check_tox.py fails until it happens."""
+    (every lib/*.py, and the shaders in lib/glsl/ that several effects share), the component's
+    builder (build_<name>.py) and everything in its src/. A change to any of them needs a
+    rebuild, and tests/check_tox.py fails until it happens."""
     rel = os.path.relpath(comp_dir, root).replace(os.sep, '/')
     name = os.path.basename(comp_dir)
     patterns = ['lib/*.py', '{}/build_{}.py'.format(rel, name)]
+    if glob.glob(os.path.join(root, 'lib', 'glsl', '*')):
+        patterns.append('lib/glsl/*')
     if glob.glob(os.path.join(comp_dir, 'src', '*')):
         patterns.append(rel + '/src/*')
     return patterns
@@ -65,6 +68,12 @@ def digest(root, patterns):
             with open(path, 'rb') as f:
                 h.update(os.path.relpath(path, root).replace(os.sep, '/').encode() + b'\0' + f.read() + b'\0')
     return h.hexdigest()
+
+
+def lib_glsl(root, name):
+    """A shader shared by several effects, from lib/glsl/ (depth_near.glsl, depth_find.glsl)."""
+    with open(os.path.join(root, 'lib', 'glsl', name)) as f:
+        return f.read()
 
 
 def lib_module(root, name):
@@ -395,12 +404,16 @@ def assert_no_unused_docked(comp):
 
 
 def assert_readable(comp):
-    """Opening the .tox shows how it works: a README, a comment on every operator, help on
-    every parameter, the About page, tags, the library color and a node big enough to read."""
+    """Opening the .tox shows how it works: a README with its CREDITS (the papers, techniques, code
+    and projects it uses or follows, docs/BUILDING.md), a comment on every operator, help on every
+    parameter, the About page, tags, the library color and a node big enough to read."""
     problems = []
     readme = comp.op('README')
     if readme is None or not readme.text.strip():
         problems.append('no README DAT, or an empty one')
+    elif not re.search(r'^CREDITS\n+\S', readme.text, re.M):
+        problems.append('the README has no CREDITS section: what the effect uses or follows (docs/BUILDING.md, '
+                        'Credits)')
     for o in _all(comp):
         if not o.comment.strip():
             problems.append('{} has no comment'.format(o.path))

@@ -1,8 +1,7 @@
 """Build the Showreel bundle. Run from a textport: __file__ = '/path/to/build_showreel.py'; exec(open(__file__).read())
 
 Every effect in effects/ (each effects/<n>/<n>.tox as built, embedded unchanged) behind one View
-menu: Grid (the input and every effect side by side, named), Cycle (one at a time, moving on every
-few bars) or one effect by name. It finds the effects itself, so a new effect needs only a rebuild
+menu: Cycle (one at a time, fading to the next every few bars) or one effect by name. It finds the effects itself, so a new effect needs only a rebuild
 of this; until then tests/check_tox.py fails (embeds_all in the manifest), as it does when an
 effect is rebuilt and this isn't.
 
@@ -10,16 +9,17 @@ The network, left to right:
   input      the standard shell: source (input 1, or the sample movie), in2_audio and in3_top, whose
              depth (lib depth_in: input 3, else input 1's brightness) feeds the effects that take one
   effects    every effect's COMP, fed the inputs it takes, its output through a Null TOP (fx_<name>)
-  views      grid.glsl tiles the input and every effect with their names; view (a Switch TOP,
-             which cooks only the input it shows) picks Grid, Cycle's effect or the one chosen;
-             label.glsl names the effect showing
+  views      view (a Switch TOP blending between neighboring inputs, which cooks only the inputs
+             it shows) picks Cycle's effect, or the two it fades between, or the one chosen; the
+             first effect is wired in again last, so the fade from the last back to the first is
+             between neighbors too; label.glsl names the effect showing
   cycle      audio_in() -> audio and a clock -> cycle (a Script CHOP, src/cycle.py): how many
              times Cycle has moved on, on the bars or the clock, never within 2 s of the last
-             move; the view reads it only while View is Cycle, so none of it cooks otherwise
+             move, and how far its fade has come; the view reads it only while View is Cycle, so
+             none of it cooks otherwise
 """
 import glob
 import hashlib
-import math
 import os
 
 try:
@@ -42,10 +42,9 @@ SAMPLE = "'vfs:' + parent().path + ':{}'".format(CLIP)
 # first pulls it, and the depth only cooks while an effect that uses it is showing.
 CLIP_SECONDS = 81 / 16
 IN_STEP = dict(playmode='specify', indexunit='seconds', index=Expr('absTime.seconds % {:g}'.format(CLIP_SECONDS)))
-GRID_W, GRID_H = 1280, 720
-# Cycle's bar while input 2 gives none, and the least time between two of its moves (src/cycle.py
-# keeps them; these are for the help and the README).
-SECONDS_A_BAR, MIN_GAP = 2.0, 2.0
+# Cycle's bar while input 2 gives none, the least time between two of its moves and how long a fade
+# from one effect to the next takes (src/cycle.py keeps them; these are for the help and the README).
+SECONDS_A_BAR, MIN_GAP, FADE = 2.0, 2.0, 1.0
 
 
 def src(name):
@@ -68,8 +67,8 @@ if not EFFECTS:
 
 comp, page, source = new_effect(
     'showreel', 'Showreel',
-    'Showreel {}: every effect in the library ({}) in one component; View picks a grid of them all, '
-    'a cycle through them, or one.'.format(VERSION, ', '.join(n for n, _ in EFFECTS)),
+    'Showreel {}: every effect in the library ({}) in one component; View picks a cycle through them, '
+    'fading from one to the next, or one.'.format(VERSION, ', '.join(n for n, _ in EFFECTS)),
     'Filled in once the effects are loaded.', tags=('showreel', 'bundle'), audio=True, flashing=True,
     sample=SAMPLE, depth=True)
 comp.vfs.addFile(os.path.join(_HERE, 'src', CLIP))
@@ -117,59 +116,50 @@ for i, (name, path) in enumerate(EFFECTS):
         fx.par.Flashing.expr = 'parent().par.Flashing'
     with open(path, 'rb') as f:
         embeds[name] = hashlib.sha256(f.read()).hexdigest()
-    null = mk(comp, nullTOP, 'fx_' + name, 150, fx.nodeY, comment="{}'s picture, for grid and view.".format(name))
+    null = mk(comp, nullTOP, 'fx_' + name, 150, fx.nodeY, comment="{}'s picture, for view.".format(name))
     null.inputConnectors[0].connect(fx.outputConnectors[0])
     fxs.append((fx, null, fx.customPages[0].name))
 
-# ---- Names in the library's font: INPUT, then each effect's title -------------------------------
+# ---- Names in the library's font: each effect's title ------------------------------------------
 font = lib_module(_ROOT, 'font5x7')
-names = ['INPUT'] + [title.upper() for _, _, title in fxs]
+names = [title.upper() for _, _, title in fxs]
 for n in names:
     for ch in n:
         font['index'](ch)  # a character the font lacks fails here, not as a blank in the picture
 at = [sum(len(n) for n in names[:k]) for k in range(len(names))]
-names_head = ('#define N_TILES {}\n'.format(len(names)) + font['glsl_font']()
+names_head = ('#define N_NAMES {}\n'.format(len(names)) + font['glsl_font']()
               + font['glsl_ints']('NAMES', ''.join(names))
               + 'const int NAME_AT[{0}] = int[]({1});\nconst int NAME_LEN[{0}] = int[]({2});\n'.format(
                   len(names), ', '.join(map(str, at)), ', '.join(str(len(n)) for n in names))
               + src('names.glsl'))
-cols = math.ceil(math.sqrt(len(names)))
-rows = math.ceil(len(names) / cols)
-# tile(t, uv) and tileRes(t) read input t through constant indices (a sampler can't be picked
-# by a variable).
-tiles_head = '#define COLS {}\n#define ROWS {}\n'.format(cols, rows)
-tiles_head += 'vec2 tileRes(int t) {\n' + ''.join(
-    '    if (t == {0}) return uTD2DInfos[{0}].res.zw;\n'.format(k) for k in range(len(names))) + '    return vec2(1.0);\n}\n'
-tiles_head += 'vec4 tile(int t, vec2 uv) {\n' + ''.join(
-    '    if (t == {0}) return texture(sTD2DInputs[{0}], uv);\n'.format(k) for k in range(len(names))) + '    return vec4(0.0);\n}\n'
 
 # ---- Views --------------------------------------------------------------------------------------
 view_menu = custom(page, 'Menu', 'View', 'View', None,
-                   'What to show. Grid: the input and every effect side by side, each named (every effect '
-                   'runs). Cycle: one effect at a time, moving on every Every bars of input 2 (a bar is {:g} s '
-                   'while no bars arrive), never within {:g} s of the last move. Or one effect by name. Only '
-                   'the effects showing run.'.format(SECONDS_A_BAR, MIN_GAP))
-view_menu.menuNames = ['grid', 'cycle'] + [fx.name for fx, _, _ in fxs]
-view_menu.menuLabels = ['Grid', 'Cycle'] + [title for _, _, title in fxs]
-view_menu.default = view_menu.val = 'grid'
+                   'What to show. Cycle: one effect at a time, fading to the next over {:g} s every Every bars '
+                   'of input 2 (a bar is {:g} s while no bars arrive), never within {:g} s of the last move. Or '
+                   'one effect by name. Only the effects showing run (two during a fade).'.format(
+                       FADE, SECONDS_A_BAR, MIN_GAP))
+view_menu.menuNames = ['cycle'] + [fx.name for fx, _, _ in fxs]
+view_menu.menuLabels = ['Cycle'] + [title for _, _, title in fxs]
+view_menu.default = view_menu.val = 'cycle'
 every = custom(page, 'Int', 'Every', 'Every', 4,
                "Cycle's pace: how many bars of input 2's music each effect shows for.", 1, 64, True)
 every.enableExpr = "me.par.View == 'cycle'"
 custom(page, 'Toggle', 'Labels', 'Labels', True, "Name each effect on the picture, in the library's pixel font.")
 
-grid = glsl(comp, 'grid', 450, 300, [source] + [null for _, null, _ in fxs], names_head + tiles_head + src('grid.glsl'),
-            'Grid: the input and every effect side by side ({} x {}), each named.'.format(cols, rows),
-            res=(GRID_W, GRID_H), uLook=(par('Labels'),))
-# Grid is input 0; effect k (from 1) is View's item k + 1; Cycle steps through them, reading the
-# cycle CHOP (and so cooking it and the audio) only while it is chosen.
-VIEW_INDEX = ("0 if parent().par.View == 'grid' else parent().par.View.menuIndex - 1 if parent().par.View != 'cycle' "
-              "else 1 + int(op('cycle')['step'].eval()) % {}").format(len(fxs))
-view = mk(comp, switchTOP, 'view', 650, 0, [grid] + [null for _, null, _ in fxs],
-          'What View shows: Grid, the effect Cycle has reached, or the one chosen (only that input cooks).',
-          index=Expr(VIEW_INDEX))
+# Effect k is input k and View's item k + 1; the first is wired in again last, so Cycle's fade from
+# the last effect to the first blends neighbors (a blending Switch TOP mixes input floor(index) with
+# the next). Cycle shows the effect it left plus how far the fade has come; it reads the cycle CHOP
+# (and so cooks it and the audio) only while it is chosen.
+VIEW_INDEX = ("parent().par.View.menuIndex - 1 if parent().par.View != 'cycle' else "
+              "(int(op('cycle')['step'].eval()) - 1) % {n} + op('cycle')['fade'].eval() "
+              "if op('cycle')['step'].eval() >= 1 else 0").format(n=len(fxs))
+view = mk(comp, switchTOP, 'view', 650, 0, [null for _, null, _ in fxs] + [fxs[0][1]],
+          "What View shows: the effect Cycle has reached, blending from the last one while it fades, or the "
+          'one chosen (only the inputs it shows cook).', index=Expr(VIEW_INDEX), blend=True)
 label = glsl(comp, 'label', 850, 0, [view], names_head + src('label.glsl'),
-             'Names the effect showing, bottom left (Labels); Grid names its own cells.',
-             uLabel=(Expr("op('view').par.index.eval()"), par('Labels')))
+             'Names the effect showing, bottom left (Labels).',
+             uLabel=(Expr("int(op('view').par.index.eval() + 0.5) % {}".format(len(fxs))), par('Labels')))
 finish_effect(comp, label, VERSION, page)
 comp.op('out_top').nodeX = 1050
 comp.op('window').nodeX = 1050

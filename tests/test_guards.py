@@ -58,7 +58,8 @@ def pages(root, kind, name):
     lib = check_tox.load_lib(root)
     write(root, '{0}/{1}/build_{1}.py'.format(kind, name), "VERSION = '0.1.0'\n")
     write(root, 'docs/effects/{}.md'.format(name), '# {0}\n\n![{0}]({0}.gif)\n\n[Download]({1}) · saved in '
-          'TouchDesigner 2025.33230\n'.format(name, lib['DOWNLOAD_URL'].format(name)))
+          'TouchDesigner 2025.33230\n\n## Credits and license\n\nMIT. Original.\n'.format(
+              name, lib['DOWNLOAD_URL'].format(name)))
     write(root, 'docs/effects/{}.gif'.format(name), b'GIF89a')
     write(root, '{}/{}/review.md'.format(kind, name),
           check_tox.review_template(root, name, '0.1.0').replace('- [ ]', '- [x]'))
@@ -103,6 +104,8 @@ BREAKS = [
                                                    + '\n# changed\n'), 'older than its sources'),
     ('another lib module changed', lambda r: write(r, 'lib/font5x7.py', open(os.path.join(r, 'lib/font5x7.py')).read()
                                                    + '\n# changed\n'), 'older than its sources'),
+    ('a shared shader changed', lambda r: write(r, 'lib/glsl/depth_near.glsl', open(os.path.join(
+        r, 'lib/glsl/depth_near.glsl')).read() + '\n// changed\n'), 'older than its sources'),
     ('the builder changed', edit('effects/demo/build_demo.py', "VERSION", "# tweak\nVERSION"), 'older than its sources'),
     ('the .tox swapped', lambda r: write(r, 'effects/demo/demo.tox', b'other tox'), 'is not the file'),
     ('VERSION bumped, not rebuilt', edit('effects/demo/build_demo.py', '0.1.0', '0.2.0'), 'built as 0.1.0'),
@@ -113,6 +116,8 @@ BREAKS = [
     ('a new effect the bundle leaves out', lambda r: add_effect(r, 'demo2'), 'does not embed demo2'),
     ('no download link', edit('docs/effects/demo.md', 'releases/latest/download', 'releases/download/v1'),
      'does not link'),
+    ('no credits on the docs page', edit('docs/effects/demo.md', '## Credits and license\n\nMIT. Original.\n', ''),
+     'no "## Credits and license"'),
     ('no preview shown', edit('docs/effects/demo.md', '![demo](demo.gif)', ''), 'shows no preview'),
     ('preview missing', remove('docs/effects/demo.gif'), 'which does not exist'),
     ('bundle embeds an older effect', rebuild_effect_only, 'embeds an older demo.tox'),

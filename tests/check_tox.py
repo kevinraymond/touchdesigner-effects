@@ -10,8 +10,8 @@ it fails when:
   - the .tox is not the file its manifest describes,
   - the builder's VERSION is not the version the .tox was built as,
   - a component has no docs page (docs/effects/<name>.md, bundles too), the page doesn't link the
-    latest-release download or state the build the .tox was saved in, or the preview it shows is
-    missing,
+    latest-release download, state the build the .tox was saved in or carry its Credits and license
+    (what it uses or follows, docs/BUILDING.md), or the preview it shows is missing,
   - a component's idiom review (<kind>/<name>/review.md, docs/TD_IDIOMS.md) is missing, leaves a
     box open, reviews an older version, or lacks an item the checklist has gained since,
   - a bundle embeds an older build of a component than the one checked in, or, built to embed
@@ -31,6 +31,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 KINDS = ('effects', 'bundles')
 PREVIEW = re.compile(r"\]\(([^)\s]+\.(?:webp|gif|mp4|webm|png|jpg))\)")
+CREDITS = re.compile(r'^## Credits and license\n+\S', re.M)
 REVIEW_ITEM = re.compile(r'^- \*\*([A-Z]\d+)\*\* \(review\) (.*(?:\n  .*)*)', re.M)
 CHECKED = re.compile(r'^- \[[xX]\] ([A-Z]\d+)\b', re.M)
 REVIEWED = re.compile(r'^Reviewed version: (\S+)', re.M)
@@ -90,6 +91,9 @@ def _docs(root, lib, rel, name, errors):
     text = open(page).read()
     if lib['DOWNLOAD_URL'].format(name) not in text:
         errors.append('docs/effects/{}.md does not link {}'.format(name, lib['DOWNLOAD_URL'].format(name)))
+    if not CREDITS.search(text):
+        errors.append('docs/effects/{}.md has no "## Credits and license" section saying what it uses or follows '
+                      '(docs/BUILDING.md, Credits)'.format(name))
     previews = PREVIEW.findall(text)
     if not previews:
         errors.append('docs/effects/{}.md shows no preview (an animated .webp or .gif, or a clip)'.format(name))

@@ -123,9 +123,15 @@ with no beat.
 
 ## Credits and license
 
-MIT. The shader and operators are written for this library. The hash that picks each burst's
-blocks and tears is Chris Wellons' lowbias32 integer hash
-([hash-prospector](https://github.com/skeeto/hash-prospector), public domain).
+MIT. The shader and operators are written for this library: the bursts and the flash budget
+among them.
+
+- **The damage** (slivers torn sideways, blocks that jump, freeze or lose their color, rows that
+  slip) is the common vocabulary of digital glitch art, after broken video streams and files.
+- **Dice:** Chris Wellons' lowbias32 integer hash ([hash-prospector](https://github.com/skeeto/hash-prospector), public domain), which picks each burst's
+  blocks and tears.
+- **Read during the survey, not used:** td-glitch-effects, Glitch Machine (paid).
+- **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the

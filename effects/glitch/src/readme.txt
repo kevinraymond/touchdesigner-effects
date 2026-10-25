@@ -49,6 +49,14 @@ bursts Bursts and Song Moments ask for, flash_limit and flash gate them, flash_b
 burst holds each one for Length, burst_count numbers them (each burst's seed) and drop_kind marks a
 drop's.
 
+CREDITS
+- The damage (slivers torn sideways, blocks that jump, freeze or lose their color, rows that slip)
+  is the common vocabulary of digital glitch art, after broken video streams and files.
+- Dice: Chris Wellons' lowbias32 integer hash (hash-prospector, public domain).
+- Read during the survey, not used: td-glitch-effects, Glitch Machine.
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else (the bursts, the flash budget) is written for this library. MIT.
+
 UPDATING
 Dragging a .tox in embeds a copy. To update, delete this one and drag in the new glitch.tox from
 https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's External

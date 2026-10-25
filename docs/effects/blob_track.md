@@ -171,11 +171,16 @@ the dancer at every setting: one more change of brightness, the smallest step th
 
 ## Credits and license
 
-MIT. The shaders and operators are written for this library. Detection uses TouchDesigner's own
-Blob Track TOP (or this library's GPU grid). The hash that picks scrambled characters, words and
-partners is Chris Wellons' lowbias32 integer hash
-([hash-prospector](https://github.com/skeeto/hash-prospector), public domain). The 5 x 7 bitmap
-font was drawn for this library.
+MIT. The shaders and operators are written for this library: the GPU Grid, the tracking and the
+flash budget among them.
+
+- **The look** follows the blob-tracking overlays that spread on social video from 2024: boxes,
+  numbers and lines over whatever moves. No project's files or code were used.
+- **Detection:** TouchDesigner's own Blob Track TOP (Derivative), or this library's GPU Grid.
+- **Dice:** Chris Wellons' lowbias32 integer hash ([hash-prospector](https://github.com/skeeto/hash-prospector), public domain), which picks scrambled
+  characters, words and partners.
+- **Font:** the 5 x 7 bitmap font was drawn for this library.
+- **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the

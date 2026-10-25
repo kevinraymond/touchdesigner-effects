@@ -1,14 +1,16 @@
 # Showreel
 
-![The Showreel's Grid view on a dancer in a hazy warehouse: a cell for the input and one for each effect, each named in its corner on a dark plate: ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Glitch tearing her on the beat, and Particles shedding glowing specks off her (her depth map inside the showreel)](showreel.webp)
+![Every effect in the Showreel on a dancer in a hazy warehouse, side by side and each named in the library's pixel font: ASCII drawing her in blue and orange glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
-in, and the same picture runs through each effect side by side, or one after another in time with
+in, and the same picture runs through each effect in turn, fading from one to the next in time with
 the music.
 
-The Showreel embeds the released `.tox` of every effect, unchanged, behind one View menu. Grid shows
-your input and every effect next to each other, each named in its corner. Cycle shows one effect at
-a time, full size, moving on every few bars of the music on input 2. Or pick one effect by name.
+The Showreel embeds the released `.tox` of every effect, unchanged, behind one View menu. Cycle, the
+default, shows one effect at a time, full size and named in its corner, fading to the next every few
+bars of the music on input 2. Or pick one effect by name. Only the effect showing runs, so the
+Showreel costs about what one effect does, however many the library holds. (The preview above shows
+them side by side: each was recorded on its own and tiled for this page.)
 Each effect inside is a full copy you can open and change, with its own page of parameters. It is
 generated from the effects themselves, so a new effect in the library comes with a new Showreel.
 
@@ -27,9 +29,10 @@ Non-Commercial license
    on with their bars. [Fosfora](https://github.com/kevinraymond/fosfora)'s signal gives the most;
    each effect's page says what it does with it.
 4. Optional: wire a depth map or mask into input 3, grayscale, brighter nearer (or inside), lined up
-   with input 1. The effects that use depth (Particles) get it. Without it they get the dancer's
-   depth while the dancer clip shows, and none once you wire input 1: then they work without depth
-   (Particles follows what moves).
+   with input 1. The effects that use depth (Particles, Point Cloud) get it. Without it they get the
+   dancer's depth while the dancer clip shows, and none once you wire input 1: then they work
+   without depth (Particles follows what moves, Point Cloud reads the picture's brightness as
+   depth).
 
 Open Window (on the Showreel page) shows it full size; Esc closes the window.
 
@@ -47,7 +50,7 @@ The Showreel page, top to bottom:
 
 | Parameter | Default | What it does |
 |---|---|---|
-| View | Grid | What to show. Grid: the input and every effect side by side, each named (every effect runs). Cycle: one effect at a time. Or one effect by name. Only the effects showing run. |
+| View | Cycle | What to show. Cycle: one effect at a time, fading to the next over 1 s. Or one effect by name. Only the effects showing run: one, or two during a fade. |
 | Every | 4 | Cycle's pace: how many bars of input 2's music each effect shows for. While no bars arrive (nothing wired, or the music stopped), a bar is 2 s. Cycle never moves on within 2 s of its last move, whatever the bars do. Grayed out unless View is Cycle. |
 | Labels | On | Names each effect on the picture, in the library's pixel font, white on a dark plate. |
 | Flashing | Calm | Applies to every effect inside: Off never flashes, Calm (the default) allows at most one flash a second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. |
@@ -68,40 +71,47 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with the five effects of this release inside and the dancer clip's depth
-on input 3. Grid, the default, runs every effect at once: 7.61 ms on the GPU per frame (95th
-percentile 8.40 ms) and 2.83 ms on the CPU (95th percentile 2.96 ms). Cycle and the single views
-run one effect at a time: Cycle took 1.92 ms on the GPU (95th percentile 3.82 ms; it depends on the
-effect showing) and 0.71 ms on the CPU. Grid's cost grows with every effect the
-library adds; Cycle's doesn't. Nothing inside cooks while the output is unused.
+TouchDesigner 2025.33230), with the six effects of this release inside, the dancer clip's depth on
+input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
+runs one effect at a time: 3.74 ms on the GPU per frame and 1.39 ms on the CPU on average, depending
+on the effect showing; during a fade two effects run, so the 95th percentile was 8.55 ms on the GPU
+and 2.03 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+grow as the library adds effects. Nothing inside cooks while the output is unused.
 
 ## Accessibility
 
 - **Flashing.** One Flashing parameter sets every effect's: each keeps to its own limits (see its
-  page). Cycle's change from one effect to the next is a cut, never within 2 s of the last, so
-  even fast bars can't turn it into flashing.
+  page). Cycle fades from one effect to the next over a second, never within 2 s of its last move,
+  so even fast bars can't turn its moves into flashing. It used to cut: with six effects inside, a
+  cut on top of an effect's own flashes reached 3.5 a second at Up to 3 per second under the test
+  below, past WCAG's 3; the fade brought that down to 2.5.
 - **Measured.** The test recorded the output while it fed a beat far busier than music (8 beats,
   2 bars and 1 drop a second) and counted the flashes in the worst second, by WCAG's area rule.
-  Cycle was measured at its fastest, Every 1, so it moved on every 2 s:
+  Under that beat Cycle moves on every 2 s, its fastest, whatever Every says:
 
-  | View and clip | Off | Calm | Up to 3 per second | The clip alone |
+  | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Grid, dancer in a hazy warehouse | 0.5 | 1.0 | 2.0 | 1.0 |
-  | Grid, people crossing a plaza | 0.5 | 1.5 | 2.0 | 0.5 |
-  | Cycle at Every 1, dancer | 1.0 | 1.5 | 3.0 | 1.0 |
+  | Dancer in a hazy warehouse | 1.0 | 2.0 | 3.0 | 1.0 |
+  | People crossing a plaza | 0.5 | 1.5 | 3.0 | 0.5 |
+  | Dancer, Every 1 | 1.0 | 2.0 | 2.5 | 1.0 |
 
   Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
-  setting goes past WCAG's 3, Cycle at its fastest under that beat included (it reaches 3 at Up to 3
-  per second). Red flashes, from Glitch's colored fringes, appeared only in Cycle at Up to 3 per
-  second: half a flash a second, well under WCAG's 3.
-- **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 2 pixels
-  per font pixel in the grid and 3 in the single views (at 720 pixels high; they scale with the
-  picture), so they read on light and dark pictures alike.
+  setting goes past WCAG's 3 (Up to 3 per second reaches it with the effects flashing as often as
+  that allows). The two dancer runs differ by which effects happened to show in the 10 seconds
+  measured. No red flashes.
+- **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 3 pixels
+  per font pixel (at 720 pixels high; they scale with the picture), so they read on light and dark
+  pictures alike.
 
 ## Credits and license
 
-MIT. The effects inside are this library's own (their pages list what they derive from); the
+MIT. The effects inside are this library's own (their pages list what they use and follow); the
 5 x 7 bitmap font was drawn for this library.
+
+- **The built-in clip and the preview footage:** see below. Her depth map, inside the `.tox`, was
+  estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Base model
+  (Apache 2.0).
+- **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 The built-in clip and the preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the

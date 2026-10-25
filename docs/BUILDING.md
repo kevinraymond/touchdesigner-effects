@@ -10,6 +10,8 @@ with a manifest beside it. Review the sources; ship the `.tox`.
 lib/tox_build.py              shared by every builder: the standard effect shell, helpers, save-time checks, manifests
 lib/font5x7.py                a 5 x 7 bitmap font for text drawn in shaders (labels, glyph grids)
 lib/audio_callbacks.py        the audio input's logic (audio_in() puts it in a Script CHOP)
+lib/glsl/                     shaders several effects share: depth_near.glsl (input 3 as nearness, by Depth Type),
+                              depth_find.glsl (what stands in front of its surroundings)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -76,7 +78,8 @@ CHOP's callbacks) instead of adding a second one; `glsl()` makes a GLSL TOP in o
 shader filled, any number of inputs: past the third they go through its TOPs parameter, the
 only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is the one way
 an effect may flash (below); `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
-the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink).
+the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and
+`lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
 
 ## Building a bundle
 
@@ -103,8 +106,8 @@ dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`)
   or a file parameter with an absolute path (sample media comes from `app.samplesFolder`).
   TouchDesigner's own `/sys` and `/ui` are allowed;
 - a docked DAT is unused (the builder wired its own beside it);
-- it isn't readable inside: no README, an operator without a comment, a parameter without
-  help, the About page incomplete, no tags, another node color, a node smaller than 480 x 270;
+- it isn't readable inside: no README or one without its CREDITS, an operator without a comment,
+  a parameter without help, the About page incomplete, no tags, another node color, a node smaller than 480 x 270;
 - the inputs aren't a TOP then optionally a CHOP and a TOP, the output isn't one TOP, or anything
   inside makes sound (an Audio Device Out, whose saved state would play the moment a project
   opens);
@@ -136,6 +139,28 @@ Tick each box (`- [x]`) with a few words on how it holds. `tests/check_tox.py` f
 box is open, when the review is for an older version than the builder's, and when the checklist
 gains an item the review doesn't have, so adding an idiom reopens every effect's review. The
 review isn't one of the sources, so writing it doesn't call for a rebuild.
+
+## Credits
+
+Every component says where it comes from, in two places: a CREDITS section in its README DAT
+(inside the `.tox`, so it travels with every copy) and a "Credits and license" section on its docs
+page. Both name every paper, technique, project, piece of code, font, model and media it uses,
+follows or was built after, with links and licenses; the docs page also credits the preview's
+footage. Each entry is one of:
+
+- **From or after a source:** a paper (authors, title, venue, year), a project or a piece of code
+  (author, link, license), or a widely known technique. Code taken from elsewhere is credited
+  where it sits too, in a comment in the shader or script, with its license when that asks for one.
+- **Followed, not copied:** a project or video whose approach the effect follows, or that was read
+  while building it, without its code ("follows the approach Acerola showed in ...").
+- **Original (no earlier source found):** designed here, and a search found no earlier source.
+  Only for what was designed here: code recalled from elsewhere that can't be traced is replaced
+  with something that can, never called original.
+
+Write the credits while building, from what the prototypes and the board recorded, and check them
+before the review: TD_IDIOMS D6 asks for it by hand in every version's review, `save_tox()` refuses
+a README without CREDITS (`dev/selftest.py` breaks it), and `tests/check_tox.py` fails a docs page
+without its Credits and license (`tests/test_guards.py` breaks it).
 
 ## Flashing
 
@@ -194,14 +219,14 @@ sample MP3 gives 6 (about 120 BPM). Beats that make the picture flash still go t
 ## Manifests and the stale-file test
 
 `<name>.json` records the effect's version, the TouchDesigner build it was saved in, a hash
-of its sources (every `lib/*.py`, the builder, everything in `src/`) and a hash of the
+of its sources (every `lib/*.py` and `lib/glsl/*`, the builder, everything in `src/`) and a hash of the
 `.tox`. A bundle's also records the hash of every `.tox` it embeds (`embeds`), and whether it
 takes every effect (`embeds_all`).
 
 `tests/check_tox.py` fails when a source changed since the last build, the `.tox` isn't the
 file its manifest describes, the builder's `VERSION` isn't the built one, a component (effect or
 bundle) has no docs page (or it doesn't link `releases/latest/download/<name>.tox`, doesn't state
-the build the `.tox` was saved in, or its preview is missing), its idiom review is missing or out
+the build the `.tox` was saved in, has no Credits and license section, or its preview is missing), its idiom review is missing or out
 of date (above), a bundle embeds an older build, or a bundle that takes every effect leaves one
 out. `tests/test_guards.py` breaks each of those on purpose. Both run in CI and before every
 commit:
@@ -250,6 +275,7 @@ The other dev tools, each run through `dev/td.sh` (their headers say more):
 | `dev/flash.py` + `dev/flashcount.py` | record each Flashing setting's output under a stress beat, then count flashes per second the WCAG way (`uv run --with numpy dev/flashcount.py dev/out/flash`; `--selftest` checks the counting) |
 | `dev/perf.py` | each effect's CPU and GPU cook time per frame at its defaults, for the performance note |
 | `dev/record.py` + `dev/clips.py` | record effects as video with sound (Motion JPEG: the free license can't encode H.264), then MP4s and docs previews (`uv run dev/clips.py dev/out/record --preview`) |
+| `dev/tile.py` | tile several effects' recordings into one labeled grid preview, in the library's font (the Showreel's page: `uv run --with pillow dev/tile.py dev/out/record --names ... --titles ... --out docs/effects/showreel`) |
 | `dev/idle.py` | checks an effect does nothing while its output is unused, input 2 unwired and wired (TD_IDIOMS C5) |
 | `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect |
 | `dev/assets.py` | normalize test footage in `private/assets/` (see `PROMPTS.md` there) |

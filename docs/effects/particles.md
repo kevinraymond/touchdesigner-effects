@@ -224,10 +224,20 @@ flashes.
 
 ## Credits and license
 
-MIT. The shaders and operators are written for this library. The swirl is curl noise (Bridson,
-Hourihan and Nordenstam, "Curl-Noise for Procedural Fluid Flow", SIGGRAPH 2007) on TouchDesigner's
-built-in simplex noise. The dice are the PCG hash from Jarzynski and Olano, "Hash Functions for GPU
-Rendering" (JCGT, 2020).
+MIT. The shaders and operators are written for this library: Stand Out's row search and
+Background's exposure drift among them. The depth reading (`lib/glsl`) is shared with
+[Point Cloud](point_cloud.md).
+
+- **Swirl:** curl noise (Bridson, Hourihan and Nordenstam, "Curl-Noise for Procedural Fluid Flow",
+  SIGGRAPH 2007) on TouchDesigner's built-in simplex noise.
+- **Dice:** the PCG hash from Jarzynski and Olano, "Hash Functions for GPU Rendering" (JCGT, 2020).
+- **Movement:** a background that follows the picture a couple of seconds behind (running-average
+  background subtraction, a standard method). **Background:** a picture of the empty room.
+- **Depth Type:** the RealSense, Kinect and Kinect Azure TOPs' depth, as their help pages describe
+  it.
+- **Font:** the 5 x 7 bitmap font for the Subject view's labels was drawn for this library.
+- **Read during the survey, not used:** the Palette's particlesGpu (Derivative).
+- **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the

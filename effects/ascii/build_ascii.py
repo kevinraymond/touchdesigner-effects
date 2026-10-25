@@ -81,6 +81,19 @@ draw the system font; cell and grid size the cells. Input 2 goes through audio (
 moments_* turn its counts into pulses, flash_limit and flash gate the pops and drops, and pop_env,
 drop_env and beat_env shape them.
 
+CREDITS
+- Edge glyphs follow the approach Acerola showed in "I Tried Turning Games Into Text" (YouTube,
+  2024): a difference of Gaussians finds the edges and a Sobel filter (Sobel and Feldman, 1968)
+  their direction, and each cell takes the line character of the direction most of it points.
+  Followed, not copied: the shaders are written for this library.
+- Glyphs stand for brightness by how much ink they carry, as ASCII art always has.
+- Per-cell dice: MurmurHash3's 32-bit finalizer (Austin Appleby, public domain).
+- Bitmap 5x7: a pixel font drawn for this library. System Font uses a font on your computer at run
+  time, so none ships here.
+- Read during the survey, not used: Lou Evoy's ASCII TOP, uisato's ASCII Paradise.
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else is written for this library. MIT.
+
 UPDATING
 Dragging a .tox in embeds a copy. To update, delete this one and drag in the new ascii.tox from
 https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's

@@ -1,6 +1,6 @@
 // Showreel (touchdesigner-effects, MIT). A name on a dark plate, in the library's 5 x 7 font.
 // The builder writes NAMES (every name's glyphs, one after another), NAME_AT and NAME_LEN (where
-// name k starts and how long it is) above this; name 0 is INPUT, then each effect's.
+// name k starts and how long it is) above this: name k is effect k's, in the View menu's order.
 #define PAD 3      // font pixels of plate around the text
 #define INK 0.9    // the text's brightness: below full white, like the library's other labels
 

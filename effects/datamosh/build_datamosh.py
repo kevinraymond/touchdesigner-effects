@@ -98,6 +98,22 @@ INSIDE
   (skip_env, key_env). Per frame, Python runs only in the audio input's Script CHOP and in
   parameter expressions.
 
+CREDITS
+- Datamoshing is the glitch art of deleting a compressed video's keyframes, so one shot's motion
+  drags the last shot's pixels. This is datamosh-style: it models what a decoder does with missing
+  keyframes, with no codec.
+- Smear: Lucas-Kanade optical flow, written from B. D. Lucas and T. Kanade, "An Iterative Image
+  Registration Technique with an Application to Stereo Vision" (1981).
+- Blocks: block matching as a video encoder does it, a full search refined to a quarter pixel as in
+  H.264. olegchomp's tdx-datamosh (tdx-rnd), read during the survey, models macroblocks too; none
+  of its code was used (it states no license).
+- Resampling: a Catmull-Rom bicubic (Catmull and Rom, 1974), clamped to its neighbors.
+- Dice: Chris Wellons' lowbias32 integer hash (hash-prospector, public domain).
+- Read during the survey, not used: VARIMOSH, the Palette's opticalFlow (its license keeps it out
+  of a shared .tox).
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else is written for this library. MIT.
+
 UPDATING
   Dragging a .tox in embeds a copy, so a new release doesn't reach it on its own. To update,
   delete this copy and drag in the new datamosh.tox from

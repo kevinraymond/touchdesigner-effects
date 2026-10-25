@@ -1,12 +1,12 @@
 {
   "version": "0.1.0",
-  "sources_sha256": "b72bbe4c575336ba14166e75b4356ab25a8ee8833feeeb75a613f8207f9f5bdd",
+  "sources_sha256": "3cf51fb08b82d30847576904e6c7968f3455b7140bcd79cc2c559b5b0e48592f",
   "inputs": [
     "in1_top",
     "in2_audio",
     "in3_top"
   ],
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "5dc95c88d0028b2e51e91780cce966873f87b09bb8937d74c76574ded17e4e38",
-  "tox_bytes": 24686
+  "tox_sha256": "7df422ecee5e2a3f881db8df20f4275c952bb3b3d4b235ab254feef3bb87157f",
+  "tox_bytes": 25166
 }

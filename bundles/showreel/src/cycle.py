@@ -3,15 +3,19 @@
 # input 2 a clock that changes every frame, so this cooks every frame it is used and never
 # otherwise; the view reads it only while View is Cycle.
 #
-# One channel, step: how many times Cycle has moved on. It moves on every Every bars of input 2
+# Two channels. step: how many times Cycle has moved on. It moves on every Every bars of input 2
 # while bars are arriving (one came within BARS_LAPSE bars' worth of seconds), else every Every
 # times SECONDS_A_BAR seconds; and never within MIN_GAP seconds of the last move, whatever the bars
-# do: moving on is a cut from one effect to the next, and every Flashing setting must hold for it.
+# do. fade: how far the fade from the last effect to the next has come, 0 at the move to 1 FADE
+# seconds later. A fade rather than a cut: a cut from one effect to the next changes the whole
+# picture's brightness at once, and on top of the effects' own flashes it took Cycle past WCAG's
+# three a second at Up to 3 per second (3.5 under dev/flash.py's stress beat).
 # State lives in _state, by operator id: not in storage, so nothing of a run is saved into the .tox.
 
 SECONDS_A_BAR = 2.0   # Cycle's bar while input 2 gives none: 4 beats at 120 BPM
 BARS_LAPSE = 4        # bars arriving: one came within this many SECONDS_A_BAR x Every seconds
 MIN_GAP = 2.0         # seconds between two moves, at least
+FADE = 1.0            # seconds the fade from one effect to the next takes (at most MIN_GAP)
 
 _state = {}
 
@@ -52,4 +56,5 @@ def onCook(scriptOp):
     scriptOp.clear()
     scriptOp.numSamples = 1
     scriptOp.appendChan('step')[0] = s['step']
+    scriptOp.appendChan('fade')[0] = min(1.0, (now - s['last']) / FADE) if s['step'] > 0 else 1.0
     return

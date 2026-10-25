@@ -1,11 +1,12 @@
-// Particles (touchdesigner-effects, MIT). The depth map (or mask), small, as nearness: each output
+// touchdesigner-effects (MIT), shared by the effects that read depth (lib/glsl, lib_glsl()).
+// The depth map (or mask), small, as nearness: each output
 // pixel averages a 4 x 4 grid of samples across the input pixels it covers, brighter nearer.
 // Depth Type says what input 3 holds. Brighter Is Nearer (depth estimators, masks) is used as it is.
 // The depth cameras give distance: the RealSense and Kinect TOPs from 0 to 1 over their range (Distance
 // 0-1), the Kinect Azure TOP in meters (Distance in Meters, scaled by Max Distance); both are flipped
 // to nearness, and their black (0 m: the camera got no reading there, a shadow or a dark screen) is
 // left out of the average. A pixel with no reading at all gets nearness 0 and validity 0, and
-// find.glsl treats it as nothing.
+// depth_find.glsl treats it as nothing.
 // Inputs: 0 the depth map or mask (input 3, or input 1's brightness).
 // Out: r nearness 0-1, g how much of the pixel had a reading, 0-1.
 uniform vec4 uNear;   // x Depth Type (0 Brighter Is Nearer, 1 Distance 0-1, 2 Distance in Meters), y Max Distance (m)

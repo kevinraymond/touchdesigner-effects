@@ -24,20 +24,21 @@ performance note, and a download link that always points at the latest release.
 | [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Bars set off the melts; Fosfora's builds hold them back until the drop. |
 | [Glitch](docs/effects/glitch.md) | Broken digital video on the beat: every beat tears thin slivers of the picture sideways, and on the one of each bar a burst makes blocks jump, freeze or lose their colors and rows slip, then the picture is whole again. Calm by default: at most one burst a second, or none at all. |
 | [Particles](docs/effects/particles.md) | Particles peel off a subject and drift away like smoke, in the picture's colors: people in a depth map (Kinect, RealSense, a depth estimator) or a mask for the best result, and with only a webcam or a video, whatever moves. Loudness thickens the stream, beats kick the cloud outward, bars swing the wind. |
+| [Point Cloud](docs/effects/point_cloud.md) | The picture as a cloud of points in 3D, each at its depth (a depth camera, a depth estimator, or the picture's brightness), seen from a camera that sways round it: people stand out from the wall behind them. Solid dots, glowing dots, or a surface of blended splats. Loudness swells the dots, beats deepen the cloud, bars swing the camera. |
 | *More on the way* | New effects are in the works. Watch or star the repo to see them land. |
 
 To try them all at once, the [Showreel](docs/effects/showreel.md) holds every effect in one
-`.tox`: side by side in a grid, one after another with the music, or one by name.
+`.tox`: one after another, fading from one to the next with the music, or one by name.
 
 Every effect reacts to music on input 2 and gets the most from
 [Fosfora](https://github.com/kevinraymond/fosfora)'s signal (bars, builds, drops, sections), and
 works with plain audio, TouchDesigner's audio analysis, or nothing wired. Each one's flashing is
-measured against WCAG 2.3.1 and can be turned off.
+measured against WCAG 2.3.1, and an effect that can flash has a setting to turn it off.
 
 ## Status
 
-Four effects are done (ASCII, Datamosh-style and Glitch 0.1.0, Blob Track 0.1.1), and the
-Showreel holds them all; there is no release yet, so the download links on their pages start
+Six effects are done (ASCII, Datamosh-style, Glitch, Particles and Point Cloud 0.1.0, Blob Track
+0.1.1), and the Showreel holds them all; there is no release yet, so the download links on their pages start
 working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.

@@ -75,6 +75,19 @@ audio_in); counts and steps turn its counts into steps, beat_env is a beat's bur
 a drop's shockwave, build_lag the build, level_lag the loudness, gust and gust_lag the wind's angle
 for each bar.
 
+CREDITS
+- Swirl: curl noise (Bridson, Hourihan and Nordenstam, "Curl-Noise for Procedural Fluid Flow",
+  SIGGRAPH 2007) on TouchDesigner's built-in simplex noise.
+- Dice: the PCG hash (Jarzynski and Olano, "Hash Functions for GPU Rendering", JCGT 2020).
+- Movement: a background that follows the picture a couple of seconds behind (running-average
+  background subtraction, a standard method); Background: a picture of the empty room.
+- Depth Type: the RealSense, Kinect and Kinect Azure TOPs' depth, as their help pages describe it.
+- Labels: a 5x7 pixel font drawn for this library.
+- Read during the survey, not used: the Palette's particlesGpu (Derivative).
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else (Stand Out's row search, Background's exposure drift) is written for this
+library; the depth reading (lib depth_near and depth_find) is shared with Point Cloud. MIT.
+
 UPDATING
 Dragging a .tox in embeds a copy. To update, delete this one and drag in the new particles.tox from
 https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's External

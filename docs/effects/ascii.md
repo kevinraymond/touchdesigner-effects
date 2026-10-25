@@ -139,11 +139,19 @@ There were no red flashes. On the plaza clip, Calm's 1.5 includes the footage's 
 
 ## Credits and license
 
-MIT. The shaders and operators are written for this library. Edge-following glyphs use two
-standard image filters: a difference of Gaussians finds edges, and a Sobel filter gives their
-direction. The per-cell dice roll uses MurmurHash3's 32-bit finalizer (Austin Appleby, public
-domain). The 5 x 7 bitmap font was drawn for this library. The system font is your own: the effect
-draws it at run time, and no font ships in the `.tox`.
+MIT. The shaders and operators are written for this library.
+
+- **Edge glyphs** follow the approach Acerola showed in "I Tried Turning Games Into Text" (YouTube,
+  2024): a difference of Gaussians finds the edges, a Sobel filter (Sobel and Feldman, 1968) gives
+  their direction, and each cell takes the line character of the direction most of it points.
+  Followed, not copied.
+- **Glyphs by ink:** brightness maps to how much ink a glyph carries, as ASCII art always has.
+- **Dice:** MurmurHash3's 32-bit finalizer (Austin Appleby, public domain).
+- **Fonts:** the 5 x 7 bitmap font was drawn for this library. The system font is your own: the
+  effect draws it at run time, and no font ships in the `.tox`.
+- **Read during the survey, not used:** Lou Evoy's ASCII TOP (paid, NVIDIA only), uisato's ASCII
+  Paradise (paid).
+- **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the

@@ -150,14 +150,23 @@ measured more than the clip does by itself. There were no red flashes.
 
 ## Credits and license
 
-MIT. The shaders and operators are written for this library. The optical flow follows
-B. D. Lucas and T. Kanade, "An Iterative Image Registration Technique with an Application to
-Stereo Vision" (1981). The block matching is the standard full search an encoder does, refined
-to a quarter pixel as in H.264. Resampling uses a Catmull-Rom bicubic, clamped so repeated moves
-neither blur nor ring. The per-block dice roll uses the "lowbias32" integer hash from Chris
-Wellons' [hash-prospector](https://github.com/skeeto/hash-prospector) (public domain, the
-Unlicense). With nothing wired in, it shows TouchDesigner's own sample media; none ships in the
-`.tox`.
+MIT. The shaders and operators are written for this library.
+
+- **The technique:** datamoshing is the glitch art of deleting a compressed video's keyframes, so
+  one shot's motion drags the last shot's pixels. This effect is datamosh-style: it models what a
+  decoder does with missing keyframes, with no codec.
+- **Smear:** Lucas-Kanade optical flow, written from B. D. Lucas and T. Kanade, "An Iterative
+  Image Registration Technique with an Application to Stereo Vision" (1981).
+- **Blocks:** block matching as a video encoder does it, a full search refined to a quarter pixel
+  as in H.264. olegchomp's tdx-datamosh ([tdx-rnd](https://github.com/olegchomp/tdx-rnd)), read
+  during the survey, models macroblocks too; none of its code was used (it states no license).
+- **Resampling:** a Catmull-Rom bicubic (Catmull and Rom, 1974), clamped so repeated moves neither
+  blur nor ring.
+- **Dice:** Chris Wellons' lowbias32 integer hash ([hash-prospector](https://github.com/skeeto/hash-prospector), public domain, the Unlicense).
+- **Read during the survey, not used:** VARIMOSH (paid), the Palette's opticalFlow (its license
+  keeps it out of a shared `.tox`).
+- With nothing wired in, it shows TouchDesigner's own sample media; none ships in the `.tox`.
+- **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,
 [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). It is AI-generated (see the

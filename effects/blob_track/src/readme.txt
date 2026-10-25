@@ -66,6 +66,15 @@ draw draws everything. Input 2 goes through audio (lib audio_in); counts and ste
 into steps, beat_env, bar_env and moment_env shape them, and flash_limit, flash, flash_budget and
 flash_env gate and shape the flashes.
 
+CREDITS
+- The look follows the blob-tracking overlays that spread on social video from 2024: boxes, numbers
+  and lines over whatever moves. No project's files or code were used.
+- Detection: TouchDesigner's own Blob Track TOP (Derivative), or the GPU Grid.
+- Scramble dice: Chris Wellons' lowbias32 integer hash (hash-prospector, public domain).
+- Labels: a 5x7 pixel font drawn for this library.
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else (the GPU Grid, the tracking, the flash budget) is written for this library. MIT.
+
 UPDATING
 Dragging a .tox in embeds a copy. To update, delete this one and drag in the new blob_track.tox
 from https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's

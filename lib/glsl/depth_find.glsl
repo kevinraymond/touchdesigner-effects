@@ -1,5 +1,5 @@
-// Particles (touchdesigner-effects, MIT). Finds the people (or anything) in the depth map: whatever
-// stands in front of its surroundings. subject.glsl decides whether the depth is used.
+// touchdesigner-effects (MIT), shared by the effects that read depth (lib/glsl, lib_glsl()).
+// Finds the people (or anything) in the depth map: whatever stands in front of its surroundings.
 // Find on Stand Out: a pixel counts when it is nearer than the Far Limit and something at least
 // Stand Out farther lies both to its left and to its right in the same row. A floor is about as
 // near all along a row, and a wall gets steadily nearer or farther along one, so neither passes;
@@ -8,7 +8,7 @@
 // with the floor they stand on. A plain threshold or a blurred background brought in the floor,
 // the walls and every beam overhead, on the library's test clips.)
 // Find on Nearer Than: the Far Limit alone decides, for a mask or a depth camera that sees no floor.
-// Inputs: 0 nearness and validity (near.glsl).
+// Inputs: 0 nearness and validity (depth_near.glsl).
 // Out: r 1 inside, else 0; g nearness; b how much nearer than its row's surroundings it is.
 uniform vec4 uFind;   // x Find (0 Stand Out, 1 Nearer Than), y Stand Out, z Far Limit
 out vec4 fragColor;

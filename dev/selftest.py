@@ -28,7 +28,8 @@ void main()
 
 
 def good(name='selftest_ok', flashing=False, depth=False):
-    comp, page, source = new_effect(name, 'Selftest', 'Selftest: inverts its input.', 'Selftest README.\n',
+    comp, page, source = new_effect(name, 'Selftest', 'Selftest: inverts its input.',
+                                    'Selftest README.\n\nCREDITS\nOriginal: a test of the save-time checks.\n',
                                     tags=('selftest',), audio=True, flashing=flashing, depth=depth)
     custom(page, 'Float', 'Amount', 'Amount', 1.0, 'How much to invert.', 0, 1, True)
     glsl = mk(comp, glslTOP, 'glsl', 0, 0, [source], comment='Inverts the picture.')
@@ -149,6 +150,7 @@ BREAKS = [
     ('another node color', _attr('', color=(0.5, 0.5, 0.5)), 'node color'),
     ('node too small', _attr('', nodeWidth=100), 'node is'),
     ('no README', lambda c: c.op('README').destroy(), 'README'),
+    ('a README without credits', lambda c: setattr(c.op('README'), 'text', 'Selftest README.\n'), 'CREDITS'),
     ('two TOP outputs', _extra(outTOP, 'out_two', 'x'), 'outputs are'),
     ('a second TOP input before the audio', _extra(inTOP, 'in1b_top', 'x'), 'inputs are'),
     ('makes sound', _extra(audiodeviceoutCHOP, 'speaker', 'x', active=False), 'makes sound'),
