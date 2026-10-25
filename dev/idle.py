@@ -2,6 +2,7 @@
 (docs/TD_IDIOMS.md C5), the way the review asks for it:
 
     TD_ARGS='ascii datamosh' dev/td.sh dev/idle.py      # those effects (none named: every one)
+    TD_ARGS='particles Behavior=flow' dev/td.sh dev/idle.py   # a setting other than the default
     dev/td.sh --pull dev/out/idle/done
     cat dev/out/idle/report.txt
 
@@ -37,6 +38,7 @@ def main():
         if os.path.exists(os.path.join(OUT, f)):
             os.remove(os.path.join(OUT, f))
     names, opts = test_args(globals().get('TDLIB_ARGS') or [])
+    overrides = {k: v for k, v in opts.items() if k[:1].isupper()}
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
     paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
@@ -56,6 +58,9 @@ def main():
         path, wired = runs[i]
         fx = host.loadTox(path)
         fx.viewer = False
+        for k, v in overrides.items():
+            if hasattr(fx.par, k):
+                setattr(fx.par, k, int(v) if v.lstrip('-').isdigit() else v)
         if wired:
             wire(fx, clip, beat)
         state.update(i=i, fx=fx, n=0, before=None)

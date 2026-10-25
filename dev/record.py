@@ -10,13 +10,15 @@ Words in TD_ARGS: effect names (none: every effect), and input and depth for the
 map as they are (to tile beside the effects, dev/tile.py), clip=<name> for private/assets/ready/
 <name>.mp4 (default b1_dancer; TouchDesigner's sample movie when it isn't there), seconds=<n>
 (default 8), audio=<file> for a track in private/assets/ready/ (default: m1_* when there, else
-TouchDesigner's sample MP3; audio=none records silence and feeds no beat).
+TouchDesigner's sample MP3; audio=none records silence and feeds no beat), <Par>=<value> (a capitalized
+name) to set that parameter on every effect that has one, and tag=<word> to add _<word> to the file names
+(TD_ARGS='particles Behavior=push tag=push').
 
 Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT at its
 defaults, the clip, its depth (<clip>_depth.mp4, on input 3 of an effect that takes one) and the
 track restart together, and the effect hears the track on input 2 while a
-Movie File Out records its output and the track at 30 fps. One effect at a time, nothing else of
-ours cooking. Before the first take the clip plays for WARMUP seconds: cued while it was still
+Movie File Out records its output and the track at 30 fps (at its defaults, but for any <Par>=<value>).
+One effect at a time, nothing else of ours cooking. Before the first take the clip plays for WARMUP seconds: cued while it was still
 opening, the first take started at another point of the clip than the rest (ASCII, first, ran
 out of step in the Showreel's tiled preview). Writes dev/out/record/<effect>_<clip>.mov, then dev/out/record/done with each file's
 frames written and dropped (TouchDesigner repeats a frame to keep time when it drops one: keep the
@@ -54,7 +56,8 @@ def options(args):
     else:
         mine = sorted(glob.glob(os.path.join(READY, 'm1_*.wav')))
         track = mine[0] if mine else app.samplesFolder + '/Audio/JeremyCaulfield_www.dumb-unit.com.mp3'
-    return names, clip, track, float(opts.get('seconds', 8))
+    pars = {k: v for k, v in opts.items() if k[:1].isupper()}
+    return names, clip, track, float(opts.get('seconds', 8)), pars, opts.get('tag')
 
 
 def main():
@@ -65,7 +68,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     if os.path.exists(os.path.join(OUT, 'done')):
         os.remove(os.path.join(OUT, 'done'))
-    names, clip_file, track_file, seconds = options(globals().get('TDLIB_ARGS') or [])
+    names, clip_file, track_file, seconds, pars, tag = options(globals().get('TDLIB_ARGS') or [])
     takes = [n for n in TAKES if n in names]
     names = [n for n in names if n not in TAKES]
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
@@ -95,9 +98,13 @@ def main():
             fx.inputConnectors[1].connect(track)
         if depth is not None and len(fx.inputConnectors) > 2:
             fx.inputConnectors[2].connect(depth)
+        for k, v in pars.items():
+            p = getattr(fx.par, k, None)
+            if p is not None:
+                p.val = type(p.default)(float(v)) if isinstance(p.default, (int, float)) and not isinstance(p.default, bool) else v
         fx.allowCooking = False
         effects.append((fx.name, fx, fx))
-    stem = os.path.splitext(os.path.basename(clip_file))[0]
+    stem = os.path.splitext(os.path.basename(clip_file))[0] + ('_' + tag if tag else '')
     lines = []
 
     def begin(i):
@@ -146,9 +153,9 @@ def main():
         print('no effects to record')
         return
     warm(int(WARMUP * 60))
-    print('recording {} for {:g} s each on {} with {}'.format(
+    print('recording {} for {:g} s each on {} with {}{}'.format(
         ', '.join(n for n, _, _ in effects), seconds, stem,
-        os.path.basename(track_file) if track_file else 'no sound'))
+        os.path.basename(track_file) if track_file else 'no sound', ', ' + str(pars) if pars else ''))
 
 
 main()

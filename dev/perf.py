@@ -3,6 +3,7 @@ performance note on its docs page (docs/TD_IDIOMS.md C7):
 
     TD_ARGS='ascii' dev/td.sh dev/perf.py     # those effects (none named: every one)
     TD_ARGS='datamosh Mode=blocks' dev/td.sh dev/perf.py   # a parameter other than its default
+    TD_ARGS='particles top=12' dev/td.sh dev/perf.py   # the 12 costliest operators (5 by default)
     dev/td.sh --pull dev/out/perf/b1_dancer/done           # clip=<name> in TD_ARGS: another clip
     cat dev/out/perf/b1_dancer/report.txt
 
@@ -96,7 +97,7 @@ def main():
             run('args[0]()', tick, delayFrames=1)
             return
         n = max(len(state['cpu']), 1)
-        top = sorted(state['ops'].items(), key=lambda kv: -(kv[1][0] + kv[1][1]))[:5]
+        top = sorted(state['ops'].items(), key=lambda kv: -(kv[1][0] + kv[1][1]))[:int(opts.get('top', 5))]
         fps = 1000 / (sum(state['frame']) / max(len(state['frame']), 1))
         lines.append('{}: CPU {:.2f} ms (95% {:.2f}), GPU {:.2f} ms (95% {:.2f}); TouchDesigner held '
                      '{:.0f} fps (cook rate {:g}); most: {}'.format(
