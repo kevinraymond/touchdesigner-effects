@@ -43,7 +43,8 @@ box; a new section makes every box lock on again. Fosfora's drop detection is ex
 Any input: on each beat a quarter of the labels scramble and settle (Scramble Labels), a quarter
 of the boxes reach for a random partner (Spawn Links) and the box insides turn over (Fill Boxes,
 a flash); loudness brightens the links. Raw audio (Audio File In, Audio Device In) gives beats
-from a simple kick detector (experimental: it can add or miss beats) and a bar every 4 beats;
+from a kick detector and a beat clock that locks to the kicks' tempo (experimental: it can still
+add or miss beats) and a bar every 4 beats;
 TouchDesigner's audioAnalysis gives beats from its kick or onset channels. Nothing wired: no
 beat behaviors, and the overlay still tracks.
 
@@ -72,6 +73,11 @@ CREDITS
 - Detection: TouchDesigner's own Blob Track TOP (Derivative), or the GPU Grid.
 - Scramble dice: Chris Wellons' lowbias32 integer hash (hash-prospector, public domain).
 - Labels: a 5x7 pixel font drawn for this library.
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
+  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
+  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
+  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
+  Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else (the GPU Grid, the tracking, the flash budget) is written for this library. MIT.
 

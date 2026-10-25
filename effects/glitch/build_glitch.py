@@ -24,7 +24,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 # Steady bursts, and On Beats or On Bars with nothing on input 2, come this many seconds apart.
 STEADY = 1.6
 # After the gate, bursts at least this far apart (s): Calm a little over its one second, so frame

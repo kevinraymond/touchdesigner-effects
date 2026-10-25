@@ -11,16 +11,19 @@ wire() gives it to an effect that takes input 3. clip_depth shows the clip's fra
 rather than play by itself, so it stays in step even when the clip runs alone first. With beat=none, beat is None and input 2 stays unwired, which tells an
 effect's own changes from the ones the beat drives. beat is a Constant CHOP shaped like Fosfora's signal and far busier than music: 8 beats,
 2 bars, 1 drop and half a section change a second, a build rising and falling, loud throughout,
-so every flash an effect can make is asked for.
+so every flash an effect can make is asked for. beat=music is the same shape at a dance tempo, MUSIC_BPM
+with a bar every 4 beats and no drops, sections or build: a beat's reaction that lasts a few tenths of
+a second gets to finish (and come back) before the next, which the stress beat's 8 a second can hide.
 """
 
 import os
 
+MUSIC_BPM = 140
 READY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'private', 'assets', 'ready')
 
 
 def test_args(args):
-    """TD_ARGS words: effect names, then options: clip=<name> (default b1_dancer), beat=none."""
+    """TD_ARGS words: effect names, then options: clip=<name> (default b1_dancer), beat=none or music."""
     opts = dict(clip='b1_dancer', beat='stress')
     opts.update(a.split('=', 1) for a in args if '=' in a)
     return [a for a in args if '=' not in a], opts
@@ -41,6 +44,12 @@ def testbed(host, opts):
              ('drop_count', 'int(absTime.seconds)'), ('boundary_count', 'int(absTime.seconds / 2)'),
              ('build', '0.5 + 0.5 * math.sin(absTime.seconds)'), ('energy', '0.8'),
              ('beat_phase', 'absTime.seconds * 8 % 1'), ('bar_phase', 'absTime.seconds * 2 % 1'))
+    if opts['beat'] == 'music':
+        b = MUSIC_BPM / 60
+        beat.comment = 'A beat at {} BPM, a bar every 4 beats, no drops or sections.'.format(MUSIC_BPM)
+        chans = (('beat_count', 'int(absTime.seconds * {})'.format(b)), ('bar_count', 'int(absTime.seconds * {})'.format(b / 4)),
+                 ('drop_count', '0'), ('boundary_count', '0'), ('build', '0'), ('energy', '0.8'),
+                 ('beat_phase', 'absTime.seconds * {} % 1'.format(b)), ('bar_phase', 'absTime.seconds * {} % 1'.format(b / 4)))
     beat.seq.const.numBlocks = len(chans)
     for i, (name, expr) in enumerate(chans):
         setpars(beat, **{'const{}name'.format(i): name, 'const{}value'.format(i): Expr(expr)})

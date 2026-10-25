@@ -15,7 +15,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 # Unwired, the effect cuts every SAMPLE_CUT seconds between two of TouchDesigner's sample pictures,
 # since datamosh needs a cut to show: grass swaying in front of a colorful building, and jellybeans
 # under a slow drift, turn and zoom (whole-picture motion for the old shot to be dragged by).
@@ -29,6 +29,12 @@ CUT_RATIO = 4.0       # ...and only one this many times the running mean of the 
 CUT_GAP = 0.25        # ...and no sooner than this many seconds after the last one
 SKIP_HOLD = 0.2       # seconds a skipped keyframe holds fully...
 SKIP_RELEASE = 0.35   # ...and lets go over
+SKIP_PUSH = 1.5       # during a skip the held motion pushes this much further (1 + SKIP_PUSH x the skip)
+# A beat's surge at Beat Surge 1: corrections stop, the motion pushes 1 + SURGE_PUSH times as far and
+# the whole picture blooms, zooming out from the middle at up to BLOOM a second, all easing off over
+# SURGE_TIME seconds; as it fades the picture catches up with the input at up to CATCH a second, so it
+# blooms on the beat and comes back.
+SURGE_PUSH, SURGE_TIME, BLOOM, CATCH = 2.0, 0.35, 4.0, 10.0
 P = 'parent().par.'
 
 
@@ -65,37 +71,41 @@ MODES
 PARAMETERS (first page; Alt+hover shows each one's help)
   Mode, Mosh, Motion, Recovery, Chroma, Frozen Blocks, Hold: how much it smears and how.
   Mosh Cuts, Keyframe, Fade, Skip Keyframe: what happens at a cut, or when you ask.
-  Skip On, Level, Song Structure: what input 2 does.
+  Beat Surge, Skip On, Level, Song Structure: what input 2 does.
   Flashing, Open Window, Full Screen, Display: flashes and the full-size window.
 
 INPUT 2 (optional): audio or beat channels
-  Any audio (an Audio File In or Audio Device In CHOP) or analysis channels: every beat or
-  every bar skips a keyframe (Skip On), and loudness adds to Mosh (Level).
+  Any audio (an Audio File In or Audio Device In CHOP) or analysis channels: a beat blooms the
+  picture, smearing it out from the middle, and it catches up (Beat Surge; as often as Flashing
+  allows); every bar (or beat) skips a keyframe, the held motion blooming further (Skip On); and
+  loudness adds to Mosh (Level).
   Fosfora's signal (fosfora_signal.tox, https://github.com/kevinraymond/fosfora) adds the
   song's shape (Song Structure): through a build the keyframes are withheld and the mosh grows,
   the drop brings a keyframe that fades it clean (Fosfora marks drops as experimental), and a
   new section brings a keyframe. Bars follow Fosfora's downbeats.
-  Nothing wired: no skips; the effect still moshes the input's cuts and its own Mosh.
+  Nothing wired: no surges and no skips; the effect still moshes the input's cuts and its own Mosh.
 
 FLASHING
-  Keyframes and skipped keyframes change the whole picture, so they count as flashes. Flashing
-  Off lets none through: no skips on beats, no keyframes from Fosfora's drops and sections, and
-  the Keyframe and Skip Keyframe pulses do nothing. Calm, the default, allows at most one of each
-  a second; Up to 3 per second is the WCAG 2.3.1 limit. Even then nothing changes suddenly:
-  keyframes fade over Fade, skips smear, recovery fades, and a cut in the input is held. Measured
-  under a beat far busier than music, no setting flashed more than the footage did by itself.
+  Keyframes, skipped keyframes and a beat's bloom change the whole picture, so they count as
+  flashes. Flashing Off lets none through: no blooms or skips on beats, no keyframes from Fosfora's
+  drops and sections, and the Keyframe and Skip Keyframe pulses do nothing. Calm, the default,
+  allows at most one of each a second (a bloom about every other beat at dance tempos); Up to 3
+  per second is the WCAG 2.3.1 limit (a bloom on every beat up to 180 BPM). Even then nothing
+  cuts: keyframes fade over Fade, skips smear, a bloom eases out and back, recovery fades, and a
+  cut in the input is held. The limits were measured on the output (docs page, Accessibility).
 
 EXPERIMENTAL
   Cut detection is a heuristic (a change several times the usual one between frames): it can
   miss a soft cut, or take a sudden change of light in the input for one. Mosh Cuts turns it off.
-  Beats from raw audio come from a simple kick detector: it can add or miss beats.
+  Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo:
+  it can still add or miss beats, and which beat starts a bar is a guess.
 
 INSIDE
   GLSL TOPs do the work: luma at 1/2, 1/4 and 1/8 (lum2, lum4, lum8), the new-frame and cut test
   (change, clock), optical flow (lk8, lk4), block matching (bm_*), the motion field (motion) and
   the decoder (mosh), each stateful one fed back into itself through a Feedback TOP. CHOPs turn
   input 2's counts into skips and keyframes, limit them in flash_limit and flash, and shape them
-  (skip_env, key_env). Per frame, Python runs only in the audio input's Script CHOP and in
+  (beat_env, skip_env, key_env). Per frame, Python runs only in the audio input's Script CHOP and in
   parameter expressions.
 
 CREDITS
@@ -111,6 +121,11 @@ CREDITS
 - Dice: Chris Wellons' lowbias32 integer hash (hash-prospector, public domain).
 - Read during the survey, not used: VARIMOSH, the Palette's opticalFlow (its license keeps it out
   of a shared .tox).
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
+  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
+  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
+  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
+  Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else is written for this library. MIT.
 
@@ -191,8 +206,14 @@ custom(page, 'Pulse', 'Skip', 'Skip Keyframe', None,
 skipon = menu(page, 'Skipon', 'Skip On', (('off', 'Off'), ('beats', 'Every Beat'), ('bars', 'Every Bar')), 'bars',
               'Which pulse on input 2 skips a keyframe (as Skip Keyframe does): every beat, every bar (Fosfora\'s '
               'downbeats, else every 4th beat), or none. Limited by Flashing: Calm allows one a second. Beats '
-              'found in raw audio are experimental: they can be added or missed.')
+              'found in raw audio are experimental: they can be added or missed, and which beat starts a bar is '
+              'a guess.')
 skipon.startSection = True
+custom(page, 'Float', 'Surge', 'Beat Surge', 0.5,
+       'On each beat of input 2 the picture blooms: for a moment no corrections arrive, it zooms out from the '
+       'middle and its motion runs further ahead, then it catches up with the input. It changes the whole '
+       'picture, so it counts as a flash: Calm allows one a second (about every other beat), Up to 3 per '
+       'second every beat at dance tempos, Off none. 0 turns it off.', 0, 1, True)
 custom(page, 'Float', 'Level', 'Level', 0.3, 'How much loudness on input 2 adds to Mosh: louder passages smear more.',
        0, 1, True)
 custom(page, 'Toggle', 'Songstruct', 'Song Structure', True,
@@ -224,13 +245,20 @@ skip_any = mk(comp, mathCHOP, 'skip_any', 800, -700, [skip_on, skip_pulse], 'A s
               chopop='max')
 key_any = mk(comp, mathCHOP, 'key_any', 1000, -700, [key_named, key_pulse], 'A keyframe from input 2 or the pulse.',
              chopop='max')
-events = mk(comp, mergeCHOP, 'events', 1200, -550, [skip_any, key_any], 'Skips and keyframes, before the limit.')
+surge_on = mk(comp, selectCHOP, 'surge_on', 1000, -300, [steps], "A beat: its surge (a bloom of the whole picture, so a "
+              'flash too).', channames='beat_count', renamefrom='*', renameto='surge')
+events = mk(comp, mergeCHOP, 'events', 1200, -550, [skip_any, key_any, surge_on],
+            'Skips, keyframes and surges, before the limit.')
 flash = flash_gate(comp, events, 1400, -550)
 skip_sel = mk(comp, selectCHOP, 'skip_sel', 1800, -450, [flash], 'Skips that passed the limit.', channames='skip')
 mk(comp, triggerCHOP, 'skip_env', 2000, -450, [skip_sel],
    'A skip\'s envelope: holds, then lets go. mosh and motion read it.', attack=0, attackunit='seconds', peak=1,
    peaklen=SKIP_HOLD, peaklenunit='seconds', decay=SKIP_RELEASE, decayunit='seconds', dshape='easeout', sustain=0,
    release=0, multitrigger='restart')
+beat_sel = mk(comp, selectCHOP, 'beat_sel', 1800, -300, [flash], 'Surges that passed the limit.', channames='surge')
+mk(comp, triggerCHOP, 'beat_env', 2000, -300, [beat_sel],
+   "A beat's surge: 1 at the beat, gone {:g} s later. mosh reads it.".format(SURGE_TIME), attack=0, peak=1,
+   peaklen=0, decay=SURGE_TIME, decayunit='seconds', dshape='easeout', sustain=0, release=0)
 key_sel = mk(comp, selectCHOP, 'key_sel', 1800, -600, [flash], 'Keyframes that passed the limit.', channames='key')
 mk(comp, triggerCHOP, 'key_env', 2000, -600, [key_sel], "A keyframe's progress, 0 to 1 over Fade. mosh reads it.",
    attack=Expr(P + 'Fade'), attackunit='seconds', ashape='linear', peak=1, peaklen=0, decay=0, sustain=0, release=0,
@@ -302,6 +330,8 @@ mosh = glsl(comp, 'mosh', 600, 0, [source, mosh_fb, prev, motion, clock], src('c
             uP1=(Expr(P + 'Mode.menuIndex'), Expr(P + 'Mosh'), Expr(P + 'Motion'), Expr(P + 'Recovery')),
             uP2=(Expr(P + 'Chroma'), Expr(P + 'Hold'), Expr(P + 'Frozen'), Expr(P + 'Moshcuts')),
             uP3=(Expr(P + 'Fade'), Expr(P + 'Level'), Expr(P + 'Songstruct'), BLOCK),
+            uBeat=(Expr("op('beat_env')[0]"), Expr(P + 'Surge')),
+            uPush=(SURGE_PUSH, BLOOM, CATCH, SKIP_PUSH),
             uAud=(Expr("op('audio')['level']"), Expr("op('audio')['build']"), Expr("op('skip_env')['skip']"),
                   Expr("op('key_env')['key']")),
             uT=(Expr('absTime.seconds'), Expr('absTime.stepSeconds')))

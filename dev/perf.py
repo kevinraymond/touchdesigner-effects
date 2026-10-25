@@ -43,7 +43,8 @@ def main():
         if o.valid:  # destroying an operator also destroys the DATs docked to it
             o.destroy()
     names, opts = test_args(globals().get('TDLIB_ARGS') or [])
-    out = os.path.join(OUT, '_'.join([opts['clip']] + ([] if opts['beat'] == 'stress' else ['no_beat']) +
+    beat = {'stress': [], 'none': ['no_beat']}.get(opts['beat'], ['beat-' + opts['beat']])
+    out = os.path.join(OUT, '_'.join([opts['clip']] + beat +
                                      ['{}-{}'.format(k, v) for k, v in opts.items() if k[:1].isupper()]))
     os.makedirs(out, exist_ok=True)
     for f in ('report.txt', 'done'):

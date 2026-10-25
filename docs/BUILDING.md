@@ -187,7 +187,7 @@ which turns whatever is wired there into the same channels on the CHOP `audio`:
 | `beat_count` | beats so far; for logic, watch the counts, since a one-frame pulse can be missed |
 | `bar_count` | bars so far: Fosfora's `bar_count` (or `downbeat` pulses), else one every 4 beats |
 | `beat_phase` | 0 to 1 through the current beat: Fosfora's, else timed from the last beats |
-| `level` | 0 to 1, how loud right now |
+| `level` | 0 to 1, how loud right now: raw audio's low band, Fosfora's `bass` |
 | `build` | 0 to 1, how far into a build: Fosfora only, else 0 |
 | `drop_count` | drop-like moments so far: Fosfora's `drop_count` (experimental there), else 0 |
 | `section_count` | section changes so far: Fosfora's `boundary_count`, else 0 |
@@ -196,9 +196,17 @@ which turns whatever is wired there into the same channels on the CHOP `audio`:
 Input 2 may carry:
 
 - [Fosfora](https://github.com/kevinraymond/fosfora)'s signal (`fosfora_signal.tox`): every
-  channel comes from it, so an effect can follow bars, builds, drops and sections as well as beats;
+  channel comes from it, so an effect can follow bars, builds, drops and sections as well as beats.
+  `level` comes from its `bass`, not its `energy`: over a song `energy` sits between 0.7 and 0.9 and
+  moves about 0.01 in two seconds, so nothing that follows it moves, while `bass` swells with each
+  beat and between passages (median 0.67, like raw audio's level);
 - raw audio (Audio File In, Audio Device In): the low band's loudness (30 to 150 Hz, from an FFT
-  of the last 40 ms) gives `level`, and a jump above its recent average gives a beat;
+  of the last 40 ms) gives `level`, and a jump above its recent average is a kick. Once the kicks
+  keep to a tempo, a beat clock locks to their grid: beats come on it, so a missed kick is filled in
+  and a kick between beats is left out, and a bar is every 4 of its beats (which beat is the one is a
+  guess). It stops 8 beats after the last kick on its grid (a breakdown goes quiet), and while it is
+  unlocked every kick is a beat. On the library's songs it finds every beat of the drop the previews
+  use, where the kicks alone found three in four (`dev/beat_bench.py`);
 - other analysis channels, by name: beats from `beat_count`, or the rising edge of `beat`, `kick`
   or `onset` (TouchDesigner's audioAnalysis and Essentia rhythm CHOPs); level from `energy`,
   `level`, `low`, `bass` or `rms`;
@@ -212,9 +220,10 @@ An effect works with any of them and is at its best on Fosfora's signal: `build`
 `section_count` stay at 0 without it, so use them for extra moments, never for the effect's
 basic behavior. `lib/audio_callbacks.py` holds the logic. `dev/selftest.py` feeds it each kind
 of input for 3 s: nothing gives 0 beats; `beat_count` and `kick` at 2 a second give 6 (and 1 or 2
-bars); a Fosfora-shaped input passes its bars, build and beat phase through; TouchDesigner's
-sample MP3 gives 6 (about 120 BPM). Beats that make the picture flash still go through
-`flash_gate()`.
+bars); a Fosfora-shaped input passes its bars, build and beat phase through, and its level follows
+`bass` rather than `energy`; TouchDesigner's sample MP3 gives 6 (about 120 BPM). The beat clock is
+checked outside TouchDesigner (`uv run --with numpy dev/beat_bench.py --selftest`). Beats that make
+the picture flash still go through `flash_gate()`.
 
 ## Manifests and the stale-file test
 
@@ -274,6 +283,8 @@ The other dev tools, each run through `dev/td.sh` (their headers say more):
 | `dev/capture.py` | exec'd by a script: save frames of some TOPs over the next seconds; `dev/sheet.py` lays them out |
 | `dev/flash.py` + `dev/flashcount.py` | record each Flashing setting's output under a stress beat, then count flashes per second the WCAG way (`uv run --with numpy dev/flashcount.py dev/out/flash`; `--selftest` checks the counting) |
 | `dev/perf.py` | each effect's CPU and GPU cook time per frame at its defaults, for the performance note |
+| `dev/beat_bench.py` | `lib/audio_callbacks.py` outside TouchDesigner: feeds it a song as raw audio and scores its beats and bars against the song's beat grid (`uv run --with numpy dev/beat_bench.py`); `--selftest` checks the beat clock on a made-up kick track with missing and extra kicks |
+| `dev/reaction.py` + `dev/reaction_report.py` | record each effect with a song as raw audio on input 2 and without audio, then measure what the music does to the picture: how much more it changes after a beat than before (the take without audio at the same times is the control), what a bar adds, and how brightness follows loudness (`uv run --with numpy dev/reaction_report.py dev/out/reaction`) |
 | `dev/record.py` + `dev/clips.py` | record effects (and, named `input` and `depth`, the clip and its depth map) as video with sound (Motion JPEG: the free license can't encode H.264), then MP4s and docs previews (`uv run dev/clips.py dev/out/record --preview`) |
 | `dev/tile.py` | tile `dev/record.py`'s takes into one labeled grid, rows centered, in the library's font: the README's hero and the Showreel's preview (`TD_ARGS='input depth ascii ... seconds=8' dev/td.sh dev/record.py`, then `uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth\|ascii,...' --titles 'input=INPUT,...' --out dev/out/record/hero --still 5.6`) |
 | `dev/social.py` | the repository's social preview (GitHub, Settings, Social preview) from that still: `docs/social-preview.png`, uploaded by hand |

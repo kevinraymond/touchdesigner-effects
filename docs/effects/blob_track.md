@@ -94,10 +94,16 @@ it into input 2. With Song Moments on, you get:
 - **Sections:** at each new section every box locks on again: it widens and closes back in, and
   its labels scramble and settle.
 
+Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
+`energy` is loudness over three seconds, nearly constant on mastered music.
+
 **Plain audio** works too. Wire an Audio File In or Audio Device In CHOP into input 2. The effect
-takes the loudness of the low band (30 to 150 Hz) as the level, and a sudden jump in it as a beat.
-That beat detector is simple and experimental: it can add or miss beats in busy music. A bar is
-every 4 beats, counted from when it starts.
+takes the loudness of the low band (30 to 150 Hz) as the level, and a sudden jump in it as a kick.
+Once the kicks keep to a tempo, a beat clock locks to them: beats then come on the beat even when a
+kick is missed, a kick between beats is left out, and a bar is every 4 beats (which beat starts the
+bar is a guess). It stops 8 beats after the kicks do, so a breakdown goes quiet, and while it isn't
+locked every kick is a beat. It is experimental: it takes a few beats to lock, and music whose kicks
+don't keep the beat (half-time, broken beats) gets every kick as a beat.
 
 **TouchDesigner's audioAnalysis** (or any CHOP with these channels) works the same way. Beats come
 from `beat_count`, or from the rising edge of `beat`, `kick` or `onset`. The level comes from
@@ -166,8 +172,9 @@ the dancer at every setting: one more change of brightness, the smallest step th
 ## Experimental
 
 - Drop moments depend on Fosfora's drop detection, which is experimental.
-- Beats from raw audio come from a simple kick detector. It can add or miss beats; Fosfora or
-  audioAnalysis give steadier beats.
+- Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo. It
+  takes a few beats to lock and can still add or miss beats where the kicks don't keep the beat, and
+  which beat starts a bar is a guess; Fosfora or audioAnalysis give steadier beats.
 
 ## Credits and license
 
@@ -180,6 +187,11 @@ flash budget among them.
 - **Dice:** Chris Wellons' lowbias32 integer hash ([hash-prospector](https://github.com/skeeto/hash-prospector), public domain), which picks scrambled
   characters, words and partners.
 - **Font:** the 5 x 7 bitmap font was drawn for this library.
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
+  in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
+  gap voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction,
+  the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive Performances"
+  (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,

@@ -4,7 +4,8 @@ The picture as text: a grid of glyph cells. Edges found by a difference of Gauss
 filter (at half resolution) get the line glyph along them, | \\ - /; the rest of the picture gets a
 brightness ramp of glyphs. Glyphs come from a system font drawn into an atlas at run time (Text
 TOP; nothing font-related ships) or from the library's 5 x 7 bitmap font. Input 2 (optional) makes
-it follow music: beats change glyphs, bars give a contrast pop through the flash gate, and
+it follow music: beats send a ripple of changed glyphs out from the middle, bars give a contrast
+pop through the flash gate, and
 Fosfora's signal adds sections, builds and drops.
 """
 import os
@@ -16,7 +17,10 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
+# A beat's ripple: a ring RIPPLE_WIDTH frame heights wide leaves the middle of the frame and reaches its
+# corners in RIPPLE_TIME seconds; the cells it passes switch glyph set and take the other accent color.
+RIPPLE_TIME, RIPPLE_WIDTH = 0.4, 0.09
 FONT = lib_module(_ROOT, 'font5x7')
 
 # Glyph sets for the fill, each ordered by ink (lib/font5x7.py ramp()); digits and letters share the
@@ -61,17 +65,19 @@ integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your 
 it into input 2. Then, with Fosfora Moments on: pops land on its downbeats, a new section moves
 the picture to the next glyph set, a build fills in the darks and the outlines, and a drop makes
 the next allowed flash reverse video (Fosfora's drop detection is experimental).
-Any input: every beat moves a share of the cells to another glyph set of the same ink (Beat
-Glyphs), every bar (or beat, Pop On) gives a contrast pop (Beat Pop), and loudness brings out more
-outlines (Loudness). Raw audio (Audio File In, Audio Device In) gives beats from a simple kick
-detector (experimental: it can add or miss beats) and a bar every 4 beats; TouchDesigner's
+Any input: every beat sends a ripple out from the middle, a ring whose cells switch to another
+glyph set and the other accent color as it passes (Beat Ripple), and moves a share of the cells to
+another glyph set of the same ink (Beat Glyphs); every bar (or beat, Pop On) gives a contrast pop
+(Beat Pop), and loudness brings out more outlines (Loudness). Raw audio (Audio File In, Audio
+Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo
+(experimental: it can still add or miss beats) and a bar every 4 beats; TouchDesigner's
 audioAnalysis gives beats from its kick or onset channels. Nothing wired: no beats, and the
 effect still draws the picture.
 
 FLASHING
 The pops and the drop are flashes; they share one gate that follows the Flashing parameter: Off
 never flashes, Calm (the default) at most once a second, Up to 3 per second is the WCAG 2.3.1
-limit. Glyph swaps keep the ink, so they don't flash.
+limit. Glyph swaps keep the ink and the ripple keeps each cell's brightness, so they don't flash.
 
 INSIDE
 source -> prep (luminance, half size) -> blur_fine, blur_wide -> edges (difference of Gaussians,
@@ -79,7 +85,7 @@ Sobel direction) -> cells (one texel per cell: mean color, winning edge directio
 out_top. avg, peak, stats_prev and stats set the automatic white point; atlas_glyphs and atlas
 draw the system font; cell and grid size the cells. Input 2 goes through audio (lib audio_in);
 moments_* turn its counts into pulses, flash_limit and flash gate the pops and drops, and pop_env,
-drop_env and beat_env shape them.
+drop_env, beat_env and ripple shape them.
 
 CREDITS
 - Edge glyphs follow the approach Acerola showed in "I Tried Turning Games Into Text" (YouTube,
@@ -91,6 +97,11 @@ CREDITS
 - Bitmap 5x7: a pixel font drawn for this library. System Font uses a font on your computer at run
   time, so none ships here.
 - Read during the survey, not used: Lou Evoy's ASCII TOP, uisato's ASCII Paradise.
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
+  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
+  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
+  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
+  Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else is written for this library. MIT.
 
@@ -183,12 +194,16 @@ custom(page, 'Float', 'Backdrop', 'Backdrop', 0.0,
 pop = custom(page, 'Float', 'Beatpop', 'Beat Pop', 0.5,
              'A contrast jump on every bar (or beat, Pop On) from input 2. It is a flash, so the '
              'Flashing parameter limits how often it comes; 0 turns it off. From raw audio, beats come '
-             'from a simple kick detector (experimental: it can add or miss beats).', 0, 1, True)
+             'from a kick detector and a beat clock (experimental: it can add or miss beats).', 0, 1, True)
 pop.startSection = True
 menu(page, 'Popon', 'Pop On', (('bars', 'Bars'), ('beats', 'Beats')), 'bars',
      'Pop on every bar (Fosfora\'s downbeats, else every 4 beats) or every beat. Beats can come faster '
      'than Flashing allows (120 BPM is two a second); Calm lets at most one a second through.'
      ).enableExpr = 'me.par.Beatpop > 0'
+custom(page, 'Float', 'Ripple', 'Beat Ripple', 1.0,
+       'On every beat a ring travels out from the middle of the picture in {:g} s: the cells it passes switch '
+       'glyph set and take the other accent color (Orange and Blue, Source), keeping their brightness (no '
+       'flash). Lower values make the ring narrower; 0 turns it off.'.format(RIPPLE_TIME), 0, 1, True)
 custom(page, 'Float', 'Beatglyphs', 'Beat Glyphs', 0.3,
        'Share of the cells that switch to another glyph set of the same ink on every beat, settling back '
        'over 0.3 s (no flash). 1 swaps the whole set.', 0, 1, True)
@@ -301,8 +316,11 @@ build = mk(comp, selectCHOP, 'build', 200, -800, [audio], "Fosfora's build, 0..1
 build_lag = mk(comp, lagCHOP, 'build_lag', 400, -800, [build], 'The build, easing out after a drop.',
                lag1=0.3, lag2=1.5, lagunit='seconds')
 level = mk(comp, selectCHOP, 'level', 200, -900, [audio], 'Loudness, 0..1.', channames='level')
-level_lag = mk(comp, lagCHOP, 'level_lag', 400, -900, [level], 'Loudness, smoothed (up in 0.4 s, down in 1 s).',
-               lag1=0.4, lag2=1.0, lagunit='seconds')
+level_lag = mk(comp, lagCHOP, 'level_lag', 400, -900, [level], 'Loudness, smoothed (up in 0.1 s, down in 0.5 s).',
+               lag1=0.1, lag2=0.5, lagunit='seconds')
+ripple = mk(comp, triggerCHOP, 'ripple', 1200, -800, [beat_pulse], "A beat's ripple: how far out it is, 0 to 1 over "
+            '{:g} s, then 0 (none).'.format(RIPPLE_TIME), attack=RIPPLE_TIME, attackunit='seconds', ashape='linear',
+            peak=1, peaklen=0, decay=0, sustain=0, release=0, multitrigger='restart')
 
 # ---- Render --------------------------------------------------------------------------------------------
 render = glsl(
@@ -318,7 +336,9 @@ render = glsl(
     uGlyphs=(Expr("{p}Glyphs.menuIndex + (op('audio')['section_count'] if {p}Fosfora else 0)".format(p=P)),
              Expr("op('audio')['beat_count']"), Expr("op('beat_env')[0] * {}Beatglyphs".format(P))),
     uAudio=(Expr("op('pop_env')[0] * {}Beatpop".format(P)), Expr("op('pop_env')[0] * op('drop_env')[0]"),
-            Expr("op('build_lag')[0] * {}Fosfora".format(P)), Expr("op('level_lag')[0]")))
+            Expr("op('build_lag')[0] * {}Fosfora".format(P)), Expr("op('level_lag')[0]")),
+    uRipple=(Expr("op('ripple')[0]"), Expr("0.5 * math.hypot(op('source').width / max(1, op('source').height), 1)"),
+             Expr('{} * {}Ripple'.format(RIPPLE_WIDTH, P)), Expr('1 if {}Ripple > 0 else 0'.format(P))))
 render.par.resolutionw.expr = "op('source').width"
 render.par.resolutionh.expr = "op('source').height"
 

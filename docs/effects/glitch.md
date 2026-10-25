@@ -67,10 +67,17 @@ with Song Moments on:
 - **Drops:** a drop breaks the whole picture once, through the same Flashing gate as every burst.
   Fosfora's drop detection is experimental.
 
+Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
+`energy` is loudness over three seconds, nearly constant on mastered music.
+
 **Any input:** small glitches on every beat, bursts on its bars (On Bars) or beats (On Beats), and
 loudness widens the RGB split.
-Raw audio (an Audio File In or Audio Device In CHOP) gives beats from a simple kick detector and a
-bar every 4 beats; TouchDesigner's audioAnalysis gives beats from its kick or onset channels.
+Raw audio (an Audio File In or Audio Device In CHOP) gives beats from a kick detector and a beat
+clock: Once the kicks keep to a tempo, a beat clock locks to them: beats then come on the beat even
+when a kick is missed, a kick between beats is left out, and a bar is every 4 beats (which beat
+starts the bar is a guess). It stops 8 beats after the kicks do, so a breakdown goes quiet, and
+while it isn't locked every kick is a beat. TouchDesigner's audioAnalysis gives beats from its kick
+or onset channels.
 
 **Nothing wired:** the small glitches and the bursts come every 1.6 s instead, so the effect shows
 itself.
@@ -118,8 +125,9 @@ with no beat.
 ## Experimental
 
 - Drop moments depend on Fosfora's drop detection, which is experimental.
-- Beats from raw audio come from a simple kick detector. It can add or miss beats; Fosfora or
-  audioAnalysis give steadier beats.
+- Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo. It
+  takes a few beats to lock and can still add or miss beats where the kicks don't keep the beat, and
+  which beat starts a bar is a guess; Fosfora or audioAnalysis give steadier beats.
 
 ## Credits and license
 
@@ -131,6 +139,11 @@ among them.
 - **Dice:** Chris Wellons' lowbias32 integer hash ([hash-prospector](https://github.com/skeeto/hash-prospector), public domain), which picks each burst's
   blocks and tears.
 - **Read during the survey, not used:** td-glitch-effects, Glitch Machine (paid).
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
+  in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
+  gap voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction,
+  the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive Performances"
+  (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,

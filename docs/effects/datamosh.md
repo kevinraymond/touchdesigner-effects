@@ -1,6 +1,6 @@
 # Datamosh
 
-![Datamosh on a cut from a field of red flowers to a woman's face against blue: at the cut her face surfaces through the flowers and keeps their color while the blue around her breaks into moving blocks, then the picture settles back to her face](datamosh.webp)
+![Datamosh on cuts between a field of red flowers and a woman's face against blue: on the beats the picture blooms, her face zooming and smearing into doubled outlines before it catches up, and at the cut back to the flowers her face stays printed over them until the picture settles](datamosh.webp)
 
 **New to datamoshing?** It is a glitch-art technique that breaks video compression on purpose. To
 save space, a compressed video stores a full picture (a keyframe) only now and then; the frames in
@@ -54,6 +54,7 @@ The Datamosh-style page, top to bottom:
 | Keyframe | | Sends a keyframe: the picture fades back to the input over Fade. In Blocks it fades in a sweep of block columns, left to right. It counts as a flash, so Flashing limits it, and it does nothing when Flashing is Off. |
 | Fade | 1 | Seconds a keyframe takes to fade the picture back to the input. |
 | Skip Keyframe | | Skips a keyframe now. For about half a second the motion holds and no corrections arrive, so the picture smears along its last movement, then recovers. It counts as a flash, so Flashing limits it, and it does nothing when Flashing is Off. |
+| Beat Surge | 0.5 | On each beat of input 2 the picture blooms: for a moment no corrections arrive, the whole picture zooms out from the middle and its motion runs further ahead, then it catches up with the input, so each beat pumps it out and back. It changes the whole picture, so it is a flash: Calm allows one a second (about every other beat at dance tempos), Up to 3 per second every beat up to 180 BPM, Off none. 0 turns it off. |
 | Skip On | Every Bar | Which pulse on input 2 skips a keyframe, as Skip Keyframe does: Every Beat, Every Bar (Fosfora's downbeats, else every 4th beat), or Off. Flashing limits it too. Beats found in raw audio are experimental. |
 | Level | 0.3 | How much loudness on input 2 adds to Mosh. Louder passages smear more. |
 | Song Structure | On | With Fosfora's signal on input 2: builds, drops and sections (see Audio input). Other inputs carry no song structure, so this does nothing with them. |
@@ -77,10 +78,16 @@ it into input 2. With Song Structure on, you get:
 - **Sections:** each new section brings a keyframe too.
 - **Bars:** with Skip On at Every Bar, the skips land on Fosfora's real downbeats.
 
+Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
+`energy` is loudness over three seconds, nearly constant on mastered music.
+
 **Plain audio** works too. Wire an Audio File In or Audio Device In CHOP into input 2. The effect
-takes the loudness of the low band (30 to 150 Hz) as the level, and a sudden jump in it as a beat.
-That beat detector is simple and experimental: it can add or miss beats in busy music. Bars come
-every 4 beats, counted from when it starts.
+takes the loudness of the low band (30 to 150 Hz) as the level, and a sudden jump in it as a kick.
+Once the kicks keep to a tempo, a beat clock locks to them: beats then come on the beat even when a
+kick is missed, a kick between beats is left out, and a bar is every 4 beats (which beat starts the
+bar is a guess). It stops 8 beats after the kicks do, so a breakdown goes quiet, and while it isn't
+locked every kick is a beat. It is experimental: it takes a few beats to lock, and music whose kicks
+don't keep the beat (half-time, broken beats) gets every kick as a beat.
 
 **TouchDesigner's audioAnalysis** (or any CHOP with these channels) works the same way. Beats come
 from `beat_count`, or from the rising edge of `beat`, `kick` or `onset`. The level comes from
@@ -88,22 +95,25 @@ from `beat_count`, or from the rising edge of `beat`, `kick` or `onset`. The lev
 
 With any of these inputs:
 
+- a beat blooms the picture, zooming and smearing it out from the middle and letting it catch up,
+  as often as Flashing allows (Beat Surge);
 - every beat or every bar skips a keyframe (Skip On), so the picture smears along its movement
-  for a moment;
+  for a moment, the held motion blooming further;
 - loudness adds to Mosh (Level).
 
-**Nothing wired:** no skips, and Level adds nothing. The effect still moshes the input's cuts and
+**Nothing wired:** no blooms or skips, and Level adds nothing. The effect still moshes the input's cuts and
 its own Mosh, and the Keyframe and Skip Keyframe pulses still work.
 
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with default parameters (Smear). Each frame took 2.84 ms on the GPU
-(95th percentile 4.36 ms) and 0.36 ms on the CPU (95th percentile 0.48 ms), and TouchDesigner
-held 60 fps.
+TouchDesigner 2025.33230), with default parameters (Smear) and a beat far busier than music on
+input 2. Each frame took 3.5 ms on the GPU (95th percentile 5.1 ms) and 0.47 ms on the CPU (95th
+percentile 0.56 ms), the median of three runs, and TouchDesigner held 60 fps. GPU times on this
+machine vary by about a third from run to run.
 
-The optical flow is most of it: Lucas-Kanade at 1/4 size (1.15 ms) and at 1/8 (0.56 ms), then
-the decoder (0.61 ms). Blocks costs a little more: 3.44 ms on the GPU (95th percentile 4.99 ms)
+The optical flow is most of it: Lucas-Kanade at 1/4 size (about 1.2 ms) and at 1/8 (about
+0.6 ms), then the decoder (0.9 ms, which reads its last picture twice while a beat blooms). Blocks costs a little more: 3.44 ms on the GPU (95th percentile 4.99 ms)
 and about 0.7 ms on the CPU. The costliest Blocks step picks the best offset per block
 (about 1.4 ms). A larger input costs more everywhere; Mosh, Motion and the other settings cost
 nothing extra.
@@ -117,13 +127,14 @@ wired or not.
   moves the input's own pixels. Chroma lets color smear apart from brightness, but carries no
   meaning.
 - **Palette:** none; the picture keeps the input's colors.
-- **Flashing.** Keyframes and skipped keyframes change the whole picture, so they count as
-  flashes. They pass through one gate that follows the Flashing parameter. Off lets none through:
-  no skips on beats, no keyframes from Fosfora's drops and sections, and the Keyframe and Skip
-  Keyframe pulses do nothing. Calm (the default) allows at most one keyframe and one skip a
-  second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. Even then,
-  nothing changes suddenly: a keyframe fades over Fade (at least 0.25 s), a skip smears the picture
-  along its own motion, recovery fades, and a cut in the input is held rather than passed through.
+- **Flashing.** Keyframes, skipped keyframes and a beat's bloom change the whole picture, so they
+  count as flashes. They pass through one gate that follows the Flashing parameter. Off lets none
+  through: no blooms or skips on beats, no keyframes from Fosfora's drops and sections, and the
+  Keyframe and Skip Keyframe pulses do nothing. Calm (the default) allows at most one keyframe, one
+  skip and one bloom a second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting
+  exceeds. Even then, nothing cuts: a keyframe fades over Fade (at least 0.25 s), a skip smears the
+  picture along its own motion, a bloom eases out and back, recovery fades, and a cut in the input
+  is held rather than passed through.
 
 The flash rates were measured, not assumed. The test recorded the output while it fed a beat far
 busier than music: 8 beats, 2 bars and 1 drop a second, a section change every 2 s, and a build
@@ -133,11 +144,14 @@ second, by WCAG's area rule:
 
 | Clip | Off | Calm | Up to 3 per second | The clip alone |
 |---|---|---|---|---|
-| Dancer in a hazy warehouse | 0.5 | 1.0 | 1.0 | 1.0 |
-| People crossing a plaza | 0.5 | 0.5 | 0.5 | 0.5 |
+| Dancer in a hazy warehouse | 0.5 | 1.0 | 2.0 | 1.0 |
+| People crossing a plaza | 0.5 | 1.0 | 2.0 | 0.5 |
+| Dancer, a beat at 140 BPM | 0.5 | 1.0 | 1.5 | 1.0 |
 
-The settings barely differ because the keyframes and skips fade instead of flashing: no setting
-measured more than the clip does by itself. There were no red flashes.
+The last row is a dance tempo, a bar every 4 beats. It matters here because a bloom takes about a
+third of a second to go out and come back: the busy beat restarts it before it returns, while at
+140 BPM each one finishes. Before the bloom went through the gate it measured 3.0 at Calm on that
+row, so Calm now lets one through a second. There were no red flashes.
 
 ## Experimental
 
@@ -145,8 +159,9 @@ measured more than the clip does by itself. There were no red flashes.
   usual one, and never less than a fixed floor. It can miss a soft cut, or take a sudden change of
   light in the input for a cut. Mosh Cuts turns it off.
 - Drop keyframes depend on Fosfora's drop detection, which is experimental.
-- Beats from raw audio come from a simple kick detector. It can add or miss beats; Fosfora or
-  audioAnalysis give steadier beats.
+- Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo. It
+  takes a few beats to lock and can still add or miss beats where the kicks don't keep the beat, and
+  which beat starts a bar is a guess; Fosfora or audioAnalysis give steadier beats.
 
 ## Credits and license
 
@@ -166,6 +181,11 @@ MIT. The shaders and operators are written for this library.
 - **Read during the survey, not used:** VARIMOSH (paid), the Palette's opticalFlow (its license
   keeps it out of a shared `.tox`).
 - With nothing wired in, it shows TouchDesigner's own sample media; none ships in the `.tox`.
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
+  in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
+  gap voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction,
+  the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive Performances"
+  (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,

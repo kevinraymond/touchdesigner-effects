@@ -1,6 +1,6 @@
 # ASCII
 
-![ASCII on a dancer silhouetted against a white backdrop: the bright backdrop becomes a dense field of glyphs and the dancer a dark cutout, traced by orange line glyphs as she leaps and turns](ascii.webp)
+![ASCII on a dancer silhouetted against a white backdrop: the bright backdrop becomes a dense field of glyphs and the dancer a dark cutout, traced by orange line glyphs as she leaps and turns, while on every beat an orange ring of changed glyphs ripples out from the middle](ascii.webp)
 
 **New to ASCII art?** It draws a picture with nothing but text characters. Each character
 stands in for a small patch of the picture: characters with a lot of ink (`@`, `#`) for bright
@@ -52,6 +52,7 @@ The ASCII page, top to bottom:
 | Backdrop | 0 | How much of the picture, dimmed, shows behind the glyphs. 0 is a dark ground. |
 | Beat Pop | 0.5 | A contrast jump on every bar (or beat) from input 2. It is a flash, so Flashing limits how often it comes. 0 turns it off. |
 | Pop On | Bars | Pop on every bar or every beat. Grayed out while Beat Pop is 0. |
+| Beat Ripple | 1 | On every beat a ring travels out from the middle of the picture, reaching the corners in 0.4 s. The cells it passes switch glyph set and take the other accent color (in Orange and Blue and in Source; in Mono only the glyphs change), keeping their brightness, so it is not a flash. Lower values make the ring narrower; 0 turns it off. |
 | Beat Glyphs | 0.3 | Share of the cells that switch to another glyph set on every beat, settling back over 0.3 s. 1 swaps the whole set. |
 | Loudness | 0.5 | How much loudness brings out more outlines. |
 | Fosfora Moments | On | Sections, builds and drops from Fosfora's signal (see Audio input). Other inputs have none of these. |
@@ -77,10 +78,16 @@ it into input 2. With Fosfora Moments on, you get:
   with the glyph cut out of it. It shares the flash budget with the pops, so Flashing still limits
   it. Fosfora's drop detection is experimental.
 
+Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
+`energy` is loudness over three seconds, nearly constant on mastered music.
+
 **Plain audio** works too. Wire an Audio File In or Audio Device In CHOP into input 2. The effect
-takes the loudness of the low band (30 to 150 Hz) as the level, and a sudden jump in it as a beat.
-That beat detector is simple and experimental: it can add or miss beats in busy music. Bars come
-every 4 beats, counted from when it starts.
+takes the loudness of the low band (30 to 150 Hz) as the level, and a sudden jump in it as a kick.
+Once the kicks keep to a tempo, a beat clock locks to them: beats then come on the beat even when a
+kick is missed, a kick between beats is left out, and a bar is every 4 beats (which beat starts the
+bar is a guess). It stops 8 beats after the kicks do, so a breakdown goes quiet, and while it isn't
+locked every kick is a beat. It is experimental: it takes a few beats to lock, and music whose kicks
+don't keep the beat (half-time, broken beats) gets every kick as a beat.
 
 **TouchDesigner's audioAnalysis** (or any CHOP with these channels) works the same way. Beats come
 from `beat_count`, or from the rising edge of `beat`, `kick` or `onset`. The level comes from
@@ -88,6 +95,8 @@ from `beat_count`, or from the rising edge of `beat`, `kick` or `onset`. The lev
 
 With any of these inputs:
 
+- every beat sends a ripple out from the middle: a ring of cells that switch glyph set and accent
+  color as it passes (Beat Ripple);
 - every beat moves a share of the cells to another glyph set with the same ink (Beat Glyphs);
 - every bar, or every beat, gives a contrast pop (Beat Pop and Pop On);
 - loudness brings out more outlines (Loudness).
@@ -97,12 +106,12 @@ With any of these inputs:
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with default parameters. Each frame took 1.09 ms on the GPU (95th
-percentile 1.33 ms) and 0.42 ms on the CPU (95th percentile 0.48 ms), and TouchDesigner held
-60 fps.
+TouchDesigner 2025.33230), with default parameters and a beat far busier than music on input 2.
+Each frame took 1.28 ms on the GPU (95th percentile 1.40 ms) and 0.32 ms on the CPU (95th
+percentile 0.34 ms), the median of three runs, and TouchDesigner held 60 fps.
 
-The edge pass runs at half resolution. The costliest steps are the narrow blur (0.40 ms), the
-render (0.22 ms) and the cells pass (0.22 ms). Smaller cells add work to the cells pass, which
+The edge pass runs at half resolution. The costliest steps are the narrow blur (0.44 ms), the
+render (0.38 ms) and the cells pass (0.28 ms). Smaller cells add work to the cells pass, which
 takes 16 color samples per cell. A larger input costs more everywhere. Nothing inside cooks while
 the output is unused.
 
@@ -117,8 +126,10 @@ the output is unused.
 - **Flashing.** The contrast pops and the drop's reverse video are flashes. They pass through one
   gate that follows the Flashing parameter: Off never flashes, Calm (the default) allows at most
   one flash a second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds.
-  Glyph swaps keep the same ink, so they are not flashes. Builds and loudness change the picture
-  gradually.
+  Glyph swaps keep the same ink, and the beat's ripple keeps each cell's brightness (it changes the
+  glyph and the accent color), so they are not flashes. Builds and loudness change the picture
+  gradually. The ripple's color is never the only sign of it: its glyphs change too, and the ring
+  moves.
 
 The flash rates were measured, not assumed. The test recorded the output while it fed a beat far
 busier than music: 8 beats, 2 bars and 1 drop a second, a section change every 2 s, and a build
@@ -126,16 +137,19 @@ rising and falling. The table gives the flashes in the worst second, by WCAG's a
 
 | Clip | Off | Calm | Up to 3 per second | The clip alone |
 |---|---|---|---|---|
-| Dancer in a hazy warehouse | 0.0 | 1.0 | 2.0 | 1.0 |
-| People crossing a plaza | 0.0 | 1.0 | 2.0 | 0.5 |
+| Dancer in a hazy warehouse | 0.5 | 1.5 | 2.0 | 1.0 |
+| People crossing a plaza | 0.0 | 1.5 | 2.5 | 0.5 |
+| Dancer, a beat at 140 BPM | 0.0 | 1.0 | 1.0 | 1.0 |
 
-There were no red flashes. On the plaza clip, Calm's 1.5 includes the footage's own 0.5.
+The last row is a dance tempo, a bar every 4 beats, where each beat's ripple and pop has time to
+finish before the next. There were no red flashes. Calm's 1.5 includes the footage's own flashes.
 
 ## Experimental
 
 - Drop moments depend on Fosfora's drop detection, which is experimental.
-- Beats from raw audio come from a simple kick detector. It can add or miss beats; Fosfora or
-  audioAnalysis give steadier beats.
+- Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo. It
+  takes a few beats to lock and can still add or miss beats where the kicks don't keep the beat, and
+  which beat starts a bar is a guess; Fosfora or audioAnalysis give steadier beats.
 
 ## Credits and license
 
@@ -147,6 +161,11 @@ MIT. The shaders and operators are written for this library.
   Followed, not copied.
 - **Glyphs by ink:** brightness maps to how much ink a glyph carries, as ASCII art always has.
 - **Dice:** MurmurHash3's 32-bit finalizer (Austin Appleby, public domain).
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
+  in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
+  gap voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction,
+  the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive Performances"
+  (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Fonts:** the 5 x 7 bitmap font was drawn for this library. The system font is your own: the
   effect draws it at run time, and no font ships in the `.tox`.
 - **Read during the survey, not used:** Lou Evoy's ASCII TOP (paid, NVIDIA only), uisato's ASCII

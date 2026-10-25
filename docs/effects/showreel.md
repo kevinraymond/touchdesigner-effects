@@ -74,9 +74,9 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with the six effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 3.74 ms on the GPU per frame and 1.39 ms on the CPU on average, depending
-on the effect showing; during a fade two effects run, so the 95th percentile was 8.55 ms on the GPU
-and 2.03 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+runs one effect at a time: 3.69 ms on the GPU per frame and 1.35 ms on the CPU on average, depending
+on the effect showing; during a fade two effects run, so the 95th percentile was 9.13 ms on the GPU
+and 1.92 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
 grow as the library adds effects. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -92,7 +92,7 @@ grow as the library adds effects. Nothing inside cooks while the output is unuse
 
   | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Dancer in a hazy warehouse | 1.0 | 2.0 | 3.0 | 1.0 |
+  | Dancer in a hazy warehouse | 1.0 | 2.0 | 2.5 | 1.0 |
   | People crossing a plaza | 0.5 | 1.5 | 3.0 | 0.5 |
   | Dancer, Every 1 | 1.0 | 2.0 | 2.5 | 1.0 |
 
@@ -112,6 +112,11 @@ MIT. The effects inside are this library's own (their pages list what they use a
 - **The built-in clip and the preview footage:** see below. Her depth map, inside the `.tox`, was
   estimated with [Depth Anything 3](https://github.com/ByteDance-Seed/Depth-Anything-3)'s Base model
   (Apache 2.0).
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`, which Cycle's bars come
+  from): a kick is a jump in the low band's loudness, and the beat clock takes its tempo from the gaps
+  between kicks, each gap voting for the beat lengths it is a whole multiple of: inter-onset-interval
+  tempo induction, the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive
+  Performances" (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 The built-in clip and the preview footage: Kevin Raymond, touchdesigner-effects,

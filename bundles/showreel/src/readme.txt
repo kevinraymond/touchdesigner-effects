@@ -38,6 +38,11 @@ CREDITS
   from Krea 2 brought to life with Wan 2.2, both run locally) and shows no real person. Her depth
   map: Depth Anything 3's Base model (Apache 2.0).
 - Names: a 5x7 pixel font drawn for this library.
+- Beats from raw audio (the library's audio input, which Cycle's bars come from): a kick is a jump in
+  the low band's loudness; the beat clock takes its tempo from the gaps between kicks, each voting
+  for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction, the idea
+  behind S. Dixon, "Automatic Extraction of Tempo and Beat from Expressive Performances" (J. New
+  Music Research, 2001). Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else is written for this library. MIT.
 

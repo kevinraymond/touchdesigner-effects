@@ -1,16 +1,16 @@
 {
-  "version": "0.1.0",
-  "sources_sha256": "d2e5d7f20d3d81578f49ac58bdc578cb14883434cbb84c41914ad31215b42b36",
+  "version": "0.1.1",
+  "sources_sha256": "61e1f59e5b83d743c5eeff5fe114ce5aa39c893940291392fa7c4ccf7b9da8a3",
   "embeds": {
-    "ascii": "9eef0cb59808d98093a577522fe12e601ce1b1dd89b920f93471cc911b245f89",
-    "blob_track": "f1372065eae1506116244286b03c7e9a7f7147e071210d551790eef00eb1ad95",
-    "datamosh": "158ff70fe6e7f2288df3af2efa43859e9f00187f5d4e475ded83757b9cb2f5a1",
-    "glitch": "2d877bf60f6d3121605cf0e8254ad343cd7a960b0d9367c377e3d2d6a457e308",
-    "particles": "3d8261021f1ab1daca389fb700f59191edbe77e4b155a3bae9a58f3a8bd98f41",
-    "point_cloud": "15dea4e0754d027cc7e4e25fc0b022ba70b604bc5a428a00740eff58263c0e95"
+    "ascii": "3221b22950c679838f2df8756de0612bd129d10fada9bf1999eb57949cfe9e87",
+    "blob_track": "e53c672aa2c351add15c0b527d6fd5c1a6a20f320ef8614d1bbd847977388ee4",
+    "datamosh": "157699fd0f7b612621a543e3d4be67d83880866b5455d58fd908c06577305152",
+    "glitch": "451163046034ad280584ee9f282ffbaeeee4c5df0d241167ed89776e0d0c67f5",
+    "particles": "5013698f027f0fb0168349dce82e6b78cc04470c27d63bdccdf11a519dc5cef3",
+    "point_cloud": "3e5d5a03ef0e8631e968527ddbc2dba8e215b28bae834585599ec4068ef78869"
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "15ee471b981af12f2ed791e7cbc34c6f7642d251d9cf9d304d4b0a2fd665f38a",
-  "tox_bytes": 2300912
+  "tox_sha256": "9dc94e166566c54f35e5267d62102ce02ff9ccd8fa7f8f919f54f5ccab09654b",
+  "tox_bytes": 2318728
 }

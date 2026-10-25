@@ -66,19 +66,29 @@ Flow, a beat's burst). Drift (Emit, Flow): how fast the air blows; below 0, the 
 Direction (Emit, Flow): which way, in degrees clockwise from straight up. Turbulence: how much it
 swirls. Color: the picture's (lifted, so dark clothes still glow), orange, blue or white. Glow.
 Backdrop: how bright the picture behind is. Loudness: how much input 2's loudness thickens and thins
-the stream. Beat Bursts: a burst on each beat, and an outward kick (Emit) or pulse (Push, Flow).
-Bar Gusts (Emit, Flow): the wind swings on each bar. Song Moments.
+the stream. Beat Bursts: a burst on each beat, sparks as often as Flashing allows, and an outward
+kick (Emit) or pulse (Push, Flow). Bar Gusts (Emit, Flow): the wind swings on each bar. Song
+Moments. Flashing: how often a burst may be sparks.
 
 AUDIO (input 2, optional)
 Fosfora's signal is the best input: run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's
 integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it
-into input 2. Loudness thickens and thins the stream; each beat fires a burst of particles that leave
-faster than the rest and kicks the whole cloud outward (Beat Bursts); each bar swings the wind (Bar
+into input 2. Loudness thickens and thins the stream; each beat fires a burst of particles that
+leave faster than the rest and kicks the whole cloud outward, and as often as Flashing allows the
+burst is sparks, born bigger and shrinking as they go (Beat Bursts); each bar swings the wind (Bar
 Gusts; in Push, which has no wind, bars do nothing); with Song Moments on, a build makes the air
 swirl harder as it rises and a drop sends a ring outward from the subject that shoves the particles
-it passes (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio Device In) gives beats from a simple kick detector
-(experimental: it can add or miss beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives
-beats from its kick or onset channels. Nothing wired: a steady stream, no bursts.
+it passes (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio Device In)
+gives beats from a kick detector and a beat clock that locks to the kicks' tempo (experimental: it
+can still add or miss beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from
+its kick or onset channels. Nothing wired: a steady stream, no bursts.
+
+FLASHING
+A burst's sparks light up a patch of the picture at once, so they count as flashes and pass through
+one gate that follows the Flashing parameter: Off never sparks, Calm (the default) at most once a
+second (about every other beat at dance tempos), Up to 3 per second is the WCAG 2.3.1 limit (every
+beat up to 180 BPM). The bursts themselves, the kicks, the stream and the wind move and add
+particles rather than light the picture, so they come on every beat at any setting.
 
 INSIDE
 The subject: depth (input 3, or input 1's brightness) -> near (small, brighter nearer; depth_stats:
@@ -94,7 +104,8 @@ alive_stats counts the living, so births come to Rate. Drawing: geo puts a dot (
 instancing from the buffers, cam looks at them flat, render draws them, glow blurs them and look lays
 both over the picture, or shows the subject with its label. Input 2 goes through audio (lib
 audio_in); counts and steps turn its counts into steps, beat_env is a beat's burst and kick (and
-beat_rate, how fast it changes, the pulse in Push and Flow), drop_env a drop's shockwave, build_lag
+beat_rate, how fast it changes, the pulse in Push and Flow), spark_ask, flash_limit and flash let
+through the beats whose burst is sparks (spark_env), drop_env a drop's shockwave, build_lag
 the build, level_lag the loudness, gust and gust_lag the wind's angle for each bar.
 
 CREDITS
@@ -114,6 +125,11 @@ CREDITS
 - Depth Type: the RealSense, Kinect and Kinect Azure TOPs' depth, as their help pages describe it.
 - Labels: a 5x7 pixel font drawn for this library.
 - Read during the survey, not used: the Palette's particlesGpu (Derivative).
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
+  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
+  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
+  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
+  Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else (Stand Out's row search, Background's exposure drift, Flow's particles waiting
 behind the subject, the beat's pulse) is written for this library; the depth reading (lib depth_near

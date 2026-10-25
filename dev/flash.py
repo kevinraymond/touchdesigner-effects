@@ -5,6 +5,7 @@ flashes (docs/TD_IDIOMS.md A2):
     TD_ARGS='ascii datamosh' dev/td.sh dev/flash.py    # those effects (none named: every one)
     TD_ARGS='clip=b2_plaza' dev/td.sh dev/flash.py     # every effect on another test clip
     TD_ARGS='blob_track beat=none' dev/td.sh dev/flash.py   # no beat: into dev/out/flash/b1_dancer_no_beat
+    TD_ARGS='datamosh beat=music' dev/td.sh dev/flash.py    # a dance-tempo beat: b1_dancer_beat-music
     TD_ARGS='showreel View=cycle' dev/td.sh dev/flash.py    # a setting off its default: b1_dancer_View-cycle
     dev/td.sh --pull dev/out/flash/b1_dancer/done
     uv run --with numpy dev/flashcount.py dev/out/flash/b1_dancer
@@ -70,8 +71,8 @@ def main():
             o.destroy()
     names, opts = test_args(globals().get('TDLIB_ARGS') or [])
     overrides = {k: v for k, v in opts.items() if k[:1].isupper()}
-    out = os.path.join(OUT, '_'.join([opts['clip']] + ([] if opts['beat'] == 'stress' else ['no_beat']) +
-                                     ['{}-{}'.format(k, v) for k, v in overrides.items()]))
+    beat = {'stress': [], 'none': ['no_beat']}.get(opts['beat'], ['beat-' + opts['beat']])
+    out = os.path.join(OUT, '_'.join([opts['clip']] + beat + ['{}-{}'.format(k, v) for k, v in overrides.items()]))
     os.makedirs(out, exist_ok=True)
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]

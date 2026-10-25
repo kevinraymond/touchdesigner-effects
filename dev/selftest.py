@@ -312,7 +312,7 @@ def _check_flash_gate(host):
 def _check_audio_in(host):
     """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; beat_count and
     energy; audioAnalysis-style kick pulses and low; Fosfora's signal (beat and bar counts, build,
-    beat_phase, bar_phase); raw audio (the sample MP3)."""
+    beat_phase, bar_phase, and bass beside energy: level follows bass); raw audio (the sample MP3)."""
     cases = {}
 
     def effect(kind):
@@ -341,9 +341,10 @@ def _check_audio_in(host):
         made += [lfo, count, mk(host, renameCHOP, 'selftest_named_' + name, -500, y, [count], comment='x',
                                 renamefrom='*', renameto=name)]
     const = mk(host, constantCHOP, 'selftest_fosfora_levels', -500, -1900, comment='x')
-    const.seq.const.numBlocks = 4
+    const.seq.const.numBlocks = 5
     made.append(setpars(const, const0name='energy', const0value=0.6, const1name='build', const1value=0.7,
-                        const2name='beat_phase', const2value=0.25, const3name='bar_phase', const3value=0.5) or const)
+                        const2name='beat_phase', const2value=0.25, const3name='bar_phase', const3value=0.5,
+                        const4name='bass', const4value=0.45) or const)
     made.append(mk(host, mergeCHOP, 'selftest_in_fosfora', -300, -1800, [made[2], made[5], made[6]], comment='x'))
     comp.inputConnectors[1].connect(made[-1])
     cases['fosfora'] = (comp, script, made)
@@ -367,7 +368,7 @@ def _check_audio_in(host):
         # source, beats in 3 s, bars in 3 s (4 beats to a bar unless the input has bars), level
         # (None: any above 0.05), build, beat_phase (None: any in 0..1)
         want = {'none': (0, (0, 0), (0, 0), 0, 0, 0), 'counted': (2, (5, 7), (1, 2), 0.6, 0, None),
-                'pulses': (2, (5, 7), (1, 2), 0.4, 0, None), 'fosfora': (3, (5, 7), (1, 2), 0.6, 0.7, 0.25),
+                'pulses': (2, (5, 7), (1, 2), 0.4, 0, None), 'fosfora': (3, (5, 7), (1, 2), 0.45, 0.7, 0.25),
                 'raw': (1, (2, 30), (0, 8), None, 0, None)}
         for k, (comp, script, extra) in cases.items():
             src, n_beats, n_bars, level, build, phase = (script[c].eval() for c in (

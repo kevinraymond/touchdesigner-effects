@@ -28,8 +28,9 @@ integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your 
 into input 2. Beats bring the small glitches and bars the bursts; with Song Moments on, a build
 breaks more of the picture as it rises and a drop breaks all of it once (Fosfora's drop detection is
 experimental). Any input: small glitches on its beats, bursts on its bars or beats, and loudness
-widens the RGB split. Raw audio (Audio File In, Audio Device In) gives beats from a simple kick
-detector (experimental: it can add or miss beats) and a bar every 4 beats; TouchDesigner's
+widens the RGB split. Raw audio (Audio File In, Audio Device In) gives beats from a kick detector
+and a beat clock that locks to the kicks' tempo (experimental: it can still add or miss beats) and a
+bar every 4 beats; TouchDesigner's
 audioAnalysis gives beats from its kick or onset channels. Nothing wired: the glitches and bursts
 come steadily instead.
 
@@ -54,6 +55,11 @@ CREDITS
   is the common vocabulary of digital glitch art, after broken video streams and files.
 - Dice: Chris Wellons' lowbias32 integer hash (hash-prospector, public domain).
 - Read during the survey, not used: td-glitch-effects, Glitch Machine.
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
+  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
+  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
+  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
+  Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else (the bursts, the flash budget) is written for this library. MIT.
 

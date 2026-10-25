@@ -1,6 +1,6 @@
 # Particles
 
-![Particles on a dancer in a hazy warehouse: glowing specks in the colors of her clothes and skin peel off her body and swirl away, and on each beat of the music the whole cloud jumps outward](particles.webp)
+![Particles on a dancer in a hazy warehouse: glowing specks in the colors of her clothes and skin peel off her body and swirl away, and on each beat of the music the whole cloud jumps outward, every other beat with a puff of big bright sparks off her body](particles.webp)
 
 **New to interactive particles?** Particles are thousands of tiny dots, each moving on its own:
 born somewhere, carried by a wind, swirled around, fading away. Interactive particles come off
@@ -13,8 +13,8 @@ This effect sends particles off its subject, each in the picture's color where i
 carries them up and swirls them around, and they fade over a few seconds. Two more behaviors fill
 the whole frame with particles instead: in Push the subject shoves through them and they light up
 where it touches them, and in Flow they stream past and part round it (see Behaviors). The music
-moves the whole cloud: loudness thickens and thins the stream, every beat fires a burst and kicks
-the cloud outward, and every bar swings the wind to a new direction; with Fosfora's signal, a build
+moves the whole cloud: loudness thickens and thins the stream, every beat fires a burst (of big
+sparks, as often as Flashing allows) and kicks the cloud outward, and every bar swings the wind to a new direction; with Fosfora's signal, a build
 stirs up the air and a drop sends a shockwave out. It finds its subject with whatever you give it:
 depth or a mask on input 3 for the best result, and with only a picture, a webcam say, what moves
 (or what differs from the empty room). Find on Auto chooses for itself, and the Subject view says
@@ -182,9 +182,10 @@ The Particles page, top to bottom:
 | Glow | 0.5 | How much the particles glow around themselves. |
 | Backdrop | 0.6 | How bright the picture behind the particles is, from 0 (black) to 1. |
 | Loudness | 0.7 | How much the loudness of input 2 thickens and thins the stream. At 1, quiet passages emit a third of Rate and the loudest a fifth more; 0 keeps Rate steady. |
-| Beat Bursts | 0.5 | On each beat of input 2, a burst of particles leaves the subject, up to three times as fast as the rest, and the whole cloud is kicked outward (Emit) or pulses out and back (Push, Flow); 0 for neither. |
+| Beat Bursts | 0.5 | On each beat of input 2, a burst of particles leaves the subject, up to three times as fast as the rest, and the whole cloud is kicked outward (Emit) or pulses out and back (Push, Flow). As often as Flashing allows, the burst is sparks: born two and a half times their size, shrinking back over about 0.3 s. 0 for none of it. |
 | Bar Gusts | 0.5 | For Emit and Flow: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new direction, up to about 35 degrees either side of Direction at 1, and eases there over 0.6 s; 0 keeps it blowing straight. |
 | Song Moments | On | With Fosfora's signal on input 2: a build stirs the air up as it rises, and a drop sends a shockwave out from the subject. |
+| Flashing | Calm | How often a burst may be sparks, which light up a patch of the picture at once. Off never; Calm at most once a second (about every other beat at dance tempos); Up to 3 per second is the WCAG 2.3.1 limit (every beat up to 180 BPM). The bursts, kicks, stream and wind come on every beat at any setting. |
 | Open Window | | Shows the picture in its own window, 1280 x 720 or filling a display. Esc closes it. |
 | Full Screen | Off | Opens the window filling the whole display, for a projector or a second screen. |
 | Display | 0 | Which display the window opens on; 0 is the primary display. |
@@ -196,20 +197,23 @@ The About page has Version, Built With (the TouchDesigner build it was saved in)
 **[Fosfora](https://github.com/kevinraymond/fosfora)** gives the most. Run `fosfora --signal`, drag
 `fosfora_signal.tox` (in Fosfora's `integrations/touchdesigner/`) into your project, and wire it
 into input 2. Its loudness thickens and thins the stream (Loudness), every beat fires a burst and
-kicks the cloud outward (Beat Bursts; in Push and Flow the whole field pulses out and back), every bar
-swings the wind (Bar Gusts; in Flow the whole stream turns, and Push has no wind to swing), and with
-Song Moments on:
+kicks the cloud outward, the burst sparks as often as Flashing allows (Beat Bursts; in Push and Flow
+the whole field pulses out and back), every bar swings the wind (Bar Gusts; in Flow the whole stream
+turns, and Push has no wind to swing), and with Song Moments on:
 
 - **Builds:** the air swirls harder as a build rises, up to three times Turbulence, and calms over
   the two seconds after it.
 - **Drops:** a ring leaves the subject's middle and sweeps outward across the frame in 1.2 s,
   shoving the particles it passes. Fosfora's drop detection is experimental.
 
+Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
+`energy` is loudness over three seconds, nearly constant on mastered music.
+
 **Any input:** loudness, beats and bars do the same. Raw audio (an Audio File In or Audio Device In
-CHOP) gives beats from a simple kick detector and a bar every 4 beats; its loudness is measured
-against its own recent peak, so the stream follows the music's swells rather than its overall volume.
-TouchDesigner's audioAnalysis gives beats from its kick or onset channels and loudness from its
-energy.
+CHOP) gives beats from a kick detector and a beat clock (below, Experimental) and a bar every 4
+beats; its loudness is measured against its own recent peak, so the stream follows the music's
+swells rather than its overall volume. TouchDesigner's audioAnalysis gives beats from its kick or
+onset channels and loudness from its energy.
 
 **Nothing wired:** a steady stream at Rate, the wind along Direction, no bursts.
 
@@ -217,9 +221,9 @@ energy.
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with default parameters and a beat far busier than music on input 2.
-With a depth clip on input 3, each frame took 2.4 ms on the GPU (95th percentile 3.1 ms) and 1.3 ms
-on the CPU (95th percentile 1.4 ms): 1.0 ms to draw the particles, 0.4 ms to blur their glow, 0.6 ms
-to move them and about 0.4 ms to find the subject, on a 320 x 180 copy of the picture and the depth
+With a depth clip on input 3, each frame took 2.6 ms on the GPU (95th percentile 3.1 ms) and 1.1 ms
+on the CPU (95th percentile 1.4 ms), the median of three runs: 1.1 ms to draw the particles, 0.5 ms
+to blur their glow, 0.6 ms to move them and about 0.4 ms to find the subject, on a 320 x 180 copy of the picture and the depth
 whatever their size. Without depth it costs about the same: 2.4 ms on Movement (people crossing a
 plaza, Find on Auto), 3.1 ms on Background. Push and Flow add about 0.6 ms for the air that goes
 round the subject: 3.0 ms (Push) and 3.1 ms (Flow) with the dancer's depth, 3.1 and 3.2 ms on the
@@ -230,10 +234,13 @@ passes run only while Find is Background, and the air only in Push and Flow.
 
 ## Accessibility
 
-- **No flashing.** Particles fade in over a tenth of a second (Emit) or nearly half a second (Push,
-  Flow) and out over the second half of their lives, and the music moves particles and adds them
-  rather than lighting the picture, so the effect has no Flashing setting. In Push the particles the
-  subject shoves light up, a few at a time, where it moves. The test below confirms it.
+- **Flashing.** A beat's burst of sparks lights up a patch of the picture at once, so sparks count
+  as flashes. They pass through one gate that follows the Flashing parameter: Off never sparks, Calm
+  (the default) allows at most one sparking burst a second, and Up to 3 per second is the WCAG 2.3.1
+  limit, which no setting exceeds. The rest moves particles and adds them rather than lighting the
+  picture, so it comes on every beat: particles fade in over a tenth of a second (Emit) or nearly
+  half a second (Push, Flow) and out over the second half of their lives, and in Push the particles
+  the subject shoves light up a few at a time, where it moves.
 - **No meaning in color.** Particles take the picture's colors or one color, as decoration. The
   Subject view marks the subject in bright orange and the depth beside it in dim blue, so brightness
   tells them apart as well as hue, and its label says in words how the subject was found.
@@ -241,24 +248,28 @@ passes run only while Find is Background, and the air only in Push and Flow.
 The flash rates were measured, not assumed. The test recorded the output while it fed a beat far
 busier than music: 8 beats, 2 bars and 1 drop a second, so a burst and a kick (or pulse) 8 times a
 second and a shockwave every second. The table gives the flashes in the worst second, by WCAG's area
-rule:
+rule, at Off, Calm and Up to 3 per second:
 
 | Clip | Emit | Push | Flow | The clip alone |
 |---|---|---|---|---|
-| Dancer in a hazy warehouse, with her depth | 1.0 | 1.0 | 1.0 | 1.0 |
-| Hands against black, with their depth | 0.5 | 1.0 | 0.5 | 1.5 |
-| People crossing a plaza, no depth (Movement) | 0.0 | 1.0 | 0.5 | 0.5 |
+| Dancer in a hazy warehouse, with her depth | 1.0, 1.0, 2.0 | 1.0, 1.0, 1.0 | 1.5, 1.0, 1.0 | 1.0 |
+| Hands against black, with their depth | 1.0, 1.0, 1.0 | 1.0, 1.5, 1.5 | 1.0, 1.0, 1.0 | 1.5 |
+| People crossing a plaza, no depth (Movement) | 0.0, 0.5, 1.0 | 1.0, 1.5, 1.5 | 0.5, 1.0, 1.0 | 0.5 |
+| Dancer, a beat at 140 BPM (Emit) | 0.5, 1.0, 1.5 | | | 1.0 |
 
-Push on the plaza adds half a flash a second to the footage's own, the people's shoves and bursts lighting up
-under a beat eight times busier than music; everything else stays at or under the footage (the dimmed
-backdrop takes some of its own flicker away), and all of it well under WCAG's limit of 3. No red
-flashes.
+The last row is a dance tempo, a bar every 4 beats, where each burst's sparks shrink back before
+the next. Before the sparks went through the gate, Emit on the dancer measured 2.5 under the busy
+beat. Push on the plaza adds half a flash a second to the footage's own even at Off, the people's
+shoves lighting particles up, and a flash at Calm and Up to 3 per second; everything else stays
+within a flash of the footage (the dimmed backdrop takes some of its own flicker away), all of it
+under WCAG's limit of 3. No red flashes.
 
 ## Experimental
 
 - Drop moments depend on Fosfora's drop detection, which is experimental.
-- Beats from raw audio come from a simple kick detector. It can add or miss beats; Fosfora or
-  audioAnalysis give steadier beats.
+- Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo. It
+  takes a few beats to lock and can still add or miss beats where the kicks don't keep the beat, and
+  which beat starts a bar is a guess; Fosfora or audioAnalysis give steadier beats.
 
 ## Credits and license
 
@@ -284,6 +295,11 @@ exposure drift, Flow's particles waiting behind the subject and the beat's pulse
   it.
 - **Font:** the 5 x 7 bitmap font for the Subject view's labels was drawn for this library.
 - **Read during the survey, not used:** the Palette's particlesGpu (Derivative).
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
+  in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
+  gap voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction,
+  the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive Performances"
+  (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,

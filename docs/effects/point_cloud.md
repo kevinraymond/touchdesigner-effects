@@ -151,10 +151,13 @@ Moments on:
 Surface, a solid skin, gets half the swell and half the burst, and glides to each bar's angle over
 1.6 s: the same moves change more of its light (see Accessibility).
 
+Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
+`energy` is loudness over three seconds, nearly constant on mastered music.
+
 **Any input:** loudness, beats and bars do the same. Raw audio (an Audio File In or Audio Device In
-CHOP) gives beats from a simple kick detector and a bar every 4 beats; its loudness is measured
-against its own recent peak. TouchDesigner's audioAnalysis gives beats from its kick or onset
-channels and loudness from its energy.
+CHOP) gives beats from a kick detector and a beat clock (below, Experimental) and a bar every 4
+beats; its loudness is measured against its own recent peak. TouchDesigner's audioAnalysis gives
+beats from its kick or onset channels and loudness from its energy.
 
 **Nothing wired:** the cloud sways and nothing else moves it.
 
@@ -200,8 +203,9 @@ light as they grow, or each beat's pop would brighten the whole cloud. No red fl
 ## Experimental
 
 - Drop moments depend on Fosfora's drop detection, which is experimental.
-- Beats from raw audio come from a simple kick detector. It can add or miss beats; Fosfora or
-  audioAnalysis give steadier beats.
+- Beats from raw audio come from a kick detector and a beat clock that locks to the kicks' tempo. It
+  takes a few beats to lock and can still add or miss beats where the kicks don't keep the beat, and
+  which beat starts a bar is a guess; Fosfora or audioAnalysis give steadier beats.
 
 ## Credits and license
 
@@ -223,6 +227,11 @@ shared with [Particles](particles.md).
 - **Read during the survey, not used:** the Palette's kinectPointcloud (Derivative),
   FollowTheDarkside's [td-movie-to-particle](https://github.com/FollowTheDarkside/td-movie-to-particle)
   (no license stated).
+- **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
+  in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
+  gap voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction,
+  the idea behind S. Dixon's "Automatic Extraction of Tempo and Beat from Expressive Performances"
+  (Journal of New Music Research, 2001). Followed, not copied: written for this library.
 - **Flash limits:** [WCAG 2.3.1](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold.html), measured with this library's tools (`dev/flash.py`, `dev/flashcount.py`).
 
 Preview footage: Kevin Raymond, touchdesigner-effects,

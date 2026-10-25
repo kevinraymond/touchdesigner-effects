@@ -42,7 +42,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 # The particles' buffers: at most PW x PH alive at once.
 PW, PH = 256, 256
 # The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
@@ -50,8 +50,9 @@ PW, PH = 256, 256
 # show nothing.
 MW, MH = 320, 180
 # A beat's burst: births per second on top of Rate at its peak (Beat Bursts at 1), falling to none
-# over BURST_TIME seconds; particles born in it leave up to 3 times as fast.
-BURST_RATE, BURST_TIME = 20000, 0.25
+# over BURST_TIME seconds; particles born in it leave up to 3 times as fast, as sparks (sim.glsl: drawn
+# 2.5 times their size, shrinking back over about 0.3 s).
+BURST_RATE, BURST_TIME = 40000, 0.25
 # In Push and Flow a beat moves the field out from the subject's middle by PULSE of its distance at once
 # (Beat Bursts at 1), easing back over BURST_TIME: their particles wrap round the frame, so a kick like
 # Emit's would gather them at its edges.
@@ -128,7 +129,7 @@ comp, page, source = new_effect(
     'particles', 'Particles',
     'Particles {}: particles peel off the subject (found by depth on input 3, or by movement) and drift '
     'away like smoke; the music thickens, kicks and sways them.'.format(VERSION),
-    README, tags=('particles', 'depth', 'interactive', 'audio-reactive'), audio=True, depth=True,
+    README, tags=('particles', 'depth', 'interactive', 'audio-reactive'), audio=True, depth=True, flashing=True,
     # A white birch among dark leaves (TouchDesigner's own sample): Auto reads its brightness as depth
     # while it shows (the sample movies barely move), and the trunk stands out from what is beside it.
     sample="app.samplesFolder + '/Map/Nature/Movie.5.mp4'")
@@ -216,8 +217,9 @@ custom(page, 'Float', 'Loudness', 'Loudness', 0.7,
        'How much the loudness of input 2 thickens and thins the stream: at 1, quiet passages emit a '
        'third of Rate and the loudest a fifth more; 0 for a steady Rate.', 0, 1, True).startSection = True
 custom(page, 'Float', 'Burst', 'Beat Bursts', 0.5,
-       'On each beat of input 2, a burst of particles leaves the subject faster than the rest and the whole '
-       'cloud is kicked outward; 0 for neither.', 0, 1, True)
+       'On each beat of input 2, a burst of particles leaves the subject faster than the rest and the whole cloud is '
+       'kicked outward; as often as Flashing allows, the burst is sparks (born bigger, shrinking as they go: a '
+       'flash). 0 for none of it.', 0, 1, True)
 custom(page, 'Float', 'Gusts', 'Bar Gusts', 0.5,
        'For Emit and Flow: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new '
        'direction; 0 keeps it blowing the same way.', 0, 1, True).enableExpr = "me.par.Behavior != 'push'"
@@ -234,6 +236,14 @@ beat_step = mk(comp, selectCHOP, 'beat_step', 0, -300, [steps], 'A beat.', chann
 beat_env = mk(comp, triggerCHOP, 'beat_env', 200, -300, [beat_step],
               "A beat's burst: 1 at the beat, none {:g} s later.".format(BURST_TIME),
               attack=0, peak=1, peaklen=0, decay=BURST_TIME, dshape='linear', sustain=0, release=0)
+# A burst's sparks light up a patch of the frame at once, so they are flashes: they come only on the
+# beats the gate lets through (Calm: one a second); the burst and the kick come on every beat.
+spark_ask = mk(comp, selectCHOP, 'spark_ask', 0, -200, [steps], 'A beat, asking for sparks.', channames='beat_count',
+               renamefrom='*', renameto='spark')
+spark_gate = flash_gate(comp, spark_ask, 200, -200)
+spark_env = mk(comp, triggerCHOP, 'spark_env', 600, -200, [spark_gate],
+               "1 for the {:g} s of a burst whose births are sparks.".format(BURST_TIME),
+               attack=0, peak=1, peaklen=BURST_TIME, decay=0, sustain=0, release=0)
 beat_rate = mk(comp, slopeCHOP, 'beat_rate', 400, -300, [beat_env],
                "How fast beat_env changes, per second: in Push and Flow the field moves out and back with it.",
                timeslice=True)
@@ -363,7 +373,8 @@ sim = glsl(comp, 'sim', 400, 300, fb + [emit, subject_blur, source, alive, emit_
                   Expr("math.radians(parent().par.Direction) + op('gust_lag')[0]"),
                   Expr("{} * parent().par.Burst * op('beat_env')[0] * min(absTime.stepSeconds, 0.1)".format(BURST_RATE))),
            uLook=(menu('Color'), menu('Behavior'),
-                  Expr("{} * parent().par.Burst * op('beat_rate')[0] * min(absTime.stepSeconds, 0.1)".format(PULSE))))
+                  Expr("{} * parent().par.Burst * op('beat_rate')[0] * min(absTime.stepSeconds, 0.1)".format(PULSE)),
+                  Expr("op('spark_env')[0]")))
 # Hold: a pixel off the edge reads as the edge (the default, Zero, reads black: the air's curl and the
 # subject's slope would jump at the frame's edges).
 setpars(sim, numcolorbufs=4, inputextenduv='hold')

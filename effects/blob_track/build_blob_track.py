@@ -27,7 +27,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 # The tracker and the mask run on a small copy: OpenCV's contour pass and the GPU-to-CPU
 # download scale with pixels (30 ms at full size on a speckly mask, under 3 ms here), and the
 # Blob Track TOP's positions come back normalized anyway.
@@ -147,7 +147,7 @@ menu_par('Accent', 'Accent', (('orange', 'Orange'), ('blue', 'Blue'), ('white', 
 
 beat = custom(page, 'Toggle', 'Beatlabels', 'Scramble Labels', True,
               'On each beat (input 2), a quarter of the labels scramble and settle again. Beats from raw audio '
-              'come from a simple kick detector (experimental: it can add or miss beats).')
+              'come from a kick detector and a beat clock (experimental: it can add or miss beats).')
 beat.startSection = True
 beat.enableExpr = "me.par.Labels != 'off'"
 custom(page, 'Toggle', 'Beatlinks', 'Spawn Links', True,

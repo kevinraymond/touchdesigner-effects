@@ -42,8 +42,8 @@ into input 2. Loudness grows and shrinks the dots; each beat deepens the cloud f
 pops the dots (Beat Swell); each bar swings the camera to a new angle (Bar Moves); with Song
 Moments on, a build scatters the points off their places as it rises and a drop blows the cloud
 apart, after which it settles back (Fosfora's drop detection is experimental). Raw audio (Audio
-File In, Audio Device In) gives beats from a simple kick detector (experimental: it can add or miss
-beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from its kick or onset
+File In, Audio Device In) gives beats from a kick detector and a beat clock that locks to the
+kicks' tempo (experimental: it can still add or miss beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from its kick or onset
 channels. Nothing wired: the cloud just sways.
 
 INSIDE
@@ -77,6 +77,11 @@ CREDITS
   2020).
 - Read during the survey, not used: the Palette's kinectPointcloud (Derivative), FollowTheDarkside's
   td-movie-to-particle (no license stated).
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
+  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
+  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
+  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
+  Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else is written for this library; the depth reading (lib depth_near and depth_find)
 is shared with Particles. MIT.

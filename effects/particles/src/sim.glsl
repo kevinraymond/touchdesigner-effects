@@ -26,7 +26,8 @@
 // subject and its outline cover, and the subject's middle); 9 the air (air.glsl, Push and Flow).
 // Out: buffer 0 x, y, x speed, y speed (in Push and Flow its speed on top of the air's); buffer 1 age
 // (s), life (s), size (as drawn), 1 alive or 0 free; buffer 2 color r, g, b, and a: how visible it is
-// now; buffer 3 r how hard it was shoved lately (0-1), g its size at rest.
+// now; buffer 3 r how hard it was shoved lately (0-1), g its size at rest, b how much of a spark it
+// still is (a beat's burst is born as sparks: drawn bigger, shrinking to its size at rest).
 uniform vec4 uClock;  // x seconds since the last frame, y seconds, z frame number (the dice), w aspect (width / height)
 uniform vec4 uEmit;   // x births asked for this frame, y Life (s), z Speed, w 1 born on the outline only
 uniform vec4 uMove;   // x Drift, y Turbulence, z Size (frame heights), w beat kick 0-1
@@ -34,9 +35,12 @@ uniform vec4 uWave;   // x shockwave radius (frame heights), y strength 0-1, z t
                       // straight up (radians), w a beat's burst: births this frame on top of x
 uniform vec4 uLook;   // x Color (0 picture, 1 orange, 2 blue, 3 white), y Behavior (0 Emit, 1 Push, 2 Flow),
                       // z the beat's pulse this frame (Push, Flow): how far the field moves out from the
-                      // subject's middle (or back, below 0), as a share of its distance from it
+                      // subject's middle (or back, below 0), as a share of its distance from it; w 1 while
+                      // a burst's births are sparks (a beat the flash gate let through)
 layout(location = 0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];
-#define KICK 4.0          // a beat's push outward, frame heights per second per second at the beat's peak
+#define KICK 8.0          // a beat's push outward, frame heights per second per second at the beat's peak
+#define SPARK 1.5         // a burst's particle is born 1 + SPARK times its size...
+#define SPARK_FADE 0.3    // ...and shrinks back over about this many seconds
 #define SETTLE_PUSH 0.6   // seconds a particle's own speed (a shove, a shockwave) takes to die away in Push
 #define SETTLE_FLOW 0.15  // the same in Flow, where it keeps to the stream
 #define FADE_IN 0.12      // seconds a particle takes to fade in: Emit
@@ -113,13 +117,13 @@ vec3 color_at(vec2 uv) {
     return uLook.x < 1.5 ? vec3(1.0, 0.55, 0.15) : uLook.x < 2.5 ? vec3(0.25, 0.55, 1.0) : vec3(1.0);
 }
 
-void born(vec2 uv, vec2 v, inout uint dice) {
+void born(vec2 uv, vec2 v, float spark, inout uint dice) {
     float life = uEmit.y * (0.5 + roll(dice));
     float size = uMove.z * (0.6 + 0.8 * roll(dice));
     fragColor[0] = vec4(to_world(uv), v);
-    fragColor[1] = vec4(0.0, life, size, 1.0);
+    fragColor[1] = vec4(0.0, life, size * (1.0 + SPARK * spark), 1.0);
     fragColor[2] = vec4(color_at(uv), 0.0);
-    fragColor[3] = vec4(0.0, size, 0.0, 0.0);
+    fragColor[3] = vec4(0.0, size, spark, 0.0);
 }
 
 void main() {
@@ -149,7 +153,7 @@ void main() {
                 free_slot();
                 return;
             }
-            born(uv, vec2(0.0), dice);
+            born(uv, vec2(0.0), 0.0, dice);
             return;
         }
         if (r >= off + on) {
@@ -169,7 +173,10 @@ void main() {
         vec2 any_way = vec2(cos(a), sin(a));
         vec2 out_dir = length(slope) > 1e-3 ? -normalize(slope) : any_way;
         vec2 dir = normalize(mix(out_dir, any_way, 0.4) + 1e-5);
-        born(uv, dir * uEmit.z * (0.3 + 0.9 * roll(dice)) * (1.0 + 2.0 * uMove.w), dice);
+        // A burst's share of these births are sparks (all of them in Push and Flow), on the beats the
+        // flash gate let through.
+        float spark = uLook.w > 0.5 && roll(dice) * (mode == 0 ? uEmit.x + uWave.w : uWave.w) < uWave.w ? 1.0 : 0.0;
+        born(uv, dir * uEmit.z * (0.3 + 0.9 * roll(dice)) * (1.0 + 2.0 * uMove.w), spark, dice);
         return;
     }
 
@@ -226,14 +233,15 @@ void main() {
         w = mod(w + half_frame, 2.0 * half_frame) - half_frame;
     }
     float seen = smoothstep(0.0, mode == 0 ? FADE_IN : FADE_IN_FIELD, age) * (1.0 - smoothstep(0.5, 1.0, age / life));
-    float size = s3.g;
+    float spark = s3.b * exp(-dt / SPARK_FADE);
+    float size = s3.g * (1.0 + SPARK * spark);
     if (mode == 1) {
-        seen *= CALM + (1.0 - CALM) * shove;
+        seen *= CALM + (1.0 - CALM) * max(shove, spark);
         size *= 1.0 + SWELL * shove;
     }
     seen *= 1.0 - behind;
     fragColor[0] = vec4(w, v);
     fragColor[1] = vec4(age, life, size, 1.0);
     fragColor[2] = vec4(s2.rgb, seen);
-    fragColor[3] = vec4(shove, s3.g, 0.0, 0.0);
+    fragColor[3] = vec4(shove, s3.g, spark, 0.0);
 }

@@ -32,11 +32,11 @@ with a preview, a performance note, and a download link that always points at th
 
 | Effect | What it does |
 |---|---|
-| [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines, and beats swap the characters and pop the contrast. |
+| [ASCII](docs/effects/ascii.md) | ASCII art, live: the picture redrawn in text characters, heavy ones such as `@` for bright areas and light ones such as `.` for dim ones, the way old text-only terminals drew pictures. Line characters trace the outlines; each beat sends a ripple of changed characters out from the middle, and bars pop the contrast. |
 | [Blob Track](docs/effects/blob_track.md) | The look of computer vision: whatever moves gets a numbered box that follows it, joined to its neighbors by lines, like surveillance software or a film's targeting display. Beats scramble the labels and spawn links. |
-| [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Bars set off the melts; Fosfora's builds hold them back until the drop. |
+| [Datamosh](docs/effects/datamosh.md) | Glitch art: one shot smears and melts into the next, the way a compressed video does when its keyframes (the full pictures it stores now and then) go missing. Beats make the picture bloom and catch up, bars set off the melts, and Fosfora's builds hold them back until the drop. |
 | [Glitch](docs/effects/glitch.md) | Broken digital video on the beat: every beat tears thin slivers of the picture sideways, and on the one of each bar a burst makes blocks jump, freeze or lose their colors and rows slip, then the picture is whole again. Calm by default: at most one burst a second, or none at all. |
-| [Particles](docs/effects/particles.md) | Particles peel off a subject and drift away like smoke, in the picture's colors, or fill the frame for the subject to shove through (Push) or for a stream to part round it (Flow): people in a depth map (Kinect, RealSense, a depth estimator) or a mask for the best result, and with only a webcam or a video, whatever moves. Loudness thickens the stream, beats kick the cloud outward, bars swing the wind. |
+| [Particles](docs/effects/particles.md) | Particles peel off a subject and drift away like smoke, in the picture's colors, or fill the frame for the subject to shove through (Push) or for a stream to part round it (Flow): people in a depth map (Kinect, RealSense, a depth estimator) or a mask for the best result, and with only a webcam or a video, whatever moves. Loudness thickens the stream, beats kick the cloud outward with a burst of sparks, bars swing the wind. |
 | [Point Cloud](docs/effects/point_cloud.md) | The picture as a cloud of points in 3D, each at its depth (a depth camera, a depth estimator, or the picture's brightness), seen from a camera that sways round it: people stand out from the wall behind them. Solid dots, glowing dots, or a surface of blended splats. Loudness swells the dots, beats deepen the cloud, bars swing the camera. |
 | *More on the way* | New effects are in the works. Watch or star the repo to see them land. |
 
@@ -50,9 +50,9 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Six effects are done (ASCII, Datamosh-style, Glitch and Point Cloud 0.1.0, Blob Track 0.1.1,
-Particles 0.2.0), and the Showreel holds them all; there is no release yet, so the download links on their pages start
-working with the first one.
+Six effects are done (ASCII and Datamosh-style 0.2.0, Glitch and Point Cloud 0.1.1, Blob Track
+0.1.2, Particles 0.3.0), and the Showreel holds them all; there is no release yet, so the download
+links on their pages start working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.

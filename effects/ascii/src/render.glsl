@@ -11,6 +11,7 @@ uniform vec4 uEdge;     // share of the cell one direction must hold, its share 
 uniform vec4 uLook;     // color mode (0 orange and blue, 1 source, 2 mono), mono ink r, g, b
 uniform vec4 uGlyphs;   // glyph set (its menu index + sections), beat count, share of cells that change set on a beat
 uniform vec4 uAudio;    // contrast pop 0..1 and reverse video 0..1 (both after the flash gate), build 0..1, level 0..1
+uniform vec4 uRipple;   // a beat's ripple: how far out (0..1; 0 none), the half diagonal and the ring's width (frame heights), on
 out vec4 fragColor;
 
 //@GLYPHS
@@ -59,6 +60,10 @@ void main() {
     float share = float((packed / 256) % 256) / 255.0;
     float coherence = float(packed % 256) / 255.0;
     float lum = dot(c.rgb, vec3(0.2126, 0.7152, 0.0722));
+    // In the ripple's ring? The cell's middle, in frame heights from the middle of the picture.
+    vec2 res = uTDOutputInfo.res.zw;
+    vec2 at = ((vec2(cell) + 0.5) * cs + uCell.zw - 0.5 * res) / res.y;
+    bool ring = uRipple.w > 0.5 && uRipple.x > 0.0 && abs(length(at) - uRipple.x * uRipple.y) < 0.5 * uRipple.z;
 
     // Tone: levels (a build lowers the black point, so the darks fill in), then the contrast pop.
     float white = mix(1.0, texelFetch(sTD2DInputs[2], ivec2(0), 0).r, uTone.z);
@@ -74,7 +79,7 @@ void main() {
         ch = EDGE[dir];
     } else if (l > 0.0) {
         int set = int(uGlyphs.x) % SETS_N;
-        if (roll(cell, uGlyphs.y, 0u) < uGlyphs.z)
+        if (ring || roll(cell, uGlyphs.y, 0u) < uGlyphs.z)
             set = (set + 1 + int(roll(cell, uGlyphs.y, 7u) * float(SETS_N - 1))) % SETS_N;
         int n = SET_LEN[set];
         ch = SETS[SET_START[set] + min(int(l * float(n)), n - 1)];
@@ -90,6 +95,9 @@ void main() {
         hue = c.rgb / max(max(c.r, c.g), max(c.b, 1e-3));
     else
         hue = uLook.yzw;
+    // The ripple's ring takes the other accent color (in Mono only its glyphs change).
+    if (ring && mode != 2)
+        hue = edge || (mode == 1 && dot(hue, vec3(1.0, 0.0, -1.0)) > 0.0) ? BLUE : ORANGE;
     float bright = (edge ? 0.45 + 0.55 * sqrt(l) : 0.3 + 0.7 * l) * (1.0 + 0.3 * uAudio.x);
     vec3 paper = mix(PAPER, c.rgb * 0.45, uTone.w);
     vec3 col = mix(paper, hue * bright, ink);
