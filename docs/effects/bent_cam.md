@@ -8,9 +8,7 @@ the pins of its sensor chip garble the bytes the picture travels on. The picture
 colors, flat bands, torn lines and broken blocks. Point that camera at a small screen showing its own
 picture and it films itself filming itself, so the damage repeats into trails, tunnels and spirals,
 and the screen's pixels beat against the camera's in rainbow moiré. VJs then mirror the result into a
-kaleidoscope. [dusty_whale](https://www.reddit.com/user/dusty_whale/)'s post of exactly that rig on
-r/vjing, ["Circuit bent feedback loop - The fractal microscope"](https://www.reddit.com/r/vjing/comments/1x9wez8/circuit_bent_feedback_loop_the_fractal_microscope/),
-drew hundreds of upvotes and comments asking how it was done.
+kaleidoscope.
 
 This effect builds that rig as a model rather than drawing its look. The picture is on a screen, with
 the camera's last picture over it. The camera films the screen through its lens and the red, green
@@ -259,7 +257,7 @@ the moiré from the screen's stripes, the bursts and the red guard (shared with 
 - **The idea:** [dusty_whale](https://www.reddit.com/user/dusty_whale/)'s post
   ["Circuit bent feedback loop - The fractal microscope"](https://www.reddit.com/r/vjing/comments/1x9wez8/circuit_bent_feedback_loop_the_fractal_microscope/) on r/vjing, a circuit-bent laptop
   webcam on a microscope mount filming a 7-inch screen showing its own picture, tiled into a
-  kaleidoscope. Its look and its rig, not its code, which isn't published.
+  kaleidoscope.
 - **Circuit bending:** Reed Ghazala's name and practice for shorting the circuits of cheap electronics.
 - **Video feedback** as a camera filming its own screen, with zoom, rotation and gain: J. P.
   Crutchfield, "Space-time dynamics in video feedback" (Physica D 10, 1984).
