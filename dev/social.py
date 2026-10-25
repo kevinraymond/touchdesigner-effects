@@ -1,7 +1,7 @@
 """DEV ONLY. The repository's social preview (GitHub, Settings, Social preview: what a shared link
-shows): 1280 x 640, the library's name, a line about it and its terms in its own 5 x 7 font over the eight
-cells of the tiled preview's still (dev/tile.py --still: the input, its depth map and every effect,
-3 x 3 with the first row centered). Upload docs/social-preview.png by hand; GitHub has no API for it.
+shows): 1280 x 640, the library's name and a line about it in its own 5 x 7 font over the eight cells
+of the tiled preview's still (dev/tile.py --still: the input, its depth map and every effect, 3 x 3
+with the first row centered). Upload docs/social-preview.png by hand; GitHub has no API for it.
 
     uv run --with pillow dev/social.py dev/out/record/hero_still.png docs/social-preview.png
 """
@@ -17,9 +17,7 @@ W, H = 1280, 640
 BG = (10, 10, 14)
 INK = (230, 230, 230)                       # the labels' 0.9
 ORANGE = (255, 148, 41)                     # ASCII's ORANGE, (1.0, 0.58, 0.16)
-TITLE, LINE = 'TOUCHDESIGNER EFFECTS', 'FREE DROP-IN EFFECTS THAT MOVE WITH YOUR MUSIC'
-TERMS = 'MIT LICENSE - NOTHING TO INSTALL - RUNS ON THE FREE LICENSE'
-GRAY = (150, 150, 155)
+TITLE, LINE = 'TOUCHDESIGNER EFFECTS', 'MIT DROP-IN EFFECTS THAT LOVE YOUR AUDIO'
 
 
 def font():
@@ -49,11 +47,12 @@ def main():
     boxes = [(cw // 2, 0), (cw // 2 + cw, 0)] + [(c * cw, r * ch) for r in (1, 2) for c in range(3)]
     cells = [src.crop((x, y, x + cw, y + ch)) for x, y in boxes]
     im = Image.new('RGB', (W, H), BG)
-    text(im, TITLE, 8, 70, INK)
-    text(im, LINE, 3, 160, ORANGE)
-    text(im, TERMS, 2, 214, GRAY)
     sw, sh = W // 4, W // 4 * 9 // 16          # four across, 16:9
     top = H - 2 * sh
+    # The title (8 pixels per font pixel) and the line (4) centered in the band above the cells.
+    y = (top - (7 * 8 + 40 + 7 * 4)) // 2
+    text(im, TITLE, 8, y, INK)
+    text(im, LINE, 4, y + 7 * 8 + 40, ORANGE)
     for i, cell in enumerate(cells):
         im.paste(cell.resize((sw, sh), Image.LANCZOS), ((i % 4) * sw, top + (i // 4) * sh))
     im.save(out, optimize=True)
