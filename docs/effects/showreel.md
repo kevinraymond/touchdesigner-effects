@@ -1,6 +1,6 @@
 # Showreel
 
-![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Fluid pouring flames off her as she moves, Glitch tearing her on the beat, Particles shedding glowing specks off her, and Point Cloud turning her and the lit wall behind her in 3D. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
+![Every effect in the Showreel on the same clip of a dancer in a hazy warehouse, each named in the library's pixel font. On top, what goes in: the clip and its depth map. Below: ASCII drawing her in glyphs, Blob Track boxing her moving limbs, Datamosh-style smearing her pose into the next, Fluid pouring flames off her as she moves, Glitch tearing her on the beat, Particles shedding glowing specks off her, Point Cloud turning her and the lit wall behind her in 3D, and VHS + CRT playing her off a worn tape on an old TV as a band of torn lines tears across her. Each was recorded on its own and tiled for this page; the Showreel shows one at a time](showreel.webp)
 
 **What is it?** Every effect in this library in one component, to try them all at once: drop it
 in, and the same picture runs through each effect in turn, fading from one to the next in time with
@@ -72,11 +72,11 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
-TouchDesigner 2025.33230), with the seven effects of this release inside, the dancer clip's depth on
+TouchDesigner 2025.33230), with the eight effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 4.1 ms on the GPU per frame and 1.5 ms on the CPU on average (the median
+runs one effect at a time: 4.0 ms on the GPU per frame and 1.2 ms on the CPU on average (the median
 of three runs), depending on the effect showing; during a fade two effects run, so the 95th
-percentile was 7.9 ms on the GPU and 1.7 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+percentile was 7.5 ms on the GPU and 1.7 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
 grow as the library adds effects. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -92,15 +92,15 @@ grow as the library adds effects. Nothing inside cooks while the output is unuse
 
   | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
-  | Dancer in a hazy warehouse | 1.0 | 2.0 | 3.0 | 1.0 |
-  | People crossing a plaza | 0.5 | 1.5 | 2.5 | 0.5 |
+  | Dancer in a hazy warehouse | 1.0 | 2.0 | 2.0 | 1.0 |
+  | People crossing a plaza | 0.5 | 1.5 | 1.5 | 0.5 |
   | Dancer, Every 1 | 1.0 | 2.0 | 2.5 | 1.0 |
 
   Off adds nothing to what the clips do by themselves, Calm adds at most one flash a second, and no
   setting goes past WCAG's 3 (Up to 3 per second reaches it with the effects flashing as often as
   that allows). The two dancer runs differ by which effects happened to show in the 10 seconds
-  measured. Red flashes: 0.5 a second on the dancer at Up to 3 per second, from Glitch's color split
-  (see its page), under WCAG's limit; none otherwise.
+  measured. Red flashes: 0.5 a second on the dancer and the plaza at Up to 3 per second, from
+  Glitch's color split (see its page), under WCAG's limit; none otherwise.
 - **Labels.** The names are white on a dark plate, in the library's 5 x 7 pixel font at 3 pixels
   per font pixel (at 720 pixels high; they scale with the picture), so they read on light and dark
   pictures alike.

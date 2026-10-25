@@ -16,6 +16,7 @@ uv run tests/test_guards.py          # each stale-file guard still fails when br
 uv run tests/check_tox.py            # every .tox in step with its sources (pre-commit + CI)
 dev/td.sh dev/selftest.py            # in TouchDesigner: each save-time check refuses when broken
 dev/td.sh effects/<n>/build_<n>.py   # build an effect in TouchDesigner, copy the .tox back
+dev/td.sh dev/demo.py                # after every build: load it into /tdlib_demo, where Kevin watches it grow
 dev/td.sh bundles/showreel/build_showreel.py   # then the showreel, which embeds every effect
 ```
 

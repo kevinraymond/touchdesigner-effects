@@ -34,7 +34,7 @@ MORE, MORE_SCALE, MORE_PAD = '& MORE', 2, 6  # the badge in the last cell's corn
 TITLE, LINE = 'TOUCHDESIGNER EFFECTS', 'MIT DROP-IN EFFECTS THAT LOVE YOUR AUDIO'
 TITLE_SCALE, LINE_SCALE = 8, 4
 INPUTS = (('input', ('INPUT',)), ('depth', ('DEPTH MAP', '(OPTIONAL)')))
-TITLES = {'datamosh': 'DATAMOSH-STYLE'}      # as the effects title themselves; the rest are their names
+TITLES = {'datamosh': 'DATAMOSH-STYLE', 'vhs_crt': 'VHS + CRT'}   # as the effects title themselves; the rest are their names
 
 
 def font():

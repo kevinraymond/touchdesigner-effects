@@ -36,6 +36,10 @@ __file__ = '/path/to/touchdesigner-effects/effects/glow/build_glow.py'; exec(ope
 It creates `/project1/glow` (replacing any previous copy), checks it, and writes
 `effects/glow/glow.tox` and `effects/glow/glow.json`. Commit both.
 
+Every build of an effect in progress goes into the demo as well, so it can be watched as it grows on the
+Mac, from the first build that passes the save checks: `dev/td.sh dev/demo.py` after the builder (see
+The dev loop) reloads whatever changed into `/tdlib_demo`.
+
 A builder has this shape:
 
 ```python
@@ -182,6 +186,17 @@ definitions and area rule (see The dev loop). WCAG's red test works in linear li
 as saturated red when red is 80% of the three there, so a dark orange (green at 0.35 of red in sRGB,
 0.1 in linear light) still counts. A color that flickers keeps green at 0.6 of red or more (Fluid's
 flames, whose red edges measured 2.5 red flashes a second with Flashing Off).
+
+Three more traps, from VHS + CRT. The red test is all or nothing at that 80%, and `dev/flash.py` takes
+it per pixel: noise that changes every frame, however faint, makes any red sitting near the line flash
+(the flowers: 2 red flashes a second with Flashing Off), and a CRT mask's red stripes over an orange
+are saturated-red pixels by themselves. VHS + CRT eases every red share past 0.73 toward 0.775 by
+adding green and blue (`effects/vhs_crt/src/red_guard.glsl`), on the picture and again on every
+output pixel; a share is linear, so no area can average past it. A pattern whose sign flips every
+frame (NTSC's subcarrier phase, every field) flickers wherever it doesn't cancel over a cell, which is
+everywhere on fine detail. And one gated event that moves the whole picture (a roll) passes every
+point through light and dark several times: several flashes, whatever the gate counts. A jump and a
+jump back is one.
 
 ## The audio input
 
