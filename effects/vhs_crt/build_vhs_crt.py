@@ -33,7 +33,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 # The tape's raster: this many samples a line, whatever the picture's size (each a fraction of the width;
 # the shaders turn the deck's bandwidths into samples from the picture's aspect).
 RASTER_W = 1280
@@ -234,7 +234,7 @@ SLIPPED = ("{} if not {} and op('burst')[0] > 0.5 and op('drop_kind')[0] > 0.5 a
            "else 0").format(SLIP, INK)
 KICK = "op('beat_env')[0] if parent().par.Flashing != 'off' and parent().par.Bursts != 'off' else 0"
 TAPE = dict(
-    uT=(Expr('absTime.seconds'), par('Lines'), Expr(KICK), Expr(SLIPPED)),
+    uT=(clock_seconds(), par('Lines'), Expr(KICK), Expr(SLIPPED)),
     uTape=(par('Tape'), par('Wear'),
            Expr("min(1, parent().par.Tracking + (0.5 * op('audio')['build'] if parent().par.Moments else 0))"),
            par('Headswitch')),

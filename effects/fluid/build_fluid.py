@@ -30,7 +30,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 # Unwired, it shows grass swaying in front of a colorful building (TouchDesigner's sample) with a soft white
 # ball circling over it on a slow figure of eight, BALL_TIME seconds round: the grass alone moves too little and
 # too thinly to pour much, and the ball's trail shows what the effect does at once.
@@ -249,7 +249,7 @@ for g in (advect, divergence):
 dye = glsl(comp, 'dye', 1400, 100, [source, dye_fb, velocity, emit], lib_glsl(_ROOT, 'common.glsl') + src('dye.glsl'),
            'What the fluid carries: ink, smoke or heat, carried by the velocity, poured in where the picture emits.',
            fmt='rgba16float',
-           uT=(DT, Expr('absTime.seconds')),
+           uT=(DT, clock_seconds()),
            uD=(Expr("parent().par.Amount * {} * ((1 - parent().par.Loudness + parent().par.Loudness * ({} + {} * "
                     "op('level_lag')[0])) if op('audio')['source'] > 0 else 1) * (1 + {} * parent().par.Puff * "
                     "op('puff_env')[0])".format(POUR, STREAM[0], STREAM[1], FLARE)),

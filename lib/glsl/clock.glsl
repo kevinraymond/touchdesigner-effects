@@ -8,14 +8,15 @@
 // last cut was (seconds).
 uniform vec4 uS;    // x: change that makes a new frame, y: least change that is a cut,
                     // z: a cut is at least this many times the running mean, w: the mean's blend
-uniform vec4 uC;    // x: seconds now (it also makes this pass cook every frame), y: seconds between cuts
+uniform vec4 uC;    // x: seconds now (clock_seconds(): wrapped every 16384 s, so times are compared modulo
+                    // that; it also makes this pass cook every frame), y: seconds between cuts
 out vec4 fragColor;
 void main() {
     float d = texelFetch(sTD2DInputs[0], ivec2(0), 0).r;
     vec4 prev = texelFetch(sTD2DInputs[1], ivec2(0), 0);
     float mean = prev.b, last = prev.a;
     float fresh = step(uS.x, d);
-    float cut = fresh * step(max(uS.y, uS.z * mean), d) * step(uC.y, abs(uC.x - last));
+    float cut = fresh * step(max(uS.y, uS.z * mean), d) * step(uC.y, mod(uC.x - last, 16384.0));
     if (fresh > 0.5 && cut < 0.5) mean = mix(mean, d, uS.w);
     if (cut > 0.5) last = uC.x;
     fragColor = vec4(fresh, cut, mean, last);

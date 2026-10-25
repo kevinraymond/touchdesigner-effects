@@ -42,7 +42,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.3.1'
+VERSION = '0.3.2'
 # The particles' buffers: at most PW x PH alive at once.
 PW, PH = 256, 256
 # The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
@@ -355,7 +355,7 @@ air = glsl(comp, 'air', 600, -800, [subject_wide, subject_middle], src('air.glsl
                  Expr("0 if parent().par.Behavior == 'push' else parent().par.Drift * math.cos(math.radians("
                       "parent().par.Direction) + op('gust_lag')[0])"),
                  Expr("{} * parent().par.Turbulence * (1 + 2 * op('build_lag')[0] * parent().par.Moments)".format(AIR_SWIRL)),
-                 Expr('absTime.seconds')),
+                 clock_seconds()),
            uFrame=(Expr("op('source').width / max(1, op('source').height)"),))
 air_in = mk(comp, switchTOP, 'air_in', 800, -800, [none, air], 'The air, while Behavior is Push or Flow.',
             index=Expr("0 if parent().par.Behavior == 'emit' else 1"))
@@ -371,7 +371,7 @@ alive = mk(comp, analyzeTOP, 'alive_stats', 200, 600, [fb[1]], 'How many particl
 sim = glsl(comp, 'sim', 400, 300, fb + [emit, subject_blur, source, alive, emit_stats, air_in], src('sim.glsl'),
            'The particles: born on the subject (or off it), carried by the air, the turbulence and the music.',
            res=(PW, PH), fmt='rgba32float',
-           uClock=(DT, Expr('absTime.seconds'), Expr('absTime.frame % 16777216'),
+           uClock=(DT, clock_seconds(), Expr('absTime.frame % 16777216'),
                    Expr("op('source').width / max(1, op('source').height)")),
            uEmit=(Expr("parent().par.Rate * (1 if parent().par.Behavior == 'emit' else {}) * ((1 - parent().par.Loudness + parent().par.Loudness * ({} + {} * op('level_lag')[0]))"
                        " if op('audio')['source'] > 0 else 1) * min(absTime.stepSeconds, 0.1)".format(FIELD, STREAM[0], STREAM[1])),

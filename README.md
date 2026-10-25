@@ -52,8 +52,8 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 ## Status
 
-Eight effects are done (ASCII, Datamosh-style and VHS + CRT 0.2.0, Fluid 0.1.0, Glitch 0.1.1, Blob
-Track and Point Cloud 0.1.2, Particles 0.3.1), and the Showreel holds them all; there is no release yet, so the download
+Eight effects are done (ASCII 0.2.0, Datamosh-style and VHS + CRT 0.2.1, Fluid 0.1.1, Glitch 0.1.1,
+Blob Track and Point Cloud 0.1.3, Particles 0.3.2), and the Showreel holds them all; there is no release yet, so the download
 links on their pages start working with the first one.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.

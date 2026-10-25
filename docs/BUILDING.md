@@ -90,6 +90,18 @@ the input's frames, as Fluid and VHS + CRT's plasma use it; `lib_module(_ROOT, '
 the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and
 `lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
 
+A shader takes the time as `clock_seconds()`, never `absTime.seconds` itself. A uniform is a
+32-bit float and `absTime.seconds` counts from TouchDesigner's start, so after 12 hours it is good to
+1/256 s and after 3 days to 1/32 s: frame-timed noise, gaps between frames and smooth motion all
+coarsen the longer a show runs, and two passes that each work out "which update is this" from it
+disagree near its start (VHS + CRT's e-ink replayed updates as flashes, board #4680).
+`clock_seconds()` wraps it every `CLOCK` seconds (16384, about 4.6 hours), which keeps it to 1 ms:
+take differences modulo `CLOCK` (lib's clock, pace and speed do), accept that smooth motion driven by
+it jumps once at each wrap, and count anything that must be exact (which update, which frame) in
+Python, whose floats are 64-bit. `assert_idiomatic` refuses a uniform whose expression grows with
+`absTime.seconds` (not wrapped with `%`, not turned into an angle with `math.sin` or `math.cos` in
+Python); CHOP channels are 32-bit too, so a script reads `absTime.seconds` itself.
+
 ## Building a bundle
 
 A bundle is a component that embeds others: `bundles/showreel/build_showreel.py` finds every
@@ -124,8 +136,8 @@ dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`)
 - it breaks a TouchDesigner idiom a script can judge (`assert_idiomatic`, items named in
   [TD_IDIOMS.md](TD_IDIOMS.md)): pages out of order, Version editable, a parameter saved off its
   default, a node that doesn't show the output, extensions not initialized on start, a Script
-  CHOP not cooking `WHEN_USED`, Python every frame or a forced cook, or a flashing effect
-  without the standard Flashing parameter;
+  CHOP not cooking `WHEN_USED`, Python every frame or a forced cook, a shader handed the raw clock
+  (below), or a flashing effect without the standard Flashing parameter;
 - it doesn't load clean (`assert_loads_clean`): any error or warning with nothing wired, in it
   or in a second copy beside it. TouchDesigner reports a GLSL compile error as a warning, so
   warnings count.

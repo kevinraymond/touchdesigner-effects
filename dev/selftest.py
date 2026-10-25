@@ -133,6 +133,8 @@ BREAKS = [
     ('a forced cook', lambda c: setattr(_extra(textDAT, 'forcer', 'x')(c), 'text',
                                         "parent().op('out_top').cook(force = True)"), 'forces a cook'),
     ('flashing without the Flashing parameter', _flashing_without_par, 'no Flashing parameter'),
+    ('a shader handed the raw clock', lambda c: uniforms(c.op('glsl'), uTime=Expr('absTime.seconds')),
+     'clock_seconds()'),
     ('an error inside', _shader_error, 'does not load clean'),
     ('an expression error nothing cooks', _hidden_expression_error, "expression 'sin(1)' fails"),
     ('external .tox', _set('', externaltox='/Users/someone/effect.tox'), 'points outside'),

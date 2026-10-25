@@ -3,7 +3,7 @@
 // Lengths along a line are in picture heights (H). NTSC's active line lasts 52.6 us and spans 4/3 H, so one
 // H of width passes in 39.45 us and a frequency of f MHz is f x 39.45 cycles per H. The raster holds one
 // texel per sample: as wide as the picture, Lines tall, each line one row, line 0 at the top.
-uniform vec4 uT;      // x seconds, y Lines, z the beat's kick (0-1), w a drop's slip (of a frame)
+uniform vec4 uT;      // x seconds (lib clock_seconds(): wrapped every 16384 s), y Lines, z the beat's kick (0-1), w a drop's slip (of a frame)
 uniform vec4 uTape;   // x Tape on, y Wear 0-1, z Tracking 0-1 (with a build), w Head Switching on
 uniform vec4 uBurst;  // x the burst's envelope (0-1), y its number (the seed), z level 0-1
 #define US_PER_H 39.45

@@ -35,10 +35,18 @@ WINDOW_W, WINDOW_H = 1280, 720
 # allows between two flashes. Never under 1/3 s: WCAG 2.3.1 allows three flashes a second.
 FLASHING = (('off', 'Off'), ('calm', 'Calm'), ('wcag', 'Up to 3 per second'))
 FLASH_INTERVAL = {'off': None, 'calm': 1.0, 'wcag': 1 / 3}
+# The clock a shader gets (clock_seconds()): absTime.seconds wrapped every CLOCK seconds (about 4.6 h).
+# A uniform is a 32-bit float, and absTime.seconds counts from TouchDesigner's start: after 12 hours it
+# is good to 1/256 s, after 3 days to 1/32 s (two frames), so frame-timed noise, gaps between frames
+# and smooth motion all coarsen the longer a show runs (board #4680). Wrapped, it stays within 1 ms.
+# Shaders take differences of it modulo CLOCK (lib/glsl's clock, pace, speed); anything that must be
+# exact (which update, which frame) is counted in Python, as VHS + CRT's e-ink and plasma do.
+CLOCK = 16384
 
 _ABSOLUTE = re.compile(r'^(/|[A-Za-z]:[/\\]|\\\\)')
 _ABSOLUTE_OP_CALL = re.compile(r"""op\(\s*['"]/(?!sys/|ui/)""")
 _EXTENSION_PAR = re.compile(r'ext\d+object$')
+_PERIODIC = re.compile(r'math\.(sin|cos)\(')
 
 
 # ---- Sources and hashes (also used outside TouchDesigner) -----------------------------------
@@ -127,7 +135,7 @@ def docked(o, suffix, text, comment):
 
 
 def uniforms(g, **values):
-    """Set a GLSL TOP's vector uniforms: uniforms(g, uAmount=0.5, uTint=(1, 0.5, 0), uTime=Expr('absTime.seconds')).
+    """Set a GLSL TOP's vector uniforms: uniforms(g, uAmount=0.5, uTint=(1, 0.5, 0), uTime=clock_seconds()).
     Each value is a number, an Expr, or a tuple of up to four of them (x, y, z, w)."""
     g.seq.vec.numBlocks = max(len(values), 1)
     for i, (name, v) in enumerate(values.items()):
@@ -200,7 +208,7 @@ def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-
                             'What change saw last frame: its g is the luma then.', top='change')
     ops['change'] = glsl(comp, 'change', x + 200, y + 450, [lum8, seen], lib_glsl(root, 'change.glsl'),
                          'Per pixel, how much the input changed since the last frame seen.', fmt='rgba32float',
-                         uTime=Expr('absTime.seconds'))
+                         uTime=clock_seconds())
     avg = ops['change_avg'] = mk(comp, analyzeTOP, 'change_avg', x + 400, y + 450, [ops['change']],
                                  'The mean change: 0 when no new frame came.', op='average',
                                  analyzechannel='independent')
@@ -208,12 +216,19 @@ def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-
                                     top='clock')
     ops['clock'] = glsl(comp, 'clock', x + 600, y + 450, [avg, clock_fb], lib_glsl(root, 'clock.glsl'),
                         'One pixel: is this a new input frame, is it a cut (experimental).', fmt='rgba32float',
-                        uS=(new_frame, cut[0], cut[1], 0.1), uC=(Expr('absTime.seconds'), cut[2]))
+                        uS=(new_frame, cut[0], cut[1], 0.1), uC=(clock_seconds(), cut[2]))
     ops['lk8'] = glsl(comp, 'lk8', x + 400, y + 300, [lum8, ops['lum8p'], lum8], lib_glsl(root, 'lk.glsl'),
                       'Optical flow at 1/8.', fmt='rgba32float', uP=(0, 1e-4, 4))
     ops['lk4'] = glsl(comp, 'lk4', x + 600, y + 200, [lum4, ops['lum4p'], ops['lk8']], lib_glsl(root, 'lk.glsl'),
                       'Optical flow at 1/4, starting from lk8.', fmt='rgba32float', uP=(1, 1e-4, 8))
     return ops
+
+
+def clock_seconds():
+    """absTime.seconds for a shader's uniform, wrapped every CLOCK seconds so a 32-bit float keeps it to 1 ms
+    however long TouchDesigner has run. Smooth motion driven by it jumps once at each wrap; take
+    differences modulo CLOCK. assert_idiomatic refuses a shader handed the raw clock."""
+    return Expr('absTime.seconds % {}'.format(CLOCK))
 
 
 def flow_speed(comp, root, mo, start, x=400, y=750, dead=0.25, hold=0.3):
@@ -226,11 +241,11 @@ def flow_speed(comp, root, mo, start, x=400, y=750, dead=0.25, hold=0.3):
     pace_fb = mk(comp, feedbackTOP, 'pace_fb', x, y + 450, [start], "pace's last frame.", top='pace')
     pace = glsl(comp, 'pace', x, y + 300, [mo['clock'], pace_fb], lib_glsl(root, 'pace.glsl'),
                 'One pixel: when the last new input frame came, and the gap between frames.', fmt='rgba32float',
-                uP=(Expr('absTime.seconds'), 0.25))
+                uP=(clock_seconds(), 0.25))
     motion_fb = mk(comp, feedbackTOP, 'motion_fb', x, y + 150, [start], "motion's last frame.", top='motion')
     motion = glsl(comp, 'motion', x, y, [mo['lk4'], motion_fb, pace], lib_glsl(root, 'speed.glsl'),
                   "The input's motion at a quarter of its size, as a speed, held between the input's frames.",
-                  fmt='rgba32float', uM=(Expr('absTime.seconds'), Expr('min(absTime.stepSeconds, 0.05)'), dead, hold))
+                  fmt='rgba32float', uM=(clock_seconds(), Expr('min(absTime.stepSeconds, 0.05)'), dead, hold))
     return pace, motion
 
 
@@ -563,6 +578,13 @@ def assert_idiomatic(comp):
             problems.append('C2: {} runs Python every frame (Frame Start/End on)'.format(o.path))
         if o.isDAT and o.name != 'README' and 'cook(force=True)' in o.text.replace(' ', ''):
             problems.append('C2: {} forces a cook'.format(o.path))
+        # A uniform whose value grows with absTime.seconds (not wrapped with %, not turned into an angle's
+        # sine or cosine in Python, which works in double precision) coarsens as TouchDesigner runs.
+        for p in o.pars('vec*value*'):
+            if (p.mode == ParMode.EXPRESSION and 'absTime.seconds' in p.expr and '%' not in p.expr
+                    and not _PERIODIC.search(p.expr)):
+                problems.append('C4: {} hands its shader absTime.seconds ({}), a 32-bit float that coarsens as '
+                                'TouchDesigner runs; use clock_seconds(), or count in Python'.format(p.owner.path, p.name))
     if 'flashing' in comp.tags:
         flash = getattr(comp.par, 'Flashing', None)
         if flash is None:

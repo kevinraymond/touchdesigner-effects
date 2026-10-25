@@ -15,7 +15,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 # Unwired, the effect cuts every SAMPLE_CUT seconds between two of TouchDesigner's sample pictures,
 # since datamosh needs a cut to show: grass swaying in front of a colorful building, and jellybeans
 # under a slow drift, turn and zoom (whole-picture motion for the old shot to be dragged by).
@@ -318,7 +318,7 @@ mosh = glsl(comp, 'mosh', 600, 0, [source, mosh_fb, prev, motion, clock],
             uPush=(SURGE_PUSH, BLOOM, CATCH, SKIP_PUSH),
             uAud=(Expr("op('audio')['level']"), Expr("op('audio')['build']"), Expr("op('skip_env')['skip']"),
                   Expr("op('key_env')['key']")),
-            uT=(Expr('absTime.seconds'), Expr('absTime.stepSeconds')))
+            uT=(clock_seconds(), Expr('absTime.stepSeconds')))
 
 finish_effect(comp, mosh, VERSION, page)
 save_effect(comp, _HERE, _ROOT)

@@ -8,7 +8,8 @@
 // A cut brings no motion: the flow across a cut is meaningless.
 // Inputs: 0 the flow (lk4: rg displacement in UV units, b confidence), 1 this pass's previous output
 // (Feedback TOP), 2 the pace (1 x 1). Out: rg the speed (cells per second), b the confidence, a 1.
-uniform vec4 uM;   // x: seconds now, y: this frame's step (s), z: dead zone (cells per frame), w: hold (s)
+uniform vec4 uM;   // x: seconds now (clock_seconds(), wrapped every 16384 s: compared modulo that), y: this
+                   // frame's step (s), z: dead zone (cells per frame), w: hold (s)
 out vec4 fragColor;
 void main() {
     vec2 uv = vUV.st;
@@ -16,7 +17,7 @@ void main() {
     vec4 prev = texture(sTD2DInputs[1], uv);
     if (pace.a > 0.5) { fragColor = vec4(0.0, 0.0, 0.0, 1.0); return; }
     if (pace.b < 0.5) {
-        float idle = uM.x - pace.r;
+        float idle = mod(uM.x - pace.r, 16384.0);
         fragColor = vec4(prev.rgb * (idle > uM.w ? exp(-uM.y / 0.15) : 1.0), 1.0);
         return;
     }

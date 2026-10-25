@@ -27,7 +27,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 # The tracker and the mask run on a small copy: OpenCV's contour pass and the GPU-to-CPU
 # download scale with pixels (30 ms at full size on a speckly mask, under 3 ms here), and the
 # Blob Track TOP's positions come back normalized anyway.
@@ -53,7 +53,7 @@ SHOW_AFTER, HOLD, FADE_IN, FADE_OUT = 0.4, 0.5, 0.35, 0.6
 # standing out within about a second, not three, while the walker (never still that long) does.
 BG_SLOW, BG_FAST, BG_STILL = 1.5, 0.25, 0.4
 FLASH_SPACING = {'calm': 1.1, 'other': 0.55}
-T = Expr('absTime.seconds')
+T = clock_seconds()
 DT = Expr('absTime.stepSeconds')
 
 

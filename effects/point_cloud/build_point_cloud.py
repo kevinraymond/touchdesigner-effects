@@ -33,7 +33,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.2'
+VERSION = '0.1.3'
 # Detail: rows of points (columns follow the picture's shape), at most 640 x 360 = 230,400 points.
 ROWS = (180, 270, 360)
 # Depth Type's Stand Out search runs on a small copy of the depth, as in Particles: it reads a whole
@@ -265,7 +265,7 @@ def moves(calm=1):
     calm scales the swell and the burst."""
     return (Expr("parent().par.Swell * {} * op('beat_env')[0]".format(SWELL_DEEP * calm)),
             Expr("op('build_lag')[0] * parent().par.Moments"),
-            Expr("op('drop_env')[0] * parent().par.Moments * {}".format(calm)), Expr('absTime.seconds'))
+            Expr("op('drop_env')[0] * parent().par.Moments * {}".format(calm)), clock_seconds())
 
 
 COLOR = Expr('parent().par.Color.menuIndex')
