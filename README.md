@@ -56,8 +56,8 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 ## Status
 
 Eleven effects are done (ASCII 0.2.0, Bent Cam 0.1.1, Datamosh and VHS + CRT 0.2.1, Fluid 0.1.1,
-Glitch 0.1.1, Blob Track and Point Cloud 0.1.3, Particles 0.3.2, Pixel Sort and Slit-Scan 0.1.0), and the Showreel holds them all; there is no release yet, so the download
-links on their pages start working with the first one.
+Glitch 0.1.1, Blob Track and Point Cloud 0.1.3, Particles 0.3.2, Pixel Sort and Slit-Scan 0.1.0), and the Showreel holds them all. All of them are in the first
+release, [v0.1.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.1.0).
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.
