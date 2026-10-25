@@ -1,0 +1,91 @@
+Pixel Sort {v}: runs of pixels sorted into streaks, live, along any angle. touchdesigner-effects, MIT.
+Docs: https://github.com/kevinraymond/touchdesigner-effects/blob/main/docs/effects/pixel_sort.md
+
+Pixel sorting rearranges the pixels of a picture in order, darkest to brightest for example, along its rows or
+columns. Sorting whole rows smears the picture into gradients, so the art form sorts only runs of pixels, spans: say
+the pixels whose brightness lies between two thresholds. Those melt into streaks while the rest of the picture stays
+as it was, and a face or a sky seems to pour or drip.
+
+This effect really sorts: every span of every line, every frame, in full. The lines can run at any angle. Spans can
+be the pixels between two brightness thresholds, the stretches between the picture's edges, what lies inside a depth
+map or mask on input 3, or whole lines, all optionally cut at random into many lengths. A span sorts by brightness,
+hue or saturation. The music turns the sort end over end on the bars, tears thin streaks on the beats, widens the
+spans as it gets louder, and sorts every line whole on a drop.
+
+USE
+Drag pixel_sort.tox into your network. It shows TouchDesigner's sample movie, a tree against bright foliage, with the
+light between the branches pouring down. Wire any TOP into input 1, and the result is on output 1 at the input's size.
+You can also wire audio or beat channels into input 2 and a depth map or mask into input 3 (below). Open Window shows
+the picture full size, and Esc closes the window.
+
+THE PAGE
+Spans picks which runs sort: Brightness (between Low and High), Edges (between edges stronger than Edge), Depth or Mask
+(where input 3 lies between Low and High) or Whole Lines. Cut Every cuts spans at random points about that many pixels
+apart. Sort By sorts by Brightness, Hue or Saturation. Angle is the way each span's values rise, 270 (the default)
+putting the brightest at the bottom, and Spin turns it, at most {spin:g} degrees a second. Flips, Beat Kick, Loudness,
+Song Moments and Length are the music's (below).
+
+AUDIO (input 2, optional)
+Fosfora's signal is the best input. Run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's
+integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it into input 2.
+With Flips at On Bars, the default, the sort turns end over end on the one of each bar, so every span's bright end
+swaps with its dark end. On Beats flips it on every beat, Steady every {steady:g} s, and Off never. On every beat three
+thin slivers of lines sort whole from end to end, against the grain, for {tear:g} s (Beat Kick says how wide). Louder
+music widens the spans, so more of the picture sorts (Loudness), moving Low toward black and High toward white. With Song Moments on, a build widens them as it rises, and a drop
+sorts every line whole for Length seconds (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio
+Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo, and a bar every 4 beats.
+That clock is experimental and can still add or miss beats. TouchDesigner's audioAnalysis gives beats from its kick or
+onset channels. With nothing wired, the sort flips every {steady:g} s and tears with each flip.
+
+DEPTH OR MASK (input 3, optional)
+With Spans at Depth or Mask, input 3 says what sorts: grayscale, brighter nearer (or inside a mask), between Low and
+High. Low 0.5 and High 1 sort what lies inside a mask, or what is near in a depth map, and leave the rest as it was.
+With nothing on input 3, input 1's brightness stands in.
+
+FLASHING
+A flip changes every span at once, and so does a drop's whole sort, so both count as flashes. They pass one gate that
+follows the Flashing parameter. Off never lets one through, Calm (the default) at most one a second, and Up to 3 per
+second is the WCAG 2.3.1 limit, which no setting exceeds. After the gate a budget keeps this effect well under that
+limit. The beat's tears cover too little of the picture to count, and Flashing Off stops them too. Span ends can
+flicker with the picture's own noise, so a pixel joins or leaves a span only once it is clearly inside or outside the
+range (hysteresis), and loudness widens the spans gradually. Turning the angle moves the steps in the lines, and every
+span a step crosses sorts anew, so Spin stops at {spin:g} degrees a second: faster, whole spans changed often enough to
+flash with Flashing Off.
+
+INSIDE
+key works out, for each pixel, the value it sorts by, whether it lies in a span and whether its line is cut there,
+reading its own last frame (key_fb) for the hysteresis and input 3 through depth. sort is a compute shader with one
+workgroup a line. It takes the line's pixels toward Angle, finds where each span starts, sorts the whole line once by
+span start, value and place, which sorts each span within itself and leaves the spans where they were, and writes each
+pixel back where it lands. Input 2 goes through audio (lib audio_in), and counts and steps turn its counts into steps.
+beat_on, bar_on, steady_on and drop_on pick the flips and drops asked for, and flash_limit, flash and flash_budget gate
+them. flip_n and flip_parity turn the sort over, and whole sorts every line whole on a drop. beat_env and beat_n open
+each beat's tears, level_smooth and widen widen the spans, and turned turns Angle by Spin.
+
+CREDITS
+- Pixel sorting with threshold spans as an art form, after Kim Asendorf's ASDFPixelSort (Processing, 2010,
+  https://github.com/kimasendorf/ASDFPixelSort, no license stated). Followed, not copied.
+- The span kinds (between two brightness thresholds, between edges, whole lines with random lengths) and the defaults
+  Low 0.25 and High 0.8, after satyarth's pixelsort (Python, MIT, https://github.com/satyarth/pixelsort). Followed,
+  not copied.
+- The bitonic sorting network, K. E. Batcher, "Sorting networks and their applications" (AFIPS Spring Joint Computer
+  Conference, 1968). Sorting each span inside one sort of the whole line, by a key that starts with where the span
+  starts, is a widely known technique (a segmented sort). Where each span starts comes from a parallel max-scan, after
+  W. D. Hillis and G. L. Steele, "Data parallel algorithms" (Communications of the ACM, 1986).
+- Edges by the Sobel operator, and hue and saturation by the usual HSV formulas: widely known techniques.
+- Chris Wellons' lowbias32 integer hash (hash-prospector, public domain) places the cuts and the tears.
+- Read during the survey, not used: MaxMainio's Sort (MIT, whole rows or columns), aaronmylespereira's pixelSorting (a
+  feedback look from a tutorial), Lou Evoy's Pixel Sort TOP (paid, NVIDIA only), a 2017 forum port of a Shadertoy
+  sorter, and elekktronaut's Pixel Sorting tutorial.
+- Beats from raw audio (the library's audio input). A kick is a jump in the low band's loudness, and the beat clock
+  takes its tempo from the gaps between kicks, each voting for the beat lengths it is a whole multiple of. That is
+  inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic Extraction of Tempo and Beat from
+  Expressive Performances" (J. New Music Research, 2001). Followed, not copied.
+- Flash limits from WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+Everything else (the digital lines at any angle, the compute shader, the hysteresis, the tears and the music) is
+written for this library. MIT.
+
+UPDATING
+Dragging a .tox in embeds a copy. To update, delete this one and drag in the new pixel_sort.tox from
+https://github.com/kevinraymond/touchdesigner-effects/releases/latest, or point the COMP's External .tox at a
+downloaded copy. The version and the build it was saved in are on the About page.

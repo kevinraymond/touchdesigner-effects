@@ -230,6 +230,12 @@ spreads one line's flicker over a whole area, wider the faster the film runs, so
 stopped adding flashes, and the red guard covers every pixel it shows (guarding only the film as it was laid still
 measured 2 red flashes a second: resampling the moving film mixed one pixel's red with another's green and blue).
 
+One more from Pixel Sort. A sort ties every pixel of a span to every other: when a span gains or loses a pixel at an
+end, its whole streak sorts anew. So whatever moves the ends of spans from frame to frame flashes, with Flashing Off as
+much as on. Noise in the picture at a threshold did (hysteresis keeps a pixel in or out until it is clearly past it),
+and so did turning the angle, which moves the steps in the digital lines so pixels change lines: Spin 20 measured 1.5
+flashes a second on the plaza with Flashing Off, where the clip alone measures 0.5, and Spin stops at 10.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -405,6 +411,13 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   one Python call write nothing (2025.33230, `dev/probes/texture3d.py`, `texture3d_writes.py`). It writes only while
   something pulls it, so its history goes stale while the effect is unused. Slit-Scan stamps every slot with which cook
   wrote it in a third ring beside the picture and its flow, and finds its slots from the stamps.
+- A GLSL TOP runs a compute shader with Mode Compute (`mode`), the shader in the DAT it docked as `<name>_compute` (a new
+  GLSL TOP docks `_compute`, `_pixel` and `_info`, so a compute TOP fills `_compute` and leaves `_pixel` at its default,
+  as a pixel TOP leaves `_compute`). Auto Dispatch Size, on by default, dispatches enough workgroups to tile the output;
+  a shader that gives each workgroup one line turns it off and sets Dispatch Size. Shared memory with
+  `memoryBarrierShared(); barrier();` works on the Mac, `local_size_x` up to 1024 compiles, and
+  `imageStore(mTDComputeOutputs[0], ...)` writes any pixel, not only the invocation's own (2025.33230,
+  `dev/probes/compute_sort.py`). Pixel Sort sorts lines of up to 2,048 pixels in shared memory, one workgroup a line.
 - `TOP.gpuMemory` gives a TOP's GPU memory in bytes (Slit-Scan's history: 503 MB for 128 slots of 1280 x 720 8-bit,
   about 7% over width x height x 4 x slots). `TOP.sample()` returned red in the alpha place on 32-bit float GLSL
   outputs: don't trust a pixel's alpha read that way.
