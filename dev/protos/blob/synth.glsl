@@ -3,7 +3,12 @@
 uniform float uTime;
 out vec4 fragColor;
 
-float h21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+// Chris Wellons' lowbias32 integer hash (hash-prospector, public domain, the Unlicense).
+uint lowbias32(uint x) {
+    x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
+    return x;
+}
+float h21(vec2 p) { return float(lowbias32(floatBitsToUint(p.x) ^ lowbias32(floatBitsToUint(p.y)))) / 4294967295.0; }
 float vnoise(vec2 p) {
     vec2 i = floor(p), f = fract(p);
     f = f * f * (3.0 - 2.0 * f);

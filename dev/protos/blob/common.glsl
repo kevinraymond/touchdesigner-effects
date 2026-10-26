@@ -27,11 +27,13 @@ int digitOf(int n, int place) {
 
 int hexOf(int n, int place) { return (n >> (4 * place)) & 15; }
 
-float hash11(float n) { return fract(sin(n * 127.1 + 311.7) * 43758.5453); }
-int ihash(int n) {
-    n = (n << 13) ^ n;
-    return (n * (n * n * 15731 + 789221) + 1376312589) & 0x7fffffff;
+// Chris Wellons' lowbias32 integer hash (hash-prospector, public domain, the Unlicense).
+uint lowbias32(uint x) {
+    x ^= x >> 16; x *= 0x7feb352du; x ^= x >> 15; x *= 0x846ca68bu; x ^= x >> 16;
+    return x;
 }
+float hash11(float n) { return float(lowbias32(floatBitsToUint(n))) / 4294967295.0; }
+int ihash(int n) { return int(lowbias32(uint(n)) & 0x7fffffffu); }
 
 float lum(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
