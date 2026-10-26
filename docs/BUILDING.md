@@ -14,7 +14,8 @@ lib/glsl/                     shaders several effects share: depth_near.glsl (in
                               depth_find.glsl (what stands in front of its surroundings); lum, change, clock and lk
                               (the input's motion: optical_flow() builds them); pace and speed (that motion as a
                               speed: flow_speed()); common.glsl (Catmull-Rom resampling, a hash);
-                              red_guard.glsl (keeps reds short of WCAG's red flash line)
+                              red_guard.glsl (keeps reds short of WCAG's red flash line); tensor, tensor_blur
+                              and tensor_flow (the direction of the picture's edges: structure_tensor())
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -87,7 +88,10 @@ only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` 
 an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's motion as Datamosh and
 Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or a cut, and Lucas-Kanade
 optical flow, each size following the input), and `flow_speed()` turns that flow into a speed, held between
-the input's frames, as Fluid and VHS + CRT's plasma use it; `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as
+the input's frames, as Fluid and VHS + CRT's plasma use it; `structure_tensor(comp, _ROOT, source)` gives the
+direction of the picture's edges at every pixel and how clear it is (the smoothed structure tensor's minor eigenvector
+and anisotropy, as Paint uses it; Reaction-diffusion and Pencil are to share it); `lib_module(_ROOT, 'font5x7')` loads
+another `lib/` file, such as
 the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and
 `lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
 
@@ -230,6 +234,10 @@ spreads one line's flicker over a whole area, wider the faster the film runs, so
 stopped adding flashes, and the red guard covers every pixel it shows (guarding only the film as it was laid still
 measured 2 red flashes a second: resampling the moving film mixed one pixel's red with another's green and blue).
 
+One more from Paint. A hard threshold turns any change in what it thresholds into flips between its two tones: a beat's
+band of broader strokes, which keeps each area's colors in Oil and Watercolor, flipped whole patches between ink and paper
+in Ink (the flowers measured 2 flashes a second under the stress beat, 1 without the band), so Ink doesn't sweep.
+
 One more from Pixel Sort. A sort ties every pixel of a span to every other: when a span gains or loses a pixel at an
 end, its whole streak sorts anew. So whatever moves the ends of spans from frame to frame flashes, with Flashing Off as
 much as on. Noise in the picture at a threshold did (hysteresis keeps a pixel in or out until it is clearly past it),
@@ -360,7 +368,9 @@ Nothing under `dev/` goes into a `.tox`.
 Each effect's page states its cost on the reference machine: MacBook Pro, Apple M2 Pro
 (16 GB), macOS 15.6, TouchDesigner 2025.33230, at 1280 x 720 input, measured with `dev/perf.py`
 (CPU and GPU milliseconds per frame at the defaults, and the frame rate TouchDesigner held) with
-the Mac otherwise idle.
+the Mac otherwise idle: pause `/tdlib_demo`'s clip (Play off on its Demo page) while measuring. The
+GPU's times wander from run to run as it changes speed, a third or more (an operator with a fixed
+amount of work read 0.26 to 0.50 ms across Paint's runs), so a page gives the median of three runs.
 
 ## Releasing
 
@@ -440,3 +450,16 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - A Geometry COMP instances from TOPs, one pixel per instance: Default Instance OP sets the count
   (Instance Count from its length), and Translate, Scale and Color each take their own TOP
   (`instancetop`, `instancesop`, `instancecolorop`) with channels `r`, `g`, `b`, `a`.
+- A GLSL TOP's Input Smoothness (`inputfiltertype`) at Mipmap gives its inputs mipmaps, and `textureLod()` reads their
+  levels: level 3 of a checkerboard of 1-pixel squares reads 0.502 (2025.33230, `dev/probes/glsl_mipmap.py`). Paint
+  reads its brush from the level that averages the pixels between its samples, so a broad brush costs no more than a
+  fine one.
+- Passes (`npasses`) with an Output Resolution of Half halves the picture again on every pass (two passes made 320 x
+  180 of 1280 x 720), since each pass's input is the last pass's output. Paint's passes are separate TOPs behind a
+  Switch.
+- TouchDesigner's Python reads a builder's files as ASCII (2025.33230 on macOS): one accented letter in `lib/` or a
+  `src/` file stops the build with a UnicodeDecodeError. Sources stay ASCII (Doellner, Winnemoeller); the docs pages,
+  which only GitHub reads, keep the accents.
+- `TOP.save()` of a 1280 x 720 PNG stalls TouchDesigner for a frame or more, so `dev/capture.py` shots scheduled under
+  about 0.15 s apart land on the same frame (Paint's beat measurements saw identical frames until they were spread
+  out).
