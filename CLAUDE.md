@@ -34,6 +34,10 @@ dev/td.sh bundles/showreel/build_showreel.py   # then the showreel, which embeds
 - Flashing follows WCAG 2.3.1: an effect that can flash uses `new_effect(flashing=True)` (Off /
   Calm default / at most 3 per second) and the limits are measured on its output.
 - Input order is alphabetical by In operator name (`in1_top`, `in2_audio`), not node position.
+- Every change goes to `main` through a pull request, squash-merged (a ruleset enforces it): work
+  on a branch, push it, `gh pr create`. The title becomes the commit subject and a line of the
+  release notes, so write it as the commit subject; the description becomes the commit message.
+  See Releasing in docs/BUILDING.md.
 - Nothing under `dev/` ships. Builds from the dev loop land in `/tdlib_dev` on the Mac.
 - US English spelling everywhere: identifiers, parameter labels, docs, file names.
 

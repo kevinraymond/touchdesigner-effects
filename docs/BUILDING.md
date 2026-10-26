@@ -364,17 +364,32 @@ the Mac otherwise idle.
 
 ## Releasing
 
-Bump `VERSION` in the builders that changed, rebuild them (and any bundle embedding them),
-commit, then tag and push:
+Every change reaches `main` through a pull request. A ruleset on `main` requires one, with the
+Checks workflow passing, and allows only squash merges, so each pull request lands as one commit
+whose subject is the pull request's title (with its number) and whose message is its description.
+Direct pushes and force pushes to `main` are refused.
 
 ```sh
-git tag v0.1.0 && git push origin v0.1.0
+git switch -c pixel-sort-0.2.0
+git push -u origin pixel-sort-0.2.0
+gh pr create --title "Pixel Sort 0.2.0: ..." --body "..."
+gh pr merge --squash
+```
+
+To release, bump `VERSION` in the builders that changed, rebuild them (and any bundle embedding
+them) and merge that, then tag `main` and push the tag:
+
+```sh
+git switch main && git pull
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
 `.github/workflows/release.yml` reruns both tests and attaches every `.tox` as its own
 release asset with `SHA256SUMS` and build provenance, so
 `https://github.com/kevinraymond/touchdesigner-effects/releases/latest/download/<name>.tox` always serves the
-newest.
+newest. Its notes list the subject of every commit since the previous tag, so the pull request
+titles are the changelog, followed by a link to the full comparison. A release that deserves more
+can have a few lines added afterward with `gh release edit <tag> --notes-file <file>`.
 
 ## TouchDesigner behaviors found here
 

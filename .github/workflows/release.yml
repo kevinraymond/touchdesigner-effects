@@ -3,7 +3,8 @@ name: Release
 # Pushing a tag vX.Y.Z publishes every checked-in .tox as its own release asset, by bare
 # file name, so the docs can link releases/latest/download/<name>.tox and never go stale.
 # The .tox files are built in TouchDesigner and committed (docs/BUILDING.md); this only
-# checks that they match their sources and attaches them.
+# checks that they match their sources and attaches them. The notes list the subject of every
+# commit since the previous tag (on main, a squash-merged pull request's title and number).
 
 on:
   push:
@@ -20,6 +21,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0   # the whole history and every tag, for the notes
 
       - name: Every .tox in step with its sources
         run: python3 tests/test_guards.py && python3 tests/check_tox.py
@@ -44,7 +47,26 @@ jobs:
         with:
           subject-path: dist/*.tox
 
+      # The first release lists the whole history.
+      - name: Write the release notes
+        run: |
+          prev=$(git describe --tags --abbrev=0 --match 'v*' "$GITHUB_REF_NAME^" 2>/dev/null || true)
+          range=$GITHUB_REF_NAME
+          if [ -n "$prev" ]; then
+            range=$prev..$GITHUB_REF_NAME
+          fi
+          {
+            echo "## Changes"
+            echo
+            git log --no-merges --format='- %s' "$range"
+            if [ -n "$prev" ]; then
+              echo
+              echo "**Full Changelog**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$prev...$GITHUB_REF_NAME"
+            fi
+          } > "$RUNNER_TEMP/notes.md"
+          cat "$RUNNER_TEMP/notes.md"
+
       - name: Create the release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "$GITHUB_REF_NAME" --generate-notes
+        run: gh release create "$GITHUB_REF_NAME" dist/* --verify-tag --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"
