@@ -11,8 +11,9 @@ map as they are (to tile beside the effects, dev/tile.py), clip=<name> for priva
 <name>.mp4 (default b1_dancer; TouchDesigner's sample movie when it isn't there), seconds=<n>
 (default 8), audio=<file> for a track in private/assets/ready/ (default: m1_* when there, else
 TouchDesigner's sample MP3; audio=none records silence and feeds no beat), <Par>=<value> (a capitalized
-name) to set that parameter on every effect that has one, and tag=<word> to add _<word> to the file names
-(TD_ARGS='particles Behavior=push tag=push').
+name) to set that parameter on every effect that has one, tag=<word> to add _<word> to the file names
+(TD_ARGS='particles Behavior=push tag=push'), and settle=<s> to let each effect cook that long on the playing clip
+before the clip and track restart, for an effect that starts by growing in (Reaction-Diffusion fades in over 4 s).
 
 Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT at its
 defaults, the clip, its depth (<clip>_depth.mp4, on input 3 of an effect that takes one) and the
@@ -57,7 +58,7 @@ def options(args):
         mine = sorted(glob.glob(os.path.join(READY, 'm1_*.wav')))
         track = mine[0] if mine else app.samplesFolder + '/Audio/JeremyCaulfield_www.dumb-unit.com.mp3'
     pars = {k: v for k, v in opts.items() if k[:1].isupper()}
-    return names, clip, track, float(opts.get('seconds', 8)), pars, opts.get('tag')
+    return names, clip, track, float(opts.get('seconds', 8)), pars, opts.get('tag'), float(opts.get('settle', 0))
 
 
 def main():
@@ -68,7 +69,7 @@ def main():
     os.makedirs(OUT, exist_ok=True)
     if os.path.exists(os.path.join(OUT, 'done')):
         os.remove(os.path.join(OUT, 'done'))
-    names, clip_file, track_file, seconds, pars, tag = options(globals().get('TDLIB_ARGS') or [])
+    names, clip_file, track_file, seconds, pars, tag, settle = options(globals().get('TDLIB_ARGS') or [])
     takes = [n for n in TAKES if n in names]
     names = [n for n in names if n not in TAKES]
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
@@ -113,6 +114,19 @@ def main():
             if o is not None:
                 o.allowCooking = o is fx
         view.inputConnectors[0].connect(what.outputConnectors[0] if what.isCOMP else what)
+        if settle and fx is not None:
+            pull(absTime.seconds + settle)   # nothing records yet, so pull the view to keep the effect cooking
+            run('args[0](args[1])', cue, i, delayMilliSeconds=int(settle * 1000))
+        else:
+            cue(i)
+
+    def pull(until):
+        view.cook(force=True)
+        if absTime.seconds < until:
+            run('args[0](args[1])', pull, until, delayFrames=1)
+
+    def cue(i):
+        name = effects[i][0]
         clip.par.cuepulse.pulse()
         if depth is not None:
             depth.par.cuepulse.pulse()

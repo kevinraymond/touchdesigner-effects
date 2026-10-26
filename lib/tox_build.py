@@ -231,14 +231,16 @@ def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4
     return ops
 
 
-def structure_tensor(comp, root, source, sigma=2.0):
+def structure_tensor(comp, root, source, sigma=2.0, ease=None):
     """The picture's local orientation, shared by the effects that follow its edges (Paint; Reaction-diffusion
     and Pencil to come): the structure tensor of its color (tensor: E, F, G from Jaehne's derivative filter),
     smoothed by a Gaussian of sigma pixels at 720 high across and then down (tensor_h, tensor_v; sigma may be an
     Expr), and its eigenanalysis (flow: rg the direction along the edges, a unit vector in pixels; b the
-    anisotropy 0-1, 0 where nothing has a direction; a the strongest change). Each pass is the input's size, in
-    16-bit float; edges hold rather than fall to black. The shaders are lib/glsl's tensor, tensor_blur and
-    tensor_flow, after Kyprianidis, Kang and Doellner (2009, 2011). Returns the operators by name."""
+    anisotropy 0-1, 0 where nothing has a direction; a the strongest change). With ease (seconds), the smoothed
+    tensor is eased over time first (tensor_fb, tensor_ease), so the direction turns smoothly instead of jittering
+    with the picture's noise and flicker. Each pass is the input's size, in 16-bit float; edges hold rather than
+    fall to black. The shaders are lib/glsl's tensor, tensor_blur, tensor_ease and tensor_flow, after Kyprianidis,
+    Kang and Doellner (2009, 2011). Returns the operators by name."""
     ops = {}
     ops['tensor'] = glsl(comp, 'tensor', [source], lib_glsl(root, 'tensor.glsl'),
                          "The structure tensor of the picture's color, per pixel.", fmt='rgba16float')
@@ -246,10 +248,19 @@ def structure_tensor(comp, root, source, sigma=2.0):
                            'The tensor smoothed across.', fmt='rgba16float', uB=(1, 0, sigma))
     ops['tensor_v'] = glsl(comp, 'tensor_v', [ops['tensor_h']], lib_glsl(root, 'tensor_blur.glsl'),
                            'The tensor smoothed down.', fmt='rgba16float', uB=(0, 1, sigma))
-    ops['flow'] = glsl(comp, 'flow', [ops['tensor_v']], lib_glsl(root, 'tensor_flow.glsl'),
+    smooth = ops['tensor_v']
+    if ease is not None:
+        ops['tensor_fb'] = mk(comp, feedbackTOP, 'tensor_fb', [smooth], "tensor_ease's last frame.",
+                              top='tensor_ease')
+        ops['tensor_ease'] = glsl(comp, 'tensor_ease', [smooth, ops['tensor_fb']], lib_glsl(root, 'tensor_ease.glsl'),
+                                  'The tensor eased over {:g} s, so the direction turns smoothly.'.format(ease),
+                                  fmt='rgba16float', uE=(Expr('min(absTime.stepSeconds, 0.1)'), ease))
+        smooth = ops['tensor_ease']
+    ops['flow'] = glsl(comp, 'flow', [smooth], lib_glsl(root, 'tensor_flow.glsl'),
                        'Along the edges: rg the direction, b how clear it is (anisotropy).', fmt='rgba16float')
     for o in ops.values():
-        setpars(o, inputextenduv='hold')
+        if o.OPType == 'glslTOP':
+            setpars(o, inputextenduv='hold')
     return ops
 
 

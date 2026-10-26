@@ -60,6 +60,7 @@ def main():
     ap.add_argument('--start', type=float, default=1.0)
     ap.add_argument('--width', type=int, default=1000, help="the preview's width")
     ap.add_argument('--quality', type=int, default=75)
+    ap.add_argument('--fps', type=int, default=20, help="the preview's frame rate (lower for busy textures, which compress poorly)")
     ap.add_argument('--out', required=True, help='path without extension')
     ap.add_argument('--still', type=float, help='also save the frame at this many seconds as <out>_still.png')
     a = ap.parse_args()
@@ -91,7 +92,7 @@ def main():
                           '-pix_fmt', 'yuv420p', mp4], check=True)
     webp = a.out + '.webp'
     subprocess.run(['ffmpeg', '-y', '-v', 'error', '-ss', str(a.start), '-t', str(PREVIEW_SECONDS), '-i', mp4,
-                    '-vf', 'fps=20,scale={}:-2:flags=lanczos'.format(a.width), '-c:v', 'libwebp_anim',
+                    '-vf', 'fps={},scale={}:-2:flags=lanczos'.format(a.fps, a.width), '-c:v', 'libwebp_anim',
                     '-quality', str(a.quality), '-loop', '0', webp], check=True)
     made = [mp4, webp]
     if a.still is not None:
