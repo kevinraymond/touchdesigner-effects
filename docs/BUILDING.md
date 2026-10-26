@@ -324,6 +324,11 @@ much as on. Noise in the picture at a threshold did (hysteresis keeps a pixel in
 and so did turning the angle, which moves the steps in the digital lines so pixels change lines: Spin 20 measured 1.5
 flashes a second on the plaza with Flashing Off, where the clip alone measures 0.5, and Spin stops at 10.
 
+One more from Motion Magnify, which moves the picture further than it moved. It adds no light, and it changes how far
+things go, not how often, but a red near WCAG's saturated-red line that sways further crosses it more often: the red
+flowers measured 2 red flashes a second with no beat, the clip alone 1. Its warp runs the red guard on every pixel, as
+Slit-Scan's does, and shows none.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,

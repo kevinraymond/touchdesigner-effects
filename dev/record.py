@@ -8,7 +8,8 @@ docs previews or a demo reel. The free license can't encode H.264, so this recor
 
 Words in TD_ARGS: effect names (none: every effect), and input and depth for the clip and its depth
 map as they are (to tile beside the effects, dev/tile.py), clip=<name> for private/assets/ready/
-<name>.mp4 (default b1_dancer; TouchDesigner's sample movie when it isn't there), seconds=<n>
+<name>.mp4 (default b1_dancer; TouchDesigner's sample movie when it isn't there; clip=sample:Movie.2 for
+TouchDesigner's Map/Nature/Movie.2.mp4, looked at here but never shown in the docs), seconds=<n>
 (default 8), audio=<file> for a track in private/assets/ready/ (default: m1_* when there, else
 TouchDesigner's sample MP3; audio=none records silence and feeds no beat), <Par>=<value> (a capitalized
 name) to set that parameter on every effect that has one, tag=<word> to add _<word> to the file names
@@ -47,7 +48,9 @@ def options(args):
     names = [a for a in args if '=' not in a]
     opts = dict(a.split('=', 1) for a in args if '=' in a)
     clip = os.path.join(READY, opts.get('clip', 'b1_dancer') + '.mp4')
-    if not os.path.exists(clip):
+    if opts.get('clip', '').startswith('sample:'):
+        clip = app.samplesFolder + '/Map/Nature/{}.mp4'.format(opts['clip'].split(':', 1)[1])
+    elif not os.path.exists(clip):
         clip = app.samplesFolder + '/Map/Nature/Movie.1.mp4'
     audio = opts.get('audio')
     if audio == 'none':
