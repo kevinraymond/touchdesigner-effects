@@ -74,9 +74,9 @@ and Cycle moves on every 8 seconds (Every 4, 2 s a bar).
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6,
 TouchDesigner 2025.33230), with the fourteen effects of this release inside, the dancer clip's depth on
 input 3, a beat far busier than music on input 2, and the Mac otherwise idle. Cycle, the default,
-runs one effect at a time: 3.7 ms on the GPU per frame and 1.2 ms on the CPU on average (the median
+runs one effect at a time: 4.2 ms on the GPU per frame and 1.1 ms on the CPU on average (the median
 of three runs, 59 fps held), depending on the effect showing; during a fade two effects run, so the
-95th percentile was 8.3 ms on the GPU and 1.5 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
+95th percentile was 7.8 ms on the GPU and 1.4 ms on the CPU. A single view costs what that effect costs (see its page). The cost doesn't
 grow as the library adds effects. Nothing inside cooks while the output is unused. GPU memory is the
 exception: Slit-Scan keeps a few seconds of the picture for its history, about 546 MB at 1280 x 720,
 and once it has shown, that memory stays reserved while the other effects show (its page has the
@@ -99,8 +99,8 @@ figures).
   | Clip | Off | Calm | Up to 3 per second | The clip alone |
   |---|---|---|---|---|
   | Dancer in a hazy warehouse | 1.0 | 1.5 | 1.5 | 1.0 |
-  | People crossing a plaza | 1.0 | 1.0 | 1.5 | 0.5 |
-  | Dancer, Every 1 | 1.0 | 1.5 | 2.0 | 1.0 |
+  | People crossing a plaza | 0.5 | 1.0 | 1.5 | 0.5 |
+  | Dancer, Every 1 | 1.0 | 1.0 | 1.5 | 1.0 |
 
   Off adds nothing to what the clips do by themselves (beyond the half flash a second the count
   allows for measuring noise: the dancer at Off has measured 1.0 and 1.5 in different builds, by

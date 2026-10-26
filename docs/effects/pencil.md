@@ -1,6 +1,6 @@
 # Pencil
 
-![Pencil at its defaults on a close-up of a laughing woman's face, drawn in graphite on white paper. Quick dark strokes outline her eyes, her smile and the creases around them, running a little past the corners where two lines meet, and her skin is left mostly white with a few light strokes. The dark background behind her is filled with dense crisscrossed pencil shading, and now and then, on the beat, the shading and the lines are redrawn](pencil.webp)
+![Pencil at its defaults on a close-up of a laughing woman's face, drawn in graphite on white paper. Quick dark strokes outline her eyes, her smile and the creases around them, running a little past the corners where two lines meet, and her skin is left mostly white with a few light strokes. The dark background behind her is filled with an even gray grain of short pencil strokes laid every way, and now and then, on the beat, the shading and the lines are redrawn](pencil.webp)
 
 *The defaults (Sketch, Graphite) on a portrait, with a song on input 2: lines along the face, its tones in pencil
 strokes, and a redraw on each beat.*
@@ -15,8 +15,9 @@ textures.
 This effect draws live video both ways. It classifies the picture's edges into eight directions of short line
 segments and spreads each direction back along its own segment, so the lines look drawn rather than traced, and it
 matches the picture's tones to those of real pencil drawings (mostly paper, a band of mild strokes, a few dark
-accents) before drawing them with pencil strokes. Sketch lays the strokes every way, as the paper does. Hatching lays
-parallel strokes that follow the picture's edges and cross where it is darker, as an illustrator hatches. The paper
+accents) before drawing them with pencil strokes. Sketch shades them in soft graphite, short strokes laid every way,
+as the paper does. Hatching lays long parallel strokes that follow the picture's edges and cross only in the darks, as
+an illustrator hatches. The paper
 names video as its limit, since its strokes stay put while the picture moves under them; here the strokes travel with
 what moves. On the beats the drawing is redrawn, as the next drawing of a hand-drawn animation would be. I found no
 TouchDesigner version of this method; the usual quick pencil sketch is a color dodge of a blurred, inverted copy of
@@ -49,12 +50,12 @@ the window.
 
 | Parameter | Default | What it does |
 |---|---|---|
-| Style | Sketch | Sketch draws lines along the edges and the tones in pencil strokes that cross every way, as Lu, Xu and Jia draw them. Hatching draws the tones in parallel strokes that follow the edges, crossing where it is darker. Lines draws the lines alone. See [The styles](#the-styles). |
+| Style | Sketch | Sketch draws lines along the edges and the tones in soft graphite shading, short strokes laid every way, as Lu, Xu and Jia draw them. Hatching draws the tones in long parallel strokes that follow the edges, crossing only in the darks. Lines draws the lines alone. See [The styles](#the-styles). |
 | Colors | Graphite | Graphite on white paper, Colored Pencil (the picture's own colors, the drawing as their brightness), Blue Pencil (an animator's blue), or Light on Dark: white pencil on black paper, drawing where the picture is light. |
 | Lines | 0.5 | How dark the lines along the edges are, 0 to 1. At 1, every strong edge is drawn black. |
 | Line Length | 1 | How far the lines run past their edges, 0.5 to 2. At 1 a segment is 1/30 of the picture's height, the paper's choice, so strokes cross at corners as a quick hand draws them; longer looks looser. |
 | Shading | 0.5 | How dark the drawing's tones are, 0 to 1: 0 mostly paper, 0.5 as the paper's pencil drawings, 1 darker, with more dark accents. The tones follow the picture over a second. Grayed out for Lines. |
-| Stroke Size | 1 | How big the pencil strokes are, 0.5 to 2. At 1 a stroke is about 40 pixels long and 1.5 wide at 720 high, and it scales with the picture. Grayed out for Lines. |
+| Stroke Size | 1 | How big the pencil strokes are, 0.5 to 2. At 1 a hatching stroke is 45 to 75 pixels long and Sketch's 25 to 45, about 1.5 wide, at 720 high, and they scale with the picture. Grayed out for Lines. |
 | Follow Movement | 1 | How much the pencil strokes travel with what moves in the picture, 0 to 1. At 0 they stay on the paper while the picture slides under them, and the motion isn't measured, which saves about a quarter of the cost. Grayed out for Lines. See [Following movement](#following-movement). |
 | Texture | 0.5 | How much the paper's grain shows in the graphite, 0 to 1. The paper stays put while the picture moves, as paper would. |
 | Depth Fade | 0.5 | With a depth map or mask on input 3: how much lighter far things (or what lies outside the mask) are drawn, 0 to 1. At 1 the farthest are left as paper. Nothing changes without input 3. |
@@ -72,17 +73,18 @@ The About page has Version, Built With (the TouchDesigner build it was saved in)
 
 ## The styles
 
-![Six views of a field of tall red flowers against a sunny sky, each named in the library's pixel font. INPUT is the clip as it is. SKETCH draws it in graphite, the flowers and the field in dense crisscrossed strokes and the sky left as paper with a few lines along the clouds. HATCHING draws the same tones in parallel strokes that run up the stems and along the hills, crossing in the darkest places. LINES draws only the outlines, sketchy strokes along every stem and petal. COLORED PENCIL keeps the red flowers, the green field and the blue sky, drawn over with the same strokes. LIGHT ON DARK draws the sky and the lit flowers in white pencil on black paper](pencil_styles.webp)
+![Six views of orange and white koi in a black pond, each named in the library's pixel font. INPUT is the clip as it is. SKETCH draws the fish in quick graphite lines, left almost white, and fills the dark water with an even gray grain of short pencil strokes laid every way. HATCHING fills the water instead with long parallel strokes that run along the fish and cross where it is darkest. LINES draws only the fish's outlines and markings on white paper. COLORED PENCIL keeps the orange fish and draws the water in gray graphite. LIGHT ON DARK draws the fish in white pencil on black paper](pencil_styles.webp)
 
-*Each style and two of the colorings on the flowers, at the defaults otherwise, with the song on input 2.*
+*Each style and two of the colorings on the koi, at the defaults otherwise, with the song on input 2.*
 
 **Sketch** is Lu, Xu and Jia's drawing: the lines times the tone, the tone drawn with a pencil pattern whose strokes
-have no one direction, laid over itself as often as each area's tone asks. Dark areas fill with a dense crisscross of
-graphite, light ones keep a few strokes, and most of the paper stays white.
+have no one direction, laid over itself as often as each area's tone asks. It reads as soft graphite shading: dark
+areas fill with a dense grain of short strokes laid every way, light ones keep a few, and most of the paper stays
+white. There are no lines to follow in it; the lines along the edges carry the shapes.
 
-**Hatching** draws the same tones with parallel strokes that follow the picture's edges, as Praun and colleagues'
-tonal art maps do on 3D surfaces. The lighter tones are parallel strokes, closer together as the tone darkens; the
-middle tones add strokes across them, and the darkest a third, diagonal layer. Where the picture has no clear
+**Hatching** draws the same tones with long, evenly spaced parallel strokes that follow the picture's edges, wrapping
+round a face or running along the smoke, as Praun and colleagues' tonal art maps do on 3D surfaces. The tone is drawn
+in parallel lines, closer together as it darkens, until the darks, which add strokes across them. Where the picture has no clear
 direction (a smooth sky, a blurred background), the hatching runs from lower left to upper right, as a right-handed
 artist's does.
 
@@ -114,14 +116,16 @@ model gives the same share, eased over a second so a bright thing walking in doe
 Shading moves between three weightings the paper shows, from 76 : 22 : 2 (mostly paper) through Table 1 to
 42 : 29 : 29 (more dark accents).
 
-**The pencil strokes.** `strokes` draws them once, when the effect loads, as a texture that repeats every 512 pixels:
-eight levels from a few light strokes to dense cross-hatching, each level holding every stroke of the lighter ones, as
-in Praun and colleagues' tonal art maps. A stroke is a slightly bowed, slightly tilted line about a pixel and a half
-wide, tapering to its ends, laid with an uneven pressure, in rows offset along themselves so their ends don't line up.
+**The pencil strokes.** `strokes` draws them once, when the effect loads, as a texture that repeats every 512 pixels.
+Hatching's are six levels, as in Praun and colleagues' tonal art maps: each holds every stroke of the lighter ones and
+adds more, long straight strokes 45 to 75 pixels long until the rows are full (levels 1 to 4), then strokes across
+them (5 and 6). Sketch's is one tonal pattern of short, light strokes 25 to 45 pixels long in three families, along the
+rows and along both diagonals, each stroke turned at random by up to 17 degrees. A stroke is a slightly bowed line
+tapering to its ends, laid with an uneven pressure, in rows offset along themselves so their ends don't line up.
 Nothing is loaded from a file, so the strokes travel inside the `.tox`.
 
-**Sketch** draws the tone as the paper does: a pencil pattern H (two cross-hatched levels laid at 60 and 125 degrees)
-drawn over itself beta times, since pencil strokes over pencil strokes multiply their darkness, so that H^beta matches
+**Sketch** draws the tone as the paper does: its pencil pattern H, turned so no family of strokes lies square to the
+frame, drawn over itself beta times, since pencil strokes over pencil strokes multiply their darkness, so that H^beta matches
 the tone J. The paper solves for a smooth beta by least squares; here beta = ln J / ln H_blur, with H blurred (a
 mipmap level of the pattern), which needs no solver and keeps the pattern's strokes. The pattern has to be about as dark
 as the darkest tone wanted: a light one needed beta near 4 for the darks, which turned the strokes black and the gaps
@@ -176,13 +180,12 @@ audioAnalysis gives beats from its kick or onset channels.
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6, TouchDesigner
-2025.33230), with default parameters (Sketch, Follow Movement 1). Each frame took 6.6 ms on the GPU (95th percentile
-8.9 ms) and 0.56 ms on the CPU, the median of three runs. The lines cost most of it, about 2.7 ms for `classify` and
-`shape` together; the optical flow behind Follow Movement about 1.9 ms; the drawing about 1.3 ms; the tone 0.3 ms.
-Hatching took 7.5 ms (its drawing reads twice the strokes), and Follow Movement 0 took 4.7 ms. GPU times on this Mac
-wander from run to run as its GPU changes speed: an earlier series, with a costlier tone pass, measured 5.7 to 6.1
-ms. The pencil
-strokes are drawn once, when the effect loads. Nothing inside cooks while the output is unused.
+2025.33230), with default parameters (Sketch, Follow Movement 1). Each frame took 5.3 ms on the GPU (95th percentile
+6.4 ms) and 0.61 ms on the CPU, the median of three runs. The lines cost most of it, about 2.1 ms for `classify` and
+`shape` together; the optical flow behind Follow Movement about 1.5 ms; the drawing about 1.2 ms; the tone 0.3 ms.
+Hatching took 6.0 ms (its drawing reads more of the strokes), and Follow Movement 0 took 4.0 ms. GPU times on this Mac
+wander from run to run as its GPU changes speed, by a fifth or more: an earlier build, nearly the same, measured 6.5 to
+6.6 ms in one series and 5.7 to 6.1 in another. The pencil strokes are drawn once, when the effect loads. Nothing inside cooks while the output is unused.
 
 ## Accessibility
 
@@ -220,6 +223,7 @@ flashes separately:
 | Dancer, Hatching, 140 BPM | 1.0 | 1.0 |
 | Dancer, Hatching, no beat | 1.0 | 1.0 |
 | Flowers, Hatching | 1.0 | 1.0, red 1.0 |
+| Plaza, Hatching | 1.0 | 0.5 |
 | Dancer, Lines | 1.0 | 1.0 |
 | Dancer, Light on Dark | 1.0 | 1.0 |
 | Flowers, Colored Pencil | 1.0, red 1.0 | 1.0, red 1.0 |
@@ -227,7 +231,7 @@ flashes separately:
 | Dancer, Follow Movement 0 | 1.0 | 1.0 |
 
 No row adds more to the clip's own than the half flash a second the count allows for measuring noise, taking the
-worse of the general and the red flashes: the plaza's 1.0 against 0.5; the koi's 1.5, all general flashes, against the
+worse of the general and the red flashes: the plaza's 1.0 against 0.5 (in either style); the koi's 1.5, all general flashes, against the
 clip's 1.5 red; and Hatching's 1.5 under the test's 8 beats a second, which comes from redrawing its coarser strokes 8
 times a second (1.0 at Beat Kick 0, and at 140 BPM). Nothing comes near WCAG's 3. Red flashes: Graphite, Blue Pencil
 and Light on Dark make none, so the flowers' and the koi's own red flashes are gone; Colored Pencil keeps the

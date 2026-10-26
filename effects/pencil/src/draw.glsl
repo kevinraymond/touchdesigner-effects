@@ -2,12 +2,12 @@
 // Lu, Xu and Jia (NPAR 2012) draw a picture in pencil as the product of two layers, R = S T (eq. 10): the stroke map
 // S, lines along the edges (shape.glsl's S' turned over: 1 - S' times Lines' gain, so the strongest edges come out
 // darkest), and the tone T, the picture's tone (tone.glsl's table, J) drawn with pencil strokes.
-// Sketch draws the tone as the paper does: with a pencil pattern H whose strokes have no one direction (two of
-// strokes.glsl's cross-hatched levels laid at 60 and 125 degrees), drawn over itself beta times, T = H^beta (eq. 9),
-// where H^beta = J would hold. The paper solves for a smooth beta by least squares (eq. 8); here beta = ln J / ln H_blur
-// in closed form, with H blurred (a mipmap level of the pattern), so beta follows the tone while H keeps its strokes.
-// H is about as dark as the darkest tone wanted, so beta stays near 1 or below: a light pattern needed beta near 4 for
-// the darks, which turned the strokes black and the gaps white.
+// Sketch draws the tone as the paper does: with a pencil pattern H whose strokes have no one direction (strokes.glsl's
+// tonal pattern, short light strokes every way), drawn over itself beta times, T = H^beta (eq. 9), where H^beta = J
+// would hold. The paper solves for a smooth beta by least squares (eq. 8); here beta = ln J / ln H_blur in closed form,
+// with H blurred (a mipmap level of the pattern), so beta follows the tone while H keeps its strokes. H is about as
+// dark as the darkest tone wanted, so beta stays near 1 or below: a light pattern needed beta near 4 for the darks,
+// which turned the strokes black and the gaps white.
 // Hatching draws it as Praun et al.'s tonal art maps do ("Real-Time Hatching", SIGGRAPH 2001): the two levels of
 // strokes.glsl around the tone wanted, mixed between, each level's tone read from its mipmap. Their strokes
 // follow surfaces by their curvature; a picture has no surface, so here they turn along its edges (lib
@@ -17,7 +17,8 @@
 // Graphite catches on the paper's tooth, so each mark is thinned where the paper dips (lib paper.glsl, fixed to the
 // frame, as paper is). Colored Pencil keeps the picture's colors, the drawing as their brightness (the paper's 3.4,
 // in YUV); Light on Dark draws white pencil on black paper, its marks where the picture is light.
-// Inputs: 0 the picture, 1 and 2 strokes.glsl's levels 1-4 and 5-8 (Input Extend Mode Repeat, Input Smoothness
+// Inputs: 0 the picture, 1 and 2 strokes.glsl's buffers (rgb hatching levels 1-3 and 4-6, 1's a Sketch's pattern;
+// Input Extend Mode Repeat, Input Smoothness
 // Mipmap: only wired inputs get mipmaps, not those the TOPs parameter adds), 3 the strokes' darkness S' (shape.glsl),
 // 4 the tone table (tone.glsl, 256 x 1), 5 the flow (rg the edges' direction, b how clear it is, a how strong; a
 // constant when Hatching isn't drawn), 6 nearness (r, input 3), 7 the strokes' two offsets (drift.glsl: rg, ba, UV).
@@ -31,6 +32,7 @@ uniform vec4 uM;   // x the first offset's age (0-1 of drift.glsl's period), y 1
 out vec4 fragColor;
 
 const float PI = 3.14159265;
+const float SKETCH = PI / 12.0;
 const vec3 PAPER = vec3(0.96, 0.95, 0.92);
 const vec3 GRAPHITE = vec3(0.16, 0.16, 0.18);
 const vec3 BLUE = vec3(0.17, 0.35, 0.72);
@@ -45,7 +47,7 @@ vec2 turn(vec2 p, float a) {
 vec2 Q0, Q1;          // where this pixel reads the strokes: carried along by each of drift.glsl's two offsets
 float W1;              // how much the second offset counts (0 when the strokes don't follow movement)
 
-// All eight levels at the pixel, turned to the direction a: read at both offsets and faded between them, so neither's
+// Both buffers of strokes at the pixel, turned to the direction a: read at both offsets and faded between them, so neither's
 // fresh start shows.
 void levels(float a, out vec4 lo, out vec4 hi) {
     vec2 t = turn(Q0, a) / uR.w;
@@ -59,7 +61,7 @@ void levels(float a, out vec4 lo, out vec4 hi) {
 }
 
 float pick(vec4 lo, vec4 hi, int n) {
-    return n < 4 ? lo[n] : hi[n - 4];
+    return n < 3 ? lo[n] : hi[n - 3];
 }
 
 void main() {
@@ -88,17 +90,13 @@ void main() {
     Q1 = (uv - dr.ba) * res / k720 / uS.w + uR.xy;
     float T = 1.0;
     if (style == 0) {
-        vec4 a, b, c, d;
-        levels(PI / 3.0, a, b);
-        Q0 += vec2(97.0, 31.0);
-        Q1 += vec2(97.0, 31.0);
-        levels(125.0 * PI / 180.0, c, d);
-        Q0 -= vec2(97.0, 31.0);
-        Q1 -= vec2(97.0, 31.0);
-        float H = min(b.y * d.x, 0.985);
-        // The pattern's local mean, from mipmap level 3 (8 pixels across) of each.
-        float Hb = textureLod(sTD2DInputs[2], turn(Q0, PI / 3.0) / uR.w, 3.0).y
-                   * textureLod(sTD2DInputs[2], turn(Q0 + vec2(97.0, 31.0), 125.0 * PI / 180.0) / uR.w, 3.0).x;
+        // The pattern turned by SKETCH, so its three families lie at 15, 60 and 150 degrees, none of them square to
+        // the frame.
+        vec4 a, b;
+        levels(SKETCH, a, b);
+        float H = min(a.a, 0.985);
+        // The pattern's local mean, from mipmap level 3 (8 pixels across).
+        float Hb = textureLod(sTD2DInputs[1], turn(Q0, SKETCH) / uR.w, 3.0).a;
         float beta = log(max(J, 1e-3)) / min(log(Hb), -1e-3);
         T = pow(H, beta);
     } else if (style == 1) {
@@ -117,10 +115,10 @@ void main() {
         // level above it reads black (2025.33230 on the M2), and so does any level asked for past it.
         float top = float(textureQueryLevels(sTD2DInputs[1]) - 2);
         vec4 mlo = textureLod(sTD2DInputs[1], vec2(0.5), top), mhi = textureLod(sTD2DInputs[2], vec2(0.5), top);
-        // From the paper (tone 1, no strokes) through the eight levels: the two around J, mixed by where J sits.
+        // From the paper (tone 1, no strokes) through the six levels: the two around J, mixed by where J sits.
         float above = 1.0, last = 1.0;
         T = -1.0;
-        for (int n = 0; n < 8; n++) {
+        for (int n = 0; n < 6; n++) {
             float m = pick(mlo, mhi, n), v = pick(lo, hi, n);
             if (T < 0.0 && J >= m) T = mix(v, last, (J - m) / max(above - m, 1e-4));
             above = m;

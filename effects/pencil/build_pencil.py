@@ -9,7 +9,8 @@ itself as often as the tone asks. Hatching draws that tone with tonal art maps i
 Hatching", SIGGRAPH 2001), turned along the picture's edges by lib structure_tensor(), shared with Paint and
 Reaction-Diffusion.
 
-The pencil strokes are a texture strokes.glsl draws once (eight nested levels, repeating every TEX[0] pixels), so the
+The pencil strokes are a texture strokes.glsl draws once (six nested levels of hatching and Sketch's tonal pattern,
+repeating every TEX[0] pixels), so the
 drawing costs the same whatever it draws. The lines cost most: classify and shape each read 8 segments of
 2 TAPS + 1 samples a pixel. With Follow Movement the strokes travel with the picture's motion (lib optical_flow() and
 flow_speed()), which costs about a quarter of the frame; at 0 none of it cooks.
@@ -17,7 +18,7 @@ flow_speed()), which costs about a quarter of the frame; at 0 none of it cooks.
 The network, left to right:
   picture  source -> edges (G, eased; edges_fb) -> classify (each pixel's direction) -> shape (S'); draw (S', the tone,
            the strokes, the edges' direction, nearness, the strokes' offsets)
-  tone     histogram (capped) -> tone (the tone table, eased; tone_fb); strokes (once) -> strokes_dark (levels 5-8);
+  tone     histogram (capped) -> tone (the tone table, eased; tone_fb); strokes (once) -> strokes_dark (levels 4-6);
            small -> structure_tensor() (tensor, tensor_h, tensor_v, tensor_fb, tensor_ease -> flow) -> orient
            (Hatching only)
   motion   optical_flow() (lum8, lum4, change, clock, lk8, lk4) -> flow_speed() (pace, motion) -> drift (two offsets;
@@ -51,8 +52,14 @@ SHADES = ((2, 22, 76), (11, 37, 52), (29, 29, 42))
 # share: uncapped, a picture crowded into a narrow band (the koi's dark pond) was stretched over every tone, its flicker
 # with it (the koi's worst cell flashed 4 times a second, capped 3).
 TONE_EASE, TONE_SOFT, TONE_CAP = 1.0, 4.0, 3.0
-TEX = (512.0, 40.0, 3.2, 0.75)        # the strokes: repeat, a stroke's cell along its row, rows' spacing, half width
-TEX_Q = (0.04, 1.0, 0.5, 0.85)        # tilt (radians), bow (pixels), lightest and heaviest pressure
+# The strokes, in pixels at 720 high. Hatching's: the repeat, a stroke's cell along its row, the rows' spacing, the half
+# width; then the most a stroke turns (radians), its bow and its lightest and heaviest pressure. Long, straight, evenly
+# spaced strokes, so it reads as hatching. Sketch's: short, light strokes turned every way (cell, spacing, half width,
+# turn; bow and pressure), so it reads as graphite shading with no lines to follow.
+TEX = (512.0, 48.0, 2.8, 0.75)
+TEX_Q = (0.02, 0.6, 0.55, 0.85)
+SKETCH_TEX = (28.0, 2.3, 0.6, 0.3)
+SKETCH_Q = (1.4, 0.4, 0.75, 0.0)
 HATCH = math.radians(60)              # the hatch where the edges have no clear direction: lower left to upper right
 TENSOR_SIGMA, TENSOR_EASE = 6.0, 0.5   # the edges' direction: smoothed over 6 pixels at 720 high, eased over 0.5 s
 DRIFT = 1.0          # each offset that carries the strokes along starts again every second (divides lib CLOCK)
@@ -98,9 +105,9 @@ comp, page, source = new_effect(
 
 # ---- Parameters -------------------------------------------------------------------------------
 menu(page, 'Style', 'Style', STYLES, 'sketch',
-     'Sketch: lines along the edges, and the tones in pencil strokes that cross every way, as Lu, Xu and Jia draw '
-     'them. Hatching: the tones in parallel strokes that follow the edges, crossing where it is darker. Lines: the '
-     'lines alone.').startSection = True
+     'Sketch: lines along the edges, and the tones in soft graphite shading, short strokes laid every way, as Lu, Xu '
+     'and Jia draw them. Hatching: the tones in long parallel strokes that follow the edges, crossing only in the '
+     'darks. Lines: the lines alone.').startSection = True
 menu(page, 'Colors', 'Colors', COLORS, 'graphite',
      "Graphite on white paper, Colored Pencil (the picture's own colors), Blue Pencil (an animator's blue), or Light "
      'on Dark: white pencil on black paper, drawing where the picture is light.')
@@ -116,7 +123,8 @@ p = custom(page, 'Float', 'Shading', 'Shading', 0.5,
 p.startSection = True
 p.enableExpr = "me.par.Style != 'lines'"
 custom(page, 'Float', 'Strokesize', 'Stroke Size', 1.0,
-       'How big the pencil strokes are, 0.5-2: at 1 a stroke is about 40 pixels long at 720 high.', 0.5, 2,
+       "How big the pencil strokes are, 0.5-2: at 1 a hatching stroke is 45 to 75 pixels long and Sketch's 25 to 45, "
+       'at 720 high.', 0.5, 2,
        True).enableExpr = "me.par.Style != 'lines'"
 custom(page, 'Float', 'Follow', 'Follow Movement', 1.0,
        'How much the pencil strokes travel with what moves in the picture, 0-1. At 0 they stay on the paper while '
@@ -210,12 +218,13 @@ tone = glsl(comp, 'tone', [hist, tone_fb], src('tone.glsl'),
             "A table of 256 levels: each of the picture's levels as the tone a pencil drawing gives it (Shading), eased.",
             res=(256, 1), fmt='rgba32float', uW=(shade(0), shade(1), shade(2)),
             uE=(Expr('min(absTime.stepSeconds, 0.1)'), TONE_EASE))
-section('strokes', 'The pencil strokes: eight levels, light to cross-hatched, drawn once', lane='tone')
+section('strokes', "The pencil strokes, drawn once: hatching's six levels and Sketch's pattern", lane='tone')
 strokes = glsl(comp, 'strokes', [], src('strokes.glsl'),
-               'The pencil strokes, drawn once: levels 1-4 (buffer 0) and 5-8 (buffer 1), repeating every {:g} '
-               'pixels.'.format(TEX[0]), res=(int(TEX[0]), int(TEX[0])), fmt='rgba16float', uP=TEX, uQ=TEX_Q)
+               "The pencil strokes, drawn once: hatching's levels 1-3 and Sketch's pattern (buffer 0), levels 4-6 (buffer "
+               '1), repeating every {:g} pixels.'.format(TEX[0]), res=(int(TEX[0]), int(TEX[0])), fmt='rgba16float',
+               uP=TEX, uQ=TEX_Q, uS=SKETCH_TEX, uT=SKETCH_Q)
 setpars(strokes, numcolorbufs=2)
-strokes_dark = mk(comp, renderselectTOP, 'strokes_dark', comment='Levels 5-8 of the strokes (buffer 1).',
+strokes_dark = mk(comp, renderselectTOP, 'strokes_dark', comment="Hatching's levels 4-6 (buffer 1).",
                   top='strokes', bufferindex=1)
 section('edges', "Hatching's direction: which way the picture's edges run (structure tensor)", lane='tone')
 small = mk(comp, resolutionTOP, 'small', [source], "The picture at half size: the edges' direction is smooth, "
