@@ -27,6 +27,9 @@ dev/td.sh bundles/showreel/build_showreel.py   # then the showreel, which embeds
   Building or adding an effect means rebuilding the showreel too (check_tox.py fails until then).
 - Builders start from `new_effect()` and end with `finish_effect()` + `save_effect()`; see
   the builder shape in docs/BUILDING.md. Fill docked DATs with `docked()`; never add a second one.
+- Name each part of a network with `section()`, titled in plain words; `finish_effect()` lays the
+  network out in Network Boxes and `assert_laid_out` checks it (docs/BUILDING.md, Laying out the
+  network). Never place operators by hand. A README holds one line per paragraph.
 - Each new check gets broken once on purpose: plain-Python checks in `tests/test_guards.py`,
   save-time checks in `dev/selftest.py`.
 - `docs/TD_IDIOMS.md` is a box to check: the auto items are save-time checks, and every effect

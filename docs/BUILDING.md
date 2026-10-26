@@ -59,7 +59,8 @@ VERSION = '0.1.0'
 
 comp, page, source = new_effect('glow', 'Glow', 'Glow 0.1.0: ... (one-line summary)', README, tags=('glow',), audio=True)
 custom(page, 'Float', 'Amount', 'Amount', 0.5, 'How strong the glow is.', 0, 1, True)
-glsl = mk(comp, glslTOP, 'glsl', 0, 0, [source], comment='What this step does.')
+section('glow', 'The glow: bright parts spread into their surroundings')
+glsl = mk(comp, glslTOP, 'glsl', [source], comment='What this step does.')
 docked(glsl, '_pixel', open(os.path.join(_HERE, 'src', 'glow.glsl')).read(), 'The glow shader.')
 finish_effect(comp, glsl, VERSION, page)
 save_effect(comp, _HERE, _ROOT)
@@ -75,25 +76,25 @@ What the shell provides:
   something is wired in, else a stand-in made from input 1 (its brightness, unless the effect
   passes its own), so a depth effect works with nothing on input 3.
 - `finish_effect()` adds `out_top`, the Open Window / Full Screen / Display parameters and
-  their Window COMP, the About page (Version, Built With, Open Docs), and shows the output
-  on the node.
+  their Window COMP, the About page (Version, Built With, Open Docs), shows the output
+  on the node, and lays out the network (below).
 - `save_effect()` runs the save-time checks, saves, and writes the manifest.
 
-Helpers: `mk()` creates, places, comments, sets parameters and wires in one call (`Expr('...')`
-for an expression); `custom()` adds a parameter with its default, range and help text;
-`docked()` fills the DAT TouchDesigner docked to an operator (a GLSL TOP's `_pixel`, a Script
-CHOP's callbacks) instead of adding a second one; `glsl()` makes a GLSL TOP in one call (docked
-shader filled, any number of inputs: past the third they go through its TOPs parameter, the
-only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is the one way
-an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's motion as Datamosh and
-Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or a cut, and Lucas-Kanade
-optical flow, each size following the input), and `flow_speed()` turns that flow into a speed, held between
-the input's frames, as Fluid and VHS + CRT's plasma use it; `structure_tensor(comp, _ROOT, source)` gives the
-direction of the picture's edges at every pixel and how clear it is (the smoothed structure tensor's minor eigenvector
-and anisotropy, as Paint uses it; Reaction-diffusion and Pencil are to share it); `lib_module(_ROOT, 'font5x7')` loads
-another `lib/` file, such as
-the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and
-`lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
+Helpers: `mk()` creates, comments, sets parameters and wires in one call (`Expr('...')` for an
+expression), and puts the operator in the current `section()`; `custom()` adds a parameter with its
+default, range and help text; `docked()` fills the DAT TouchDesigner docked to an operator (a GLSL
+TOP's `_pixel`, a Script CHOP's callbacks) instead of adding a second one; `glsl()` makes a GLSL TOP
+in one call (docked shader filled, any number of inputs: past the third they go through its TOPs
+parameter, the only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is
+the one way an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's
+motion as Datamosh and Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or
+a cut, and Lucas-Kanade optical flow, each size following the input), and `flow_speed()` turns that
+flow into a speed, held between the input's frames, as Fluid and VHS + CRT's plasma use it;
+`structure_tensor(comp, _ROOT, source)` gives the direction of the picture's edges at every pixel
+and how clear it is (the smoothed structure tensor's minor eigenvector and anisotropy, as Paint uses
+it; Reaction-diffusion and Pencil are to share it); `lib_module(_ROOT, 'font5x7')` loads another
+`lib/` file, such as the bitmap font (`glsl_font()` gives the shader `glyph(g, p)`; `ramp()` orders
+glyphs by ink), and `lib_glsl(_ROOT, 'depth_near.glsl')` a shared shader.
 
 A shader takes the time as `clock_seconds()`, never `absTime.seconds` itself. A uniform is a
 32-bit float and `absTime.seconds` counts from TouchDesigner's start, so after 12 hours it is good to
@@ -106,6 +107,53 @@ it jumps once at each wrap, and count anything that must be exact (which update,
 Python, whose floats are 64-bit. `assert_idiomatic` refuses a uniform whose expression grows with
 `absTime.seconds` (not wrapped with `%`, not turned into an angle with `math.sin` or `math.cos` in
 Python); CHOP channels are 32-bit too, so a script reads `absTime.seconds` itself.
+
+## Laying out the network
+
+Someone who opens an effect should be able to follow it, so every network has the same shape.
+The builder only says which part of the effect each operator belongs to, and
+`finish_effect()` works out where everything goes (`lay_out()`, from `plan_layout()`, which is
+plain Python).
+
+- The network reads left to right. Everything wired into an operator sits to its left. So does
+  anything it reads by expression or operator parameter from its own box. A reference to another
+  box is left free, since TouchDesigner draws no line for it and the picture's shaders read the
+  audio's values all along the way. A Feedback TOP's Target TOP is the loop it closes and is exempt.
+- Each part of the effect sits in a Network Box (an Annotate COMP in Network Box mode) whose
+  title says in plain words what that part does, such as "The tape: the deck's time base, its
+  filters and noise, the signal into the TV". Every operator sits in exactly one box, boxes
+  never overlap, and each box is wide enough for its title.
+- Boxes run in lanes, one row of boxes each. "Read me" (the README and the parameter script)
+  sits at the top left. The picture's lane runs along the top, from input 1 to the output, which
+  takes the last column. Any other lanes come next, in the order the builder first names them.
+  The audio and depth lanes come last, since they start from inputs 2 and 3. Within a lane,
+  boxes run in the order they are wired.
+- Inside a box, each operator sits as far right as what it feeds allows and level with what it
+  reads. Columns are `LAYOUT_COL` (200) apart, wider after a column holding a wider node (the
+  Showreel's effects), and operators stack by their own heights.
+- The DATs docked to an operator sit right under it, its shader or callbacks first, then its
+  Info DAT. TouchDesigner docks a pixel shader, a compute shader and an Info DAT to every GLSL
+  TOP; `lay_out()` drops the shader its mode doesn't run, which would read as part of the effect,
+  and keeps the Info DAT, which says where a shader fails to compile (the node only says that
+  it did).
+
+A builder names its parts with `section(key, title, lane=...)` before the operators that belong
+to them. `mk()` refuses to make an operator inside the effect before any `section()`.
+`new_effect()` opens "Read me", the input box, and the `audio` and `depth` boxes with their In
+operators, which the builder titles when it builds on them (`section('audio', 'Audio (input
+2): ...')`). `finish_effect()` opens the output box, which the builder may title too (VHS +
+CRT's holds the Switch that picks a screen). Lib helpers such as `audio_in()` and
+`optical_flow()` put their operators in whatever section is current. An operator made some other
+way (a loaded `.tox`) joins one with `put(op, key)`. Outside the effect, `mk(..., at=(x, y))`
+places an operator by hand, as the dev tools do.
+
+`assert_laid_out` checks the result at save time (TD_IDIOMS D7). It refuses an operator outside
+every box or in two, boxes or operators that overlap, a docked DAT away from its operator, an
+untitled box, a wire running right to left, and an operator reading one to its right in its own
+box. To see a network without opening TouchDesigner, `dev/probes/layout_dump.py` writes every
+component's operators, wires, references and boxes as JSON. To show that a change moved
+operators and nothing else, compare two `dev/probes/structure_dump.py` runs with
+`dev/probes/structure_diff.py`.
 
 ## Building a bundle
 
@@ -132,8 +180,9 @@ dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`)
   or a file parameter with an absolute path (sample media comes from `app.samplesFolder`).
   TouchDesigner's own `/sys` and `/ui` are allowed;
 - a docked DAT is unused (the builder wired its own beside it);
-- it isn't readable inside: no README or one without its CREDITS, an operator without a comment,
-  a parameter without help, the About page incomplete, no tags, another node color, a node smaller than 480 x 270;
+- it isn't readable inside: no README, one without its CREDITS or one wrapped by hand, an operator
+  without a comment, a parameter without help, the About page incomplete, no tags, another node color,
+  a node smaller than 480 x 270;
 - the inputs aren't a TOP then optionally a CHOP and a TOP, the output isn't one TOP, or anything
   inside makes sound (an Audio Device Out, whose saved state would play the moment a project
   opens);
@@ -145,7 +194,8 @@ dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`)
   (below), or a flashing effect without the standard Flashing parameter;
 - it doesn't load clean (`assert_loads_clean`): any error or warning with nothing wired, in it
   or in a second copy beside it. TouchDesigner reports a GLSL compile error as a warning, so
-  warnings count.
+  warnings count;
+- its network isn't laid out (`assert_laid_out`, Laying out the network above).
 
 `dev/selftest.py` breaks each of these once inside TouchDesigner and checks it refuses, checks
 that a flashing effect built the standard way passes, and that the intact effect loads
@@ -182,6 +232,13 @@ footage. Each entry is one of:
 - **Original (no earlier source found):** designed here, and a search found no earlier source.
   Only for what was designed here: code recalled from elsewhere that can't be traced is replaced
   with something that can, never called original.
+
+The README DAT holds one line per paragraph and per list item, with a blank line between
+paragraphs. TouchDesigner's text viewer wraps lines to its own width, so a README wrapped by hand
+breaks again wherever the viewer is narrower than the wrap, which reads jolting. A list item or an
+indented line may follow a line directly, and anything may follow a heading (CREDITS, USE).
+`new_effect()` turns the README's Word Wrap on, and `assert_readable` refuses a README wrapped by
+hand (`hard_wrapped()`; `dev/selftest.py` breaks it).
 
 Write the credits while building, from what the prototypes and the board recorded, and check them
 before the review: TD_IDIOMS D6 asks for it by hand in every version's review, `save_tox()` refuses

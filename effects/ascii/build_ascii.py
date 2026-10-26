@@ -17,7 +17,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.2.0'
+VERSION = '0.2.1'
 # A beat's ripple: a ring RIPPLE_WIDTH frame heights wide leaves the middle of the frame and reaches its
 # corners in RIPPLE_TIME seconds; the cells it passes switch glyph set and take the other accent color.
 RIPPLE_TIME, RIPPLE_WIDTH = 0.4, 0.09
@@ -40,75 +40,37 @@ ORANGE_BLUE, SOURCE, MONO = 'orangeblue', 'source', 'mono'
 README = """ASCII {v}: the picture as text. touchdesigner-effects, MIT.
 Docs: https://github.com/kevinraymond/touchdesigner-effects/blob/main/docs/effects/ascii.md
 
-ASCII art draws a picture with nothing but text characters: characters with a lot of ink stand
-in for bright patches and sparse ones for dim patches, so from a step back the text reads as the
-picture. This effect does it live.
+ASCII art draws a picture with nothing but text characters: characters with a lot of ink stand in for bright patches and sparse ones for dim patches, so from a step back the text reads as the picture. This effect does it live.
 
-The picture becomes a grid of glyph cells. Where it has a clear edge, the cell gets the line
-glyph that follows it ( | \\ - / ), in orange by default; everywhere else a glyph from a
-brightness ramp, and cells below the black point stay empty.
+The picture becomes a grid of glyph cells. Where it has a clear edge, the cell gets the line glyph that follows it ( | \\ - / ), in orange by default; everywhere else a glyph from a brightness ramp, and cells below the black point stay empty.
 
 USE
-Drag ascii.tox into your network: it shows TouchDesigner's sample picture straight away. Wire
-any TOP into input 1; the result is on output 1, at the input's size. Optionally wire audio or
-beat channels into input 2 (below). Open Window shows it full size; Esc closes the window.
+Drag ascii.tox into your network: it shows TouchDesigner's sample picture straight away. Wire any TOP into input 1; the result is on output 1, at the input's size. Optionally wire audio or beat channels into input 2 (below). Open Window shows it full size; Esc closes the window.
 
 FONTS
-System Font draws the glyphs with a font installed on your computer (Font Name; Courier New is on
-Mac and Windows), rasterized at run time, so no font ships in this file. If the font is missing,
-TouchDesigner substitutes Helvetica and shows a warning. Bitmap 5x7 is a pixel font drawn for this
-library, the same on every computer; its cells snap to whole font pixels (9, 18, 27...).
+System Font draws the glyphs with a font installed on your computer (Font Name; Courier New is on Mac and Windows), rasterized at run time, so no font ships in this file. If the font is missing, TouchDesigner substitutes Helvetica and shows a warning. Bitmap 5x7 is a pixel font drawn for this library, the same on every computer; its cells snap to whole font pixels (9, 18, 27...).
 
 AUDIO (input 2, optional)
-Fosfora's signal is the best input: run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's
-integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire
-it into input 2. Then, with Fosfora Moments on: pops land on its downbeats, a new section moves
-the picture to the next glyph set, a build fills in the darks and the outlines, and a drop makes
-the next allowed flash reverse video (Fosfora's drop detection is experimental).
-Any input: every beat sends a ripple out from the middle, a ring whose cells switch to another
-glyph set and the other accent color as it passes (Beat Ripple), and moves a share of the cells to
-another glyph set of the same ink (Beat Glyphs); every bar (or beat, Pop On) gives a contrast pop
-(Beat Pop), and loudness brings out more outlines (Loudness). Raw audio (Audio File In, Audio
-Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo
-(experimental: it can still add or miss beats) and a bar every 4 beats; TouchDesigner's
-audioAnalysis gives beats from its kick or onset channels. Nothing wired: no beats, and the
-effect still draws the picture.
+Fosfora's signal is the best input: run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it into input 2. Then, with Fosfora Moments on: pops land on its downbeats, a new section moves the picture to the next glyph set, a build fills in the darks and the outlines, and a drop makes the next allowed flash reverse video (Fosfora's drop detection is experimental). Any input: every beat sends a ripple out from the middle, a ring whose cells switch to another glyph set and the other accent color as it passes (Beat Ripple), and moves a share of the cells to another glyph set of the same ink (Beat Glyphs); every bar (or beat, Pop On) gives a contrast pop (Beat Pop), and loudness brings out more outlines (Loudness). Raw audio (Audio File In, Audio Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo (experimental: it can still add or miss beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from its kick or onset channels. Nothing wired: no beats, and the effect still draws the picture.
 
 FLASHING
-The pops and the drop are flashes; they share one gate that follows the Flashing parameter: Off
-never flashes, Calm (the default) at most once a second, Up to 3 per second is the WCAG 2.3.1
-limit. Glyph swaps keep the ink and the ripple keeps each cell's brightness, so they don't flash.
+The pops and the drop are flashes; they share one gate that follows the Flashing parameter: Off never flashes, Calm (the default) at most once a second, Up to 3 per second is the WCAG 2.3.1 limit. Glyph swaps keep the ink and the ripple keeps each cell's brightness, so they don't flash.
 
 INSIDE
-source -> prep (luminance, half size) -> blur_fine, blur_wide -> edges (difference of Gaussians,
-Sobel direction) -> cells (one texel per cell: mean color, winning edge direction) -> render ->
-out_top. avg, peak, stats_prev and stats set the automatic white point; atlas_glyphs and atlas
-draw the system font; cell and grid size the cells. Input 2 goes through audio (lib audio_in);
-moments_* turn its counts into pulses, flash_limit and flash gate the pops and drops, and pop_env,
-drop_env, beat_env and ripple shape them.
+source -> prep (luminance, half size) -> blur_fine, blur_wide -> edges (difference of Gaussians, Sobel direction) -> cells (one texel per cell: mean color, winning edge direction) -> render -> out_top. avg, peak, stats_prev and stats set the automatic white point; atlas_glyphs and atlas draw the system font; cell and grid size the cells. Input 2 goes through audio (lib audio_in); moments_* turn its counts into pulses, flash_limit and flash gate the pops and drops, and pop_env, drop_env, beat_env and ripple shape them.
 
 CREDITS
-- Edge glyphs follow the approach Acerola showed in "I Tried Turning Games Into Text" (YouTube,
-  2024): a difference of Gaussians finds the edges and a Sobel filter (Sobel and Feldman, 1968)
-  their direction, and each cell takes the line character of the direction most of it points.
-  Followed, not copied: the shaders are written for this library.
+- Edge glyphs follow the approach Acerola showed in "I Tried Turning Games Into Text" (YouTube, 2024): a difference of Gaussians finds the edges and a Sobel filter (Sobel and Feldman, 1968) their direction, and each cell takes the line character of the direction most of it points. Followed, not copied: the shaders are written for this library.
 - Glyphs stand for brightness by how much ink they carry, as ASCII art always has.
 - Per-cell dice: MurmurHash3's 32-bit finalizer (Austin Appleby, public domain).
-- Bitmap 5x7: a pixel font drawn for this library. System Font uses a font on your computer at run
-  time, so none ships here.
+- Bitmap 5x7: a pixel font drawn for this library. System Font uses a font on your computer at run time, so none ships here.
 - Read during the survey, not used: Lou Evoy's ASCII TOP, uisato's ASCII Paradise.
-- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
-  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
-  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
-  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
-  Followed, not copied.
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness; the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001). Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
 Everything else is written for this library. MIT.
 
 UPDATING
-Dragging a .tox in embeds a copy. To update, delete this one and drag in the new ascii.tox from
-https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's
-External .tox at a downloaded copy).
+Dragging a .tox in embeds a copy. To update, delete this one and drag in the new ascii.tox from https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's External .tox at a downloaded copy).
 """.format(v=VERSION)
 
 
@@ -218,8 +180,9 @@ custom(page, 'Toggle', 'Fosfora', 'Fosfora Moments', True,
 BITMAP = P + "Font == 'bitmap'"
 SCALE = 'max(1, round({}Cellsize / 9))'.format(P)
 WIDTH = 'max(4, round({}Cellsize * 0.55))'.format(P)
-cell = mk(comp, constantCHOP, 'cell', -400, 350, comment='Cell width and height, font size, bitmap font scale.')
-grid = mk(comp, constantCHOP, 'grid', -200, 350, comment='Columns and rows of cells, and the grid origin '
+section('grid', 'The grid: cell size, columns and rows', lane='glyphs')
+cell = mk(comp, constantCHOP, 'cell', comment='Cell width and height, font size, bitmap font scale.')
+grid = mk(comp, constantCHOP, 'grid', comment='Columns and rows of cells, and the grid origin '
           '(centered on the picture).')
 for chop, chans in ((cell, (('w', '6 * {s} if {b} else {w}'.format(s=SCALE, b=BITMAP, w=WIDTH)),
                             ('h', '9 * {s} if {b} else {p}Cellsize.eval()'.format(s=SCALE, b=BITMAP, p=P)),
@@ -236,41 +199,44 @@ for chop, chans in ((cell, (('w', '6 * {s} if {b} else {w}'.format(s=SCALE, b=BI
 CELL = (Expr("op('cell')['w']"), Expr("op('cell')['h']"), Expr("op('grid')['ox']"), Expr("op('grid')['oy']"))
 
 # ---- Edges, at half resolution ------------------------------------------------------------------------
-prep = glsl(comp, 'prep', -400, 0, [source], shader('prep.glsl'), 'Luminance at half size, for the edge pass.',
+section('edges', "Edges at half size, and each cell's color and edge")
+prep = glsl(comp, 'prep', [source], shader('prep.glsl'), 'Luminance at half size, for the edge pass.',
             fmt='mono16float')
 prep.par.outputresolution = 'half'
-blur_fine = mk(comp, blurTOP, 'blur_fine', -200, 100, [prep], 'The luminance blurred a little (difference of '
+blur_fine = mk(comp, blurTOP, 'blur_fine', [prep], 'The luminance blurred a little (difference of '
                'Gaussians, narrow).', size=2, extend='hold')
-blur_wide = mk(comp, blurTOP, 'blur_wide', -200, -100, [prep], 'The luminance blurred more (difference of '
+blur_wide = mk(comp, blurTOP, 'blur_wide', [prep], 'The luminance blurred more (difference of '
                'Gaussians, wide).', size=5, extend='hold')
-edges = glsl(comp, 'edges', 0, 0, [blur_fine, blur_wide], shader('edges.glsl'),
+edges = glsl(comp, 'edges', [blur_fine, blur_wide], shader('edges.glsl'),
              'Edges and their direction (difference of Gaussians, Sobel), at half size.', fmt='rg8fixed',
              uThresh=Expr('0.008 * 2 ** ((0.5 - {}Edges) * 3)'.format(P)))
 edges.par.inputextenduv = 'hold'
-cells = glsl(comp, 'cells', 200, 0, [source, edges], shader('cells.glsl'),
+cells = glsl(comp, 'cells', [source, edges], shader('cells.glsl'),
              'One texel per cell: its mean color and winning edge direction.', fmt='rgba32float',
              res=(1, 1), uCell=CELL)
 cells.par.resolutionw.expr = "int(op('grid')['cols'])"
 cells.par.resolutionh.expr = "int(op('grid')['rows'])"
 
 # ---- Automatic levels --------------------------------------------------------------------------------
-avg = mk(comp, analyzeTOP, 'avg', 400, 250, [cells], 'Mean cell color (automatic levels).',
+section('levels', 'Automatic levels: the black and white points')
+avg = mk(comp, analyzeTOP, 'avg', [cells], 'Mean cell color (automatic levels).',
          op='average', analyzechannel='independent', format='rgba32float')
-peak = mk(comp, analyzeTOP, 'peak', 400, 150, [cells], 'Brightest cell (automatic levels).',
+peak = mk(comp, analyzeTOP, 'peak', [cells], 'Brightest cell (automatic levels).',
           op='maximum', analyzechannel='luminance', format='rgba32float')
-prev = mk(comp, feedbackTOP, 'stats_prev', 400, 350, [avg], "The white point's previous value.", top='stats')
-stats = glsl(comp, 'stats', 600, 250, [avg, peak, prev], shader('stats.glsl'),
+prev = mk(comp, feedbackTOP, 'stats_prev', [avg], "The white point's previous value.", top='stats')
+stats = glsl(comp, 'stats', [avg, peak, prev], shader('stats.glsl'),
              'Automatic white point, eased over time.', res=(1, 1), fmt='rgba32float',
              uEase=(Expr('absTime.stepSeconds'), 0.5))
 
 # ---- The system font's atlas --------------------------------------------------------------------------
-table = mk(comp, tableDAT, 'atlas_glyphs', 200, 500, comment='Where atlas draws each glyph: x is its left edge, '
+section('atlas', 'The system font: its glyphs drawn once at the cell size', lane='glyphs')
+table = mk(comp, tableDAT, 'atlas_glyphs', comment='Where atlas draws each glyph: x is its left edge, '
            'y its baseline, one slot per glyph.')
 table.clear()
 table.appendRow(['x', 'y', 'text'])
 for i, ch in enumerate(CHARS):
     table.appendRow([i % ATLAS_COLS * SLOT_W + SLOT_X, (ATLAS_ROWS - 1 - i // ATLAS_COLS) * SLOT_H + SLOT_Y, ch])
-atlas = mk(comp, textTOP, 'atlas', 400, 500, comment='The glyphs, drawn with the system font at the cell size.',
+atlas = mk(comp, textTOP, 'atlas', comment='The glyphs, drawn with the system font at the cell size.',
            text='', specdat='atlas_glyphs', font=Expr(P + 'Fontname'), typeface='Bold', fontsizexunit='pixels',
            fontsizex=Expr("op('cell')['fs']"), keepfontratio=True, outputresolution='custom',
            resolutionw=ATLAS_COLS * SLOT_W, resolutionh=ATLAS_ROWS * SLOT_H)
@@ -278,53 +244,55 @@ if hasattr(atlas.par, 'legacyparsing'):
     atlas.par.legacyparsing = False
 
 # ---- Audio: counts become pulses; every flash goes through the gate ----------------------------------------
-audio = audio_in(comp, _ROOT, x=-400, y=-350)
+section('audio', 'Audio (input 2): beats, drops and builds become pulses; flashes pass the gate')
+audio = audio_in(comp, _ROOT)
 counts = (('pop', "'bar_count' if {}Popon == 'bars' else 'beat_count'".format(P), 'The count the contrast pop '
            'follows: bars or beats (Pop On).'),
           ('drop', 'drop_count', "Fosfora's drop count."),
           ('beat', 'beat_count', 'The beat count: glyphs change on every beat.'))
-picks = [mk(comp, selectCHOP, 'moments_' + name, -200, -350 - 100 * i, [audio], text,
+picks = [mk(comp, selectCHOP, 'moments_' + name, [audio], text,
             channames=Expr(chan) if 'Popon' in chan else chan, renamefrom='*', renameto=name)
          for i, (name, chan, text) in enumerate(counts)]
-moments = mk(comp, mergeCHOP, 'moments', 0, -450, picks, 'The three counts.')
-lagged = mk(comp, lagCHOP, 'moments_lag', 200, -500, [moments], 'The counts, lagged a little.',
+moments = mk(comp, mergeCHOP, 'moments', picks, 'The three counts.')
+lagged = mk(comp, lagCHOP, 'moments_lag', [moments], 'The counts, lagged a little.',
             lag1=0.15, lag2=0.15, lagunit='seconds')
-new = mk(comp, mathCHOP, 'moments_new', 400, -450, [moments, lagged], 'Near 1 just after a count steps up.',
+new = mk(comp, mathCHOP, 'moments_new', [moments, lagged], 'Near 1 just after a count steps up.',
          chopop='sub')
-gains = mk(comp, constantCHOP, 'moments_on', 400, -600, comment='Which pulses count: the pop while Beat Pop is '
+gains = mk(comp, constantCHOP, 'moments_on', comment='Which pulses count: the pop while Beat Pop is '
            'above 0, the drop while Fosfora Moments is on, every beat.')
 gains.seq.const.numBlocks = 3
 setpars(gains, const0name='pop', const0value=Expr('1 if {}Beatpop > 0 else 0'.format(P)),
         const1name='drop', const1value=Expr('1 if {}Fosfora else 0'.format(P)), const2name='beat', const2value=1)
-picked = mk(comp, mathCHOP, 'moments_pick', 600, -450, [new, gains], 'Pulses that count.', chopop='mul')
-pulses = mk(comp, triggerCHOP, 'moments_pulse', 800, -450, [picked], 'A clean 0/1 pulse per new count.',
+picked = mk(comp, mathCHOP, 'moments_pick', [new, gains], 'Pulses that count.', chopop='mul')
+pulses = mk(comp, triggerCHOP, 'moments_pulse', [picked], 'A clean 0/1 pulse per new count.',
             threshup=0.5, attack=0, peak=1, decay=0, sustain=1, release=0)
-flashes = mk(comp, selectCHOP, 'moments_flash', 1000, -400, [pulses], 'The pulses that flash: pops and drops.',
+flashes = mk(comp, selectCHOP, 'moments_flash', [pulses], 'The pulses that flash: pops and drops.',
              channames='pop drop')
-either = mk(comp, mathCHOP, 'moments_any', 1200, -400, [flashes], 'A pop or a drop: one flash either way.',
+either = mk(comp, mathCHOP, 'moments_any', [flashes], 'A pop or a drop: one flash either way.',
             chanop='max')
-flash = flash_gate(comp, either, 1400, -400)
-pop_env = mk(comp, triggerCHOP, 'pop_env', 1800, -400, [flash], "The flash's shape: up at once, down over "
+flash = flash_gate(comp, either)
+pop_env = mk(comp, triggerCHOP, 'pop_env', [flash], "The flash's shape: up at once, down over "
              '0.4 s.', attack=0, peak=1, peaklen=0.05, decay=0.4, dshape='easeout', sustain=0)
-drop_pulse = mk(comp, selectCHOP, 'drop_pulse', 1000, -550, [pulses], 'A new drop.', channames='drop')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 1200, -550, [drop_pulse], 'Near a drop, a flash is reverse video.',
+drop_pulse = mk(comp, selectCHOP, 'drop_pulse', [pulses], 'A new drop.', channames='drop')
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_pulse], 'Near a drop, a flash is reverse video.',
               attack=0, peak=1, peaklen=0.6, decay=0.2, sustain=0)
-beat_pulse = mk(comp, selectCHOP, 'beat_pulse', 1000, -700, [pulses], 'A new beat.', channames='beat')
-beat_env = mk(comp, triggerCHOP, 'beat_env', 1200, -700, [beat_pulse], 'Glyphs changed by a beat settle back '
+beat_pulse = mk(comp, selectCHOP, 'beat_pulse', [pulses], 'A new beat.', channames='beat')
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_pulse], 'Glyphs changed by a beat settle back '
               'over 0.3 s.', attack=0, peak=1, peaklen=0.05, decay=0.3, dshape='linear', sustain=0)
-build = mk(comp, selectCHOP, 'build', 200, -800, [audio], "Fosfora's build, 0..1.", channames='build')
-build_lag = mk(comp, lagCHOP, 'build_lag', 400, -800, [build], 'The build, easing out after a drop.',
+build = mk(comp, selectCHOP, 'build', [audio], "Fosfora's build, 0..1.", channames='build')
+build_lag = mk(comp, lagCHOP, 'build_lag', [build], 'The build, easing out after a drop.',
                lag1=0.3, lag2=1.5, lagunit='seconds')
-level = mk(comp, selectCHOP, 'level', 200, -900, [audio], 'Loudness, 0..1.', channames='level')
-level_lag = mk(comp, lagCHOP, 'level_lag', 400, -900, [level], 'Loudness, smoothed (up in 0.1 s, down in 0.5 s).',
+level = mk(comp, selectCHOP, 'level', [audio], 'Loudness, 0..1.', channames='level')
+level_lag = mk(comp, lagCHOP, 'level_lag', [level], 'Loudness, smoothed (up in 0.1 s, down in 0.5 s).',
                lag1=0.1, lag2=0.5, lagunit='seconds')
-ripple = mk(comp, triggerCHOP, 'ripple', 1200, -800, [beat_pulse], "A beat's ripple: how far out it is, 0 to 1 over "
+ripple = mk(comp, triggerCHOP, 'ripple', [beat_pulse], "A beat's ripple: how far out it is, 0 to 1 over "
             '{:g} s, then 0 (none).'.format(RIPPLE_TIME), attack=RIPPLE_TIME, attackunit='seconds', ashape='linear',
             peak=1, peaklen=0, decay=0, sustain=0, release=0, multitrigger='restart')
 
 # ---- Render --------------------------------------------------------------------------------------------
+section('render', 'The text: each cell drawn as a glyph')
 render = glsl(
-    comp, 'render', 600, 0, [cells, atlas, stats], shader('render.glsl').replace('//@GLYPHS', glyph_tables()),
+    comp, 'render', [cells, atlas, stats], shader('render.glsl').replace('//@GLYPHS', glyph_tables()),
     'A glyph in every cell: lines along edges, a brightness ramp elsewhere, colored.', fmt='rgba8fixed',
     res=(1, 1),
     uCell=CELL,

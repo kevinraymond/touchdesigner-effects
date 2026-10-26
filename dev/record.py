@@ -75,19 +75,19 @@ def main():
              if not (names or takes) or os.path.splitext(os.path.basename(p))[0] in names]
     paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
               if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
-    clip = mk(host, moviefileinTOP, 'clip', -600, 0, comment='The clip.', file=clip_file)
+    clip = mk(host, moviefileinTOP, 'clip', comment='The clip.', file=clip_file, at=(-600, 0))
     depth_file = os.path.splitext(clip_file)[0] + '_depth.mp4'
-    depth = mk(host, moviefileinTOP, 'clip_depth', -600, -150, comment="The clip's depth.",
-               file=depth_file) if os.path.exists(depth_file) else None
-    track = mk(host, audiofileinCHOP, 'track', -600, -300, comment='The track.', file=track_file,
-               repeat='on') if track_file else None
-    view = mk(host, nullTOP, 'view', 400, 0, comment='What gets recorded.')
-    rec = mk(host, moviefileoutTOP, 'rec', 600, 0, [view], comment='Records the view and the track.',
+    depth = mk(host, moviefileinTOP, 'clip_depth', comment="The clip's depth.",
+               file=depth_file, at=(-600, -150)) if os.path.exists(depth_file) else None
+    track = mk(host, audiofileinCHOP, 'track', comment='The track.', file=track_file,
+               repeat='on', at=(-600, -300)) if track_file else None
+    view = mk(host, nullTOP, 'view', comment='What gets recorded.', at=(400, 0))
+    rec = mk(host, moviefileoutTOP, 'rec', [view], comment='Records the view and the track.',
              type='movie', videocodec='mjpa', qualityscale=1.0, fps=FPS, limitlength=True,
-             length=seconds, lengthunit='seconds')
+             length=seconds, lengthunit='seconds', at=(600, 0))
     if track:
         rec.par.audiochop = track
-    info = mk(host, infoCHOP, 'rec_info', 800, 0, comment='Frames written and dropped.', op=rec)
+    info = mk(host, infoCHOP, 'rec_info', comment='Frames written and dropped.', op=rec, at=(800, 0))
     # Each take: (name, what to record, the effect to let cook or None).
     effects = [(n, clip if n == 'input' else depth, None) for n in takes if n == 'input' or depth is not None]
     for path in paths:

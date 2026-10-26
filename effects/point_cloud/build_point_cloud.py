@@ -33,7 +33,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 # Detail: rows of points (columns follow the picture's shape), at most 640 x 360 = 230,400 points.
 ROWS = (180, 270, 360)
 # Depth Type's Stand Out search runs on a small copy of the depth, as in Particles: it reads a whole
@@ -174,63 +174,66 @@ custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "apart, after which it settles back (Fosfora's drop detection is experimental).")
 
 # ---- Audio (input 2) ---------------------------------------------------------------------------
+section('audio', "Audio (input 2): beats, drops, builds, loudness and each bar's angle")
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -400, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count drop_count')
-steps = mk(comp, slopeCHOP, 'steps', -200, -350, [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
-beat_step = mk(comp, selectCHOP, 'beat_step', 0, -300, [steps], 'A beat.', channames='beat_count')
-beat_env = mk(comp, triggerCHOP, 'beat_env', 200, -300, [beat_step],
+steps = mk(comp, slopeCHOP, 'steps', [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
+beat_step = mk(comp, selectCHOP, 'beat_step', [steps], 'A beat.', channames='beat_count')
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_step],
               "A beat's swell: 1 at the beat, none {:g} s later.".format(BEAT_TIME),
               attack=0, peak=1, peaklen=0, decay=BEAT_TIME, dshape='linear', sustain=0, release=0)
-drop_step = mk(comp, selectCHOP, 'drop_step', 0, -450, [steps], 'A drop.', channames='drop_count')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 200, -450, [drop_step],
+drop_step = mk(comp, selectCHOP, 'drop_step', [steps], 'A drop.', channames='drop_count')
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_step],
               "A drop's burst: out in {:g} s, settled back {:g} s later.".format(DROP_ATTACK, DROP_TIME),
               attack=DROP_ATTACK, peak=1, peaklen=0, decay=DROP_TIME, dshape='linear', sustain=0, release=0)
-build = mk(comp, selectCHOP, 'build', 0, -600, [audio], "Fosfora's build, 0..1.", channames='build')
-build_lag = mk(comp, lagCHOP, 'build_lag', 200, -600, [build], 'The build, easing out after a drop.',
+build = mk(comp, selectCHOP, 'build', [audio], "Fosfora's build, 0..1.", channames='build')
+build_lag = mk(comp, lagCHOP, 'build_lag', [build], 'The build, easing out after a drop.',
                lag1=0.5, lag2=2.0, lagunit='seconds')
-level = mk(comp, selectCHOP, 'level', 0, -750, [audio], 'Loudness, 0..1.', channames='level')
-level_lag = mk(comp, lagCHOP, 'level_lag', 200, -750, [level], 'Loudness, smoothed (up in 0.1 s, down in 0.8 s).',
+level = mk(comp, selectCHOP, 'level', [audio], 'Loudness, 0..1.', channames='level')
+level_lag = mk(comp, lagCHOP, 'level_lag', [level], 'Loudness, smoothed (up in 0.1 s, down in 0.8 s).',
                lag1=0.1, lag2=0.8, lagunit='seconds')
-bar = mk(comp, constantCHOP, 'bar', 0, -900, comment="The camera's angle for this bar (degrees).",
+bar = mk(comp, constantCHOP, 'bar', comment="The camera's angle for this bar (degrees).",
          const0name='turn', const0value=Expr("math.sin(op('audio')['bar_count'] * 2.4) * {} * parent().par.Barmoves"
                                              .format(BAR_TURN)))
 BAR_GLIDE = Expr("{} if parent().par.Look == 'surface' else {}".format(SURFACE_BAR_EASE, BAR_EASE))
-bar_lag = mk(comp, lagCHOP, 'bar_lag', 200, -900, [bar],
+bar_lag = mk(comp, lagCHOP, 'bar_lag', [bar],
              'The camera easing to its new angle over {:g} s ({:g} s for Surface).'.format(BAR_EASE, SURFACE_BAR_EASE),
              lag1=BAR_GLIDE, lag2=BAR_GLIDE, lagunit='seconds')
 
 # ---- The points ----------------------------------------------------------------------------------
-depth = depth_in(comp, x=-600, y=-1100)
+section('depth', 'Depth or a mask (input 3)')
+depth = depth_in(comp)
 grid_w = Expr("max(1, int(round({} * op('source').width / max(1, op('source').height))))".format(ROWS_EXPR))
-near = glsl(comp, 'near', -400, -1100, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
+section('points', 'The points: each pixel placed at its depth, the ones to keep')
+near = glsl(comp, 'near', [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
             'The depth at the grid size (Detail), as nearness; Depth Type flips distance (black: no reading).',
             fmt='rgba16float', uNear=(Expr('parent().par.Depthtype.menuIndex'), par('Maxdist')))
 setpars(near, outputresolution='custom', resolutionw=grid_w, resolutionh=Expr(ROWS_EXPR))
-near_small = glsl(comp, 'near_small', -400, -1300, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
+near_small = glsl(comp, 'near_small', [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
                   'The depth, {} x {}, for finding the subject.'.format(MW, MH), res=(MW, MH), fmt='rgba16float',
                   uNear=(Expr('parent().par.Depthtype.menuIndex'), par('Maxdist')))
-find = glsl(comp, 'find', -200, -1300, [near_small], lib_glsl(_ROOT, 'depth_find.glsl'),
+find = glsl(comp, 'find', [near_small], lib_glsl(_ROOT, 'depth_find.glsl'),
             'The subject: nearer than Far Limit and (The Subject) than what lies left and right of it.',
             res=(MW, MH), fmt='rgba16float',
             uFind=(Expr("1 if parent().par.Pointsfrom == 'nearer' else 0"), par('Standout'),
                    Expr('parent().par.Far.eval() if parent().inputConnectors[2].connections else '
                         'max(parent().par.Far.eval(), {:g})'.format(BRIGHT_FAR))))
-keep_all = mk(comp, constantTOP, 'keep_all', -200, -1450, comment='White: every point stays (Points From Everything).',
+keep_all = mk(comp, constantTOP, 'keep_all', comment='White: every point stays (Points From Everything).',
               outputresolution='custom', resolutionw=1, resolutionh=1, colorr=1, colorg=1, colorb=1, alpha=1)
-keep = mk(comp, switchTOP, 'keep', 0, -1300, [keep_all, find],
+keep = mk(comp, switchTOP, 'keep', [keep_all, find],
           'Which points stay: all, or the subject (find cooks only then: a Switch TOP cooks only what it shows).',
           index=Expr("0 if parent().par.Pointsfrom == 'everything' else 1"))
-near_tiny = glsl(comp, 'near_tiny', -600, -800, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
+near_tiny = glsl(comp, 'near_tiny', [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
                  'The depth, {} x {}, as nearness: enough to tell whether input 3 carries any.'.format(*TINY),
                  res=TINY, fmt='rgba16float', uNear=(Expr('parent().par.Depthtype.menuIndex'), par('Maxdist')))
-depth_stats = mk(comp, analyzeTOP, 'depth_stats', -400, -800, [near_tiny],
+depth_stats = mk(comp, analyzeTOP, 'depth_stats', [near_tiny],
                  'The nearest reading in the depth: none (black) means input 3 carries no depth.',
                  op='maximum', analyzechannel='independent', format='rgba16float')
-near_pick = glsl(comp, 'near_pick', -200, -950, [near, source, depth_stats], src('near_pick.glsl'),
+near_pick = glsl(comp, 'near_pick', [near, source, depth_stats], src('near_pick.glsl'),
                  "The depth pos reads: input 3's when it carries any, else input 1's brightness.", fmt='rgba16float')
 JITTER = Expr("0 if parent().par.Look == 'surface' else 1")
-pos = glsl(comp, 'pos', -200, -1100, [near_pick, keep], src('pos.glsl'),
+pos = glsl(comp, 'pos', [near_pick, keep], src('pos.glsl'),
            'Every point in 3D: on its ray from the camera, as far as its depth says (smoothed, edges put to a side).',
            fmt='rgba32float',
            uGeo=(ASPECT, par('Depth'), Expr("1 if parent().par.Depthtype != 'nearness' else 0"), JITTER),
@@ -239,15 +242,16 @@ pos = glsl(comp, 'pos', -200, -1100, [near_pick, keep], src('pos.glsl'),
 setpars(pos, outputresolution='custom', resolutionw=grid_w, resolutionh=Expr(ROWS_EXPR))
 
 # ---- The cloud's middle --------------------------------------------------------------------------
-pivot_in = glsl(comp, 'pivot_in', 0, -950, [pos], src('pivot_in.glsl'), 'The kept points (and 1), for their average.',
+section('pivot', "The cloud's middle, which the camera turns around")
+pivot_in = glsl(comp, 'pivot_in', [pos], src('pivot_in.glsl'), 'The kept points (and 1), for their average.',
                 fmt='rgba32float')
-pivot_avg = mk(comp, analyzeTOP, 'pivot_avg', 200, -950, [pivot_in], "pivot_in's average: the kept points' middle.",
+pivot_avg = mk(comp, analyzeTOP, 'pivot_avg', [pivot_in], "pivot_in's average: the kept points' middle.",
                op='average', analyzechannel='independent', format='rgba32float')
-pivot_start = mk(comp, constantTOP, 'pivot_start', 200, -800, comment="pivot's starting state: no middle yet.",
+pivot_start = mk(comp, constantTOP, 'pivot_start', comment="pivot's starting state: no middle yet.",
                  outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float',
                  colorr=0, colorg=0, colorb=0, alpha=0)
-pivot_fb = mk(comp, feedbackTOP, 'pivot_fb', 400, -800, [pivot_start], "pivot's last frame.", top='pivot')
-pivot = glsl(comp, 'pivot', 400, -950, [pivot_avg, pivot_fb], src('pivot.glsl'),
+pivot_fb = mk(comp, feedbackTOP, 'pivot_fb', [pivot_start], "pivot's last frame.", top='pivot')
+pivot = glsl(comp, 'pivot', [pivot_avg, pivot_fb], src('pivot.glsl'),
              'What the cloud turns around: its middle, eased over {:g} s.'.format(PIVOT_EASE),
              res=(1, 1), fmt='rgba32float', uPivot=(DT, PIVOT_EASE))
 
@@ -271,10 +275,10 @@ def moves(calm=1):
 COLOR = Expr('parent().par.Color.menuIndex')
 
 
-def dot_mat(name, y, comment, size, pass_, calm=1):
+def dot_mat(name, comment, size, pass_, calm=1):
     """A GLSL MAT with the dot shaders (each MAT fills its own docked DATs, so the three carry the
     same text), reading pos, the picture and the pivot."""
-    mat = mk(comp, glslMAT, name, 800, y, comment=comment)
+    mat = mk(comp, glslMAT, name, comment=comment)
     docked(mat, '_vertex', src('dot_vertex.glsl'), 'Places, turns, moves and colors each dot (dot_vertex.glsl).')
     docked(mat, '_pixel', src('dot_pixel.glsl'), 'Draws a dot: solid, soft or a splat (dot_pixel.glsl).')
     mat.seq.sampler.numBlocks = 3
@@ -286,47 +290,48 @@ def dot_mat(name, y, comment, size, pass_, calm=1):
     return mat
 
 
+section('draw', 'Drawing: a dot or a splat at every point, seen by a turning camera')
 GLOW = "parent().par.Look == 'glow'"
-dots = dot_mat('dot_mat', -150, 'Points and Glow: solid dots in front of each other, or soft ones added up.',
+dots = dot_mat('dot_mat', 'Points and Glow: solid dots in front of each other, or soft ones added up.',
                Expr("parent().par.Size * ({} if {} else 1)".format(GLOW_SIZE, GLOW)),
                Expr('parent().par.Look.menuIndex'))
 setpars(dots, blending=Expr(GLOW), srcblend='one', destblend='one', depthtest=Expr('not ' + GLOW),
         depthwriting=Expr('not ' + GLOW))
-dot_mat('splat_depth_mat', -300, "Surface's depth pass: each splat's middle, a little farther back.",
+dot_mat('splat_depth_mat', "Surface's depth pass: each splat's middle, a little farther back.",
         SPLAT_SIZE, 3, SURFACE_MOVES)
-splats = dot_mat('splat_mat', -450, "Surface's splats: color x weight and weight, added up where they pass the depth.",
+splats = dot_mat('splat_mat', "Surface's splats: color x weight and weight, added up where they pass the depth.",
                  SPLAT_SIZE, 2, SURFACE_MOVES)
 setpars(splats, blending=True, srcblend='one', destblend='one', srcblenda='one', destblenda='one', depthtest=True,
         depthwriting=False, premultrgbbyalpha=False)
 
-geo = mk(comp, geometryCOMP, 'geo', 600, -150, comment="A square at every point: instancing, one per pixel of pos.",
+geo = mk(comp, geometryCOMP, 'geo', comment="A square at every point: instancing, one per pixel of pos.",
          instancing=True, instancecountmode='oplength', instanceop='pos', instancetx='r', instancety='g',
          instancetz='b', material='dot_mat')
 for o in list(geo.children):             # a new Geometry COMP holds a torus
     o.destroy()
-quad = mk(geo, rectangleSOP, 'quad', 0, 0, comment='A square one unit across: dot_mat sizes and places each one.',
-          sizex=1, sizey=1)
+quad = mk(geo, rectangleSOP, 'quad', comment='A square one unit across: dot_mat sizes and places each one.',
+          sizex=1, sizey=1, at=(0, 0))
 quad.render = quad.display = True
-cam = mk(comp, cameraCOMP, 'cam', 600, 0, comment='Where the picture fills the frame ({:g} degrees high); the cloud '
+cam = mk(comp, cameraCOMP, 'cam', comment='Where the picture fills the frame ({:g} degrees high); the cloud '
          'turns, not the camera.'.format(FOV), projection='perspective', viewanglemethod='vertfov', fov=FOV,
          tz=D0, near=0.01, far=100)
 # A new Camera COMP holds a File In POP (its own picture in the viewer); nothing here draws it.
 for o in list(cam.children):
     o.destroy()
 SIZE = dict(outputresolution='custom', resolutionw=Expr("op('source').width"), resolutionh=Expr("op('source').height"))
-render = mk(comp, renderTOP, 'render', 1000, -150, comment='Points and Glow, at the picture size.',
+render = mk(comp, renderTOP, 'render', comment='Points and Glow, at the picture size.',
             camera='cam', geometry='geo', lights='', bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=1, **SIZE)
 # A Render Pass TOP draws into its input's buffers, so the float the sums need is set here.
-splat_depth = mk(comp, renderTOP, 'splat_depth', 1000, -300, comment="Surface: the splats' depth only, a little "
+splat_depth = mk(comp, renderTOP, 'splat_depth', comment="Surface: the splats' depth only, a little "
                  'farther back than they are.', camera='cam', geometry='geo', lights='', overridemat='splat_depth_mat',
                  drawdepthonly=True, format='rgba16float', bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=0, **SIZE)
-splat_sum = mk(comp, renderpassTOP, 'splat_sum', 1200, -300, [splat_depth],
+splat_sum = mk(comp, renderpassTOP, 'splat_sum', [splat_depth],
                "Surface: the splats' colors and weights added up where they pass splat_depth's depth.",
                camera='cam', geometry='geo', lights='', cleardepth=False, clearcolor=True, overridemat='splat_mat',
                bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=0)
-splat_norm = glsl(comp, 'splat_norm', 1400, -300, [splat_sum], src('splat_norm.glsl'),
+splat_norm = glsl(comp, 'splat_norm', [splat_sum], src('splat_norm.glsl'),
                   'Surface: color divided by weight, the splats blended into one skin.')
-look = mk(comp, switchTOP, 'look', 1600, -150, [render, splat_norm], 'The Look: Points and Glow, or Surface.',
+look = mk(comp, switchTOP, 'look', [render, splat_norm], 'The Look: Points and Glow, or Surface.',
           index=Expr("1 if parent().par.Look == 'surface' else 0"))
 
 finish_effect(comp, look, VERSION, page)

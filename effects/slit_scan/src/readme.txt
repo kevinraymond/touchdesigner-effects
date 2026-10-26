@@ -1,104 +1,41 @@
 Slit-Scan {v}: each part of the picture from its own moment. touchdesigner-effects, MIT.
 Docs: https://github.com/kevinraymond/touchdesigner-effects/blob/main/docs/effects/slit_scan.md
 
-Slit-scan shows different parts of the picture from different moments. Stack a video's frames one behind the other
-and you have a block of time, and a normal picture is a slice straight across it, one moment everywhere. Slit-scan
-slices it at a tilt or along a curve, so the top of the picture might be now and the bottom a second ago. Whatever
-stands still looks the same, and whatever moves bends, stretches and smears through time. Strip photography, the
-older form, films one line of the scene through a slit onto moving film, as photo-finish cameras do.
+Slit-scan shows different parts of the picture from different moments. Stack a video's frames one behind the other and you have a block of time, and a normal picture is a slice straight across it, one moment everywhere. Slit-scan slices it at a tilt or along a curve, so the top of the picture might be now and the bottom a second ago. Whatever stands still looks the same, and whatever moves bends, stretches and smears through time. Strip photography, the older form, films one line of the scene through a slit onto moving film, as photo-finish cameras do.
 
-This effect keeps the last few seconds of the input on the GPU and builds each pixel from the moment its time map
-gives it. The map can sweep across the picture (Sweep), spread in rings from a center (Rings), follow the depth or a
-mask on input 3 (Depth) or a drifting noise (Liquid), or be a slit with film running past it (Slit). Between the
-input's frames it fills in along the movement, so a 24 or 30 fps video bends smoothly instead of in steps. The music
-flips the map on the bars, tears thin slivers of the picture open onto other moments on the beats, reaches further
-back as it gets louder, and freezes time on a drop.
+This effect keeps the last few seconds of the input on the GPU and builds each pixel from the moment its time map gives it. The map can sweep across the picture (Sweep), spread in rings from a center (Rings), follow the depth or a mask on input 3 (Depth) or a drifting noise (Liquid), or be a slit with film running past it (Slit). Between the input's frames it fills in along the movement, so a 24 or 30 fps video bends smoothly instead of in steps. The music flips the map on the bars, tears thin slivers of the picture open onto other moments on the beats, reaches further back as it gets louder, and freezes time on a drop.
 
 USE
-Drag slit_scan.tox into your network. It shows TouchDesigner's sample movie, a slow pan through a forest, with the
-trees bending through time straight away. Wire any TOP into input 1, and the result is on output 1 at the input's
-size. The history fills over the first seconds, so the effect grows in. You can also wire audio or beat channels into
-input 2 and a depth map or mask into input 3 (below). Open Window shows the picture full size, and Esc closes the
-window.
+Drag slit_scan.tox into your network. It shows TouchDesigner's sample movie, a slow pan through a forest, with the trees bending through time straight away. Wire any TOP into input 1, and the result is on output 1 at the input's size. The history fills over the first seconds, so the effect grows in. You can also wire audio or beat channels into input 2 and a depth map or mask into input 3 (below). Open Window shows the picture full size, and Esc closes the window.
 
 THE PAGE
-Map picks Sweep, Rings, Depth, Liquid or Slit. Delay is how far back the most delayed part lies, in seconds, at most
-History. Angle says where Sweep's past lies and Spin how fast that turns. Center X and Center Y place the rings, and
-Scale and Drift shape Liquid's noise. Film, Position and Speed set which way Slit's film runs, where the slit is and
-how fast the film goes. Bands cuts the map into that many steps of time, and Reverse turns it end over end. History
-is how many seconds are kept, History Size the resolution they are kept at, and Between Frames how the moments between
-the input's frames are filled in (Flow, Blend or Steps). Flips, Beat Kick, Loudness, Song Moments and Length are the
-music's (below).
+Map picks Sweep, Rings, Depth, Liquid or Slit. Delay is how far back the most delayed part lies, in seconds, at most History. Angle says where Sweep's past lies and Spin how fast that turns. Center X and Center Y place the rings, and Scale and Drift shape Liquid's noise. Film, Position and Speed set which way Slit's film runs, where the slit is and how fast the film goes. Bands cuts the map into that many steps of time, and Reverse turns it end over end. History is how many seconds are kept, History Size the resolution they are kept at, and Between Frames how the moments between the input's frames are filled in (Flow, Blend or Steps). Flips, Beat Kick, Loudness, Song Moments and Length are the music's (below).
 
 MEMORY
-The history lives on the GPU. It holds every frame the project made over the last History seconds, 60 a second at
-60 fps, whatever the input's own frame rate. At 1280 x 720 each second of History takes about {mem720} MB at Full,
-{mem720h} MB at Half and {mem720q} MB at Quarter. At 1280 x 1280, the free license's largest, it takes {mem1280} MB,
-{mem1280h} MB and {mem1280q} MB. At its defaults ({hist:g} s of History) at 1280 x 720 the whole effect takes about
-{memdef} MB. At Half the past looks softer, but the newest moment always comes from the input at its full size.
-Changing History or History Size starts the history again.
+The history lives on the GPU. It holds every frame the project made over the last History seconds, 60 a second at 60 fps, whatever the input's own frame rate. At 1280 x 720 each second of History takes about {mem720} MB at Full, {mem720h} MB at Half and {mem720q} MB at Quarter. At 1280 x 1280, the free license's largest, it takes {mem1280} MB, {mem1280h} MB and {mem1280q} MB. At its defaults ({hist:g} s of History) at 1280 x 720 the whole effect takes about {memdef} MB. At Half the past looks softer, but the newest moment always comes from the input at its full size. Changing History or History Size starts the history again.
 
 AUDIO (input 2, optional)
-Fosfora's signal is the best input. Run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's
-integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it into input 2.
-With Flips at On Bars, the default, the map flips end over end on the one of each bar, sliding over a quarter second.
-On Beats flips it on every beat, Steady every {steady:g} s, and Off never. Slit doesn't flip, since its film would
-lose the strip. On every beat a few thin slivers of rows tear open onto a moment further back for {tear:g} s (Beat
-Kick says how far), and in Slit they land on the film and ride away with it. Louder music reaches further back
-(Loudness), and in Slit it runs the film faster. With Song Moments on, a build reaches further back as it rises, and a
-drop freezes time for Length seconds (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio
-Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo, and a bar every 4 beats.
-That clock is experimental and can still add or miss beats. TouchDesigner's audioAnalysis gives beats from its kick
-or onset channels. With nothing wired, the map flips every {steady:g} s and tears open with each flip.
+Fosfora's signal is the best input. Run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it into input 2. With Flips at On Bars, the default, the map flips end over end on the one of each bar, sliding over a quarter second. On Beats flips it on every beat, Steady every {steady:g} s, and Off never. Slit doesn't flip, since its film would lose the strip. On every beat a few thin slivers of rows tear open onto a moment further back for {tear:g} s (Beat Kick says how far), and in Slit they land on the film and ride away with it. Louder music reaches further back (Loudness), and in Slit it runs the film faster. With Song Moments on, a build reaches further back as it rises, and a drop freezes time for Length seconds (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo, and a bar every 4 beats. That clock is experimental and can still add or miss beats. TouchDesigner's audioAnalysis gives beats from its kick or onset channels. With nothing wired, the map flips every {steady:g} s and tears open with each flip.
 
 DEPTH OR MASK (input 3, optional)
-Map Depth reads input 3, grayscale, brighter nearer (or inside a mask). Nearer parts are now and farther ones lag, so
-a dancer leaves her past selves in the room behind her. Reverse makes the near parts lag instead. With nothing on
-input 3, input 1's brightness stands in.
+Map Depth reads input 3, grayscale, brighter nearer (or inside a mask). Nearer parts are now and farther ones lag, so a dancer leaves her past selves in the room behind her. Reverse makes the near parts lag instead. With nothing on input 3, input 1's brightness stands in.
 
 FLASHING
-A flip changes the whole picture at once, and so does time starting again after a freeze, so both count as flashes.
-They pass one gate that follows the Flashing parameter. Off never lets one through, Calm (the default) at most one a
-second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. After the gate a budget keeps this
-effect well under that limit. The beat's tears cover too little of the picture to count, and Flashing Off stops them
-too. Slit-scan only re-times the picture, so a still input stays still, but a map that moves sweeps time past each
-point, and faster than the picture moves it would show the picture's own changes faster, flashes included. So the
-delay glides to new values at up to {glide:g} s a second, Spin and Drift slow down at long delays, and a flip slides
-for longer. Slit's film spreads whatever flickers on the slit line across the strip, so its speed stops at
-{speedmax:g}, and its reds are kept short of WCAG's saturated-red line (an orange comes out a little lighter).
+A flip changes the whole picture at once, and so does time starting again after a freeze, so both count as flashes. They pass one gate that follows the Flashing parameter. Off never lets one through, Calm (the default) at most one a second, and Up to 3 per second is the WCAG 2.3.1 limit, which no setting exceeds. After the gate a budget keeps this effect well under that limit. The beat's tears cover too little of the picture to count, and Flashing Off stops them too. Slit-scan only re-times the picture, so a still input stays still, but a map that moves sweeps time past each point, and faster than the picture moves it would show the picture's own changes faster, flashes included. So the delay glides to new values at up to {glide:g} s a second, Spin and Drift slow down at long delays, and a flip slides for longer. Slit's film spreads whatever flickers on the slit line across the strip, so its speed stops at {speedmax:g}, and its reds are kept short of WCAG's saturated-red line (an orange comes out a little lighter).
 
 INSIDE
-The history runs source into pics (a Texture 3D TOP, a slot every frame, at History Size), the optical flow lk4 (lib
-optical_flow) into flows, and stamp (which cook, which input frame, when it came) into stamps. frames lists the input's
-frames newest first. scan builds Sweep, Rings, Depth and Liquid from them, slit builds Slit with its film in slit_fb,
-and view picks one. Input 2 goes through audio (lib audio_in), and counts and steps turn its counts into steps.
-beat_on, bar_on, steady_on and drop_on pick the flips and freezes asked for, and flash_limit, flash and flash_budget
-gate them. flip_n, flip_parity and flip slide the map over, and freeze holds time on a drop. beat_env and beat_n open
-each beat's tears, and level_smooth eases the loudness.
+The history runs source into pics (a Texture 3D TOP, a slot every frame, at History Size), the optical flow lk4 (lib optical_flow) into flows, and stamp (which cook, which input frame, when it came) into stamps. frames lists the input's frames newest first. scan builds Sweep, Rings, Depth and Liquid from them, slit builds Slit with its film in slit_fb, and view picks one. Input 2 goes through audio (lib audio_in), and counts and steps turn its counts into steps. beat_on, bar_on, steady_on and drop_on pick the flips and freezes asked for, and flash_limit, flash and flash_budget gate them. flip_n, flip_parity and flip slide the map over, and freeze holds time on a drop. beat_env and beat_n open each beat's tears, and level_smooth eases the loudness.
 
 CREDITS
-- Slit-scan and time displacement as an art form, catalogued in Golan Levin's "An Informal Catalogue of Slit-Scan
-  Video Artworks and Research" (flong.com, 2005 to 2015).
-- The video as a block of time cut by a plane or a sphere (Sweep, Spin, Rings), after S. Fels and K. Mase,
-  "Interactive Video Cubism" (Workshop on New Paradigms for Interactive Visualization and Manipulation, 1999), and
-  S. Fels, E. Lee and K. Mase, "Techniques for Interactive Video Cubism" (ACM Multimedia 2000). Followed, not copied.
-- Strip photography as photo-finish cameras take it (Slit), and Martin Reinhart's tx-transform (1998), which swaps
-  time and one direction of the picture.
-- Filling in between frames along the motion, the two frames warped toward the moment between them and mixed, is a
-  widely known technique. The motion is the library's Lucas-Kanade optical flow (B. D. Lucas and T. Kanade, 1981).
-- Liquid's noise is value noise with Chris Wellons' lowbias32 integer hash (hash-prospector, public domain), which
-  also places the tears.
-- Read during the survey, not used: FollowTheDarkside's td-slitscan, instant infinite's "Slit scan with Texture3D &
-  TimeMachine", elekktronaut's Slitscan tutorial, and TouchDesigner's Time Machine TOP and its OP Snippet.
-- Beats from raw audio (the library's audio input). A kick is a jump in the low band's loudness, and the beat clock
-  takes its tempo from the gaps between kicks, each voting for the beat lengths it is a whole multiple of. That is
-  inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic Extraction of Tempo and Beat from
-  Expressive Performances" (J. New Music Research, 2001). Followed, not copied.
+- Slit-scan and time displacement as an art form, catalogued in Golan Levin's "An Informal Catalogue of Slit-Scan Video Artworks and Research" (flong.com, 2005 to 2015).
+- The video as a block of time cut by a plane or a sphere (Sweep, Spin, Rings), after S. Fels and K. Mase, "Interactive Video Cubism" (Workshop on New Paradigms for Interactive Visualization and Manipulation, 1999), and S. Fels, E. Lee and K. Mase, "Techniques for Interactive Video Cubism" (ACM Multimedia 2000). Followed, not copied.
+- Strip photography as photo-finish cameras take it (Slit), and Martin Reinhart's tx-transform (1998), which swaps time and one direction of the picture.
+- Filling in between frames along the motion, the two frames warped toward the moment between them and mixed, is a widely known technique. The motion is the library's Lucas-Kanade optical flow (B. D. Lucas and T. Kanade, 1981).
+- Liquid's noise is value noise with Chris Wellons' lowbias32 integer hash (hash-prospector, public domain), which also places the tears.
+- Read during the survey, not used: FollowTheDarkside's td-slitscan, instant infinite's "Slit scan with Texture3D & TimeMachine", elekktronaut's Slitscan tutorial, and TouchDesigner's Time Machine TOP and its OP Snippet.
+- Beats from raw audio (the library's audio input). A kick is a jump in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it is a whole multiple of. That is inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001). Followed, not copied.
 - Flash limits from WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
-Everything else (the history's stamps and frame list, the maps, the slit's film, the tears, the music) is written for
-this library. MIT.
+Everything else (the history's stamps and frame list, the maps, the slit's film, the tears, the music) is written for this library. MIT.
 
 UPDATING
-Dragging a .tox in embeds a copy. To update, delete this one and drag in the new slit_scan.tox from
-https://github.com/kevinraymond/touchdesigner-effects/releases/latest, or point the COMP's External .tox at a
-downloaded copy. The version and the build it was saved in are on the About page.
+Dragging a .tox in embeds a copy. To update, delete this one and drag in the new slit_scan.tox from https://github.com/kevinraymond/touchdesigner-effects/releases/latest, or point the COMP's External .tox at a downloaded copy. The version and the build it was saved in are on the About page.

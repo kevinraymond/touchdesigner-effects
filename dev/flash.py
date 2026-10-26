@@ -86,9 +86,9 @@ def main():
     if os.path.exists(os.path.join(out, 'done')):
         os.remove(os.path.join(out, 'done'))
     clip, beat = testbed(host, opts)
-    view = mk(host, nullTOP, 'view', 400, 0, comment='What the meter reads.')
-    meter = glsl(host, 'meter', 600, 0, [view], METER, 'Linear luminance and red, per 20 x 20 cell.',
-                 res=GRID, fmt='rgba32float')
+    view = mk(host, nullTOP, 'view', comment='What the meter reads.', at=(400, 0))
+    meter = glsl(host, 'meter', [view], METER, 'Linear luminance and red, per 20 x 20 cell.',
+                 res=GRID, fmt='rgba32float', at=(600, 0))
 
     runs = [('clip', 'source', None, None)]
     for path in paths:

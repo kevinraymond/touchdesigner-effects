@@ -20,7 +20,7 @@ for o in list(host.children):
 os.makedirs(OUT, exist_ok=True)
 if os.path.exists(os.path.join(OUT, 'done')):
     os.remove(os.path.join(OUT, 'done'))
-track = mk(host, audiofileinCHOP, 'track', -600, -300, comment='The song.', file=song, repeat='on')
+track = mk(host, audiofileinCHOP, 'track', comment='The song.', file=song, repeat='on', at=(-600, -300))
 fx = host.loadTox(os.path.join(_ROOT, 'effects', names[0], names[0] + '.tox'))
 fx.inputConnectors[1].connect(track)
 audio = fx.op('audio')

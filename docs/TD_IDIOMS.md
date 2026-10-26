@@ -84,8 +84,9 @@ Each item is one of:
   own `/sys` and `/ui`. [Global OP Shortcut](https://docs.derivative.ca/Global_OP_Shortcut)
 - **D2** (auto: assert_no_unused_docked) The DATs TouchDesigner docks to an operator are filled,
   not duplicated.
-- **D3** (auto: assert_readable) A README DAT with a CREDITS section, a comment on every operator,
-  tags, the library color, a node large enough to read. [OP Snippets](https://docs.derivative.ca/OP_Snippets)
+- **D3** (auto: assert_readable) A README DAT with a CREDITS section and one line per paragraph, a
+  comment on every operator, tags, the library color, a node large enough to read.
+  [OP Snippets](https://docs.derivative.ca/OP_Snippets)
 - **D4** (auto: check_tox.py) The docs page states the build the `.tox` was saved in (newer builds
   open older files, not the reverse) and links `releases/latest/download/<name>.tox`.
   [Release Notes 2023](https://docs.derivative.ca/Release_Notes/2023.10000)
@@ -98,6 +99,10 @@ Each item is one of:
   earlier source after a search. Code recalled from elsewhere that can't be traced is replaced,
   never called original; code taken from elsewhere is also credited where it sits (a comment in
   the shader or script). D3 and check_tox.py only see that the sections exist.
+- **D7** (auto: assert_laid_out) The network reads left to right in Network Boxes titled with what
+  each part does: every operator in one box, nothing overlapping, each docked DAT under its
+  operator, every wire running left to right (docs/BUILDING.md, Laying out the network).
+  [Network Box](https://docs.derivative.ca/Annotate_COMP)
 
 ## Accessibility and honesty
 

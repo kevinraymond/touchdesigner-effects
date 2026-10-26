@@ -30,7 +30,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 STEADY = 2.0         # flips this many seconds apart for Steady, and for On Beats or On Bars with nothing wired
 HISTORY = 2.0        # seconds kept by default
 SLACK = 1.05         # the rings hold this much more than History (and 2 slots), so a full one reaches past Delay
@@ -175,13 +175,14 @@ custom(page, 'Float', 'Length', 'Length', 0.5, 'How long a drop freezes time, in
        True).enableExpr = 'me.par.Moments'
 
 # ---- Audio (input 2): flips, freezes, tears -------------------------------------------------------
+section('audio', 'Audio (input 2): beats, bars, drops or a steady clock ask for flips and freezes')
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -200, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count bar_count drop_count')
-steady = mk(comp, constantCHOP, 'steady', -200, -500, comment='Counts {:g} s periods, for Steady flips.'.format(STEADY),
+steady = mk(comp, constantCHOP, 'steady', comment='Counts {:g} s periods, for Steady flips.'.format(STEADY),
             const0name='steady_count', const0value=Expr('int(absTime.seconds / {})'.format(STEADY)))
-both = mk(comp, mergeCHOP, 'all_counts', 0, -400, [counts, steady], 'Every count a flip or freeze may follow.')
-steps = mk(comp, slopeCHOP, 'steps', 200, -400, [both], 'Above 0 on the frame a count goes up.', timeslice=True)
+both = mk(comp, mergeCHOP, 'all_counts', [counts, steady], 'Every count a flip or freeze may follow.')
+steps = mk(comp, slopeCHOP, 'steps', [both], 'Above 0 on the frame a count goes up.', timeslice=True)
 WIRED = "op('audio')['source'].eval() > 0"
 asks = []
 for i, (name, chan, when, what) in enumerate((
@@ -191,101 +192,107 @@ for i, (name, chan, when, what) in enumerate((
          "parent().par.Flips == 'steady' or (parent().par.Flips in ('beats', 'bars') and not " + WIRED + ")",
          'the steady clock, when Flips is Steady (or On Beats or On Bars with nothing on input 2)'),
         ('drop_on', 'drop_count', 'parent().par.Moments', 'drops (Song Moments: a freeze)'))):
-    pick = mk(comp, selectCHOP, name + '_step', 400, -250 - 150 * i, [steps], 'Steps of {}.'.format(chan), channames=chan)
-    asks.append(mk(comp, mathCHOP, name, 600, -250 - 150 * i, [pick], 'Flips on {}.'.format(what) if i < 3 else
+    pick = mk(comp, selectCHOP, name + '_step', [steps], 'Steps of {}.'.format(chan), channames=chan)
+    asks.append(mk(comp, mathCHOP, name, [pick], 'Flips on {}.'.format(what) if i < 3 else
                    'Freezes on {}.'.format(what), gain=Expr('1 if ({}) else 0'.format(when))))
-ask = mk(comp, mergeCHOP, 'flip_asks', 800, -450, asks, 'Every flip and freeze asked for.')
-ask_any = mk(comp, mathCHOP, 'flip_any', 1000, -450, [ask], 'One channel: any flip or freeze.', chanop='max')
-gate = flash_gate(comp, ask_any, 1200, -450)
-budget = mk(comp, triggerCHOP, 'flash_budget', 1600, -450, [gate],
+ask = mk(comp, mergeCHOP, 'flip_asks', asks, 'Every flip and freeze asked for.')
+ask_any = mk(comp, mathCHOP, 'flip_any', [ask], 'One channel: any flip or freeze.', chanop='max')
+section('flash', 'Flashing: flips and freezes no closer together than it allows', lane='audio')
+gate = flash_gate(comp, ask_any)
+budget = mk(comp, triggerCHOP, 'flash_budget', [gate],
             'After the gate: flips and freezes {calm} s apart at Calm, {other} s otherwise, so the total stays well '
             'under WCAG.'.format(**FLASH_SPACING),
             retrigger=Expr("{calm} if parent().par.Flashing == 'calm' else {other}".format(**FLASH_SPACING)),
             retriggerunit='seconds', attack=0, peak=1, peaklen=0, decay=0, sustain=0, release=0)
-drop_step = mk(comp, selectCHOP, 'drop_now', 1600, -650, [asks[3]], 'A drop asking for a freeze.')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 1800, -650, [drop_step], 'How recent a drop is (fades over 0.3 s).',
+section('flips', 'Flips and freezes: which way time runs, and a freeze on a drop', lane='audio')
+drop_step = mk(comp, selectCHOP, 'drop_now', [asks[3]], 'A drop asking for a freeze.')
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_step], 'How recent a drop is (fades over 0.3 s).',
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
-drop_kind = mk(comp, holdCHOP, 'drop_kind', 2000, -600, [drop_env, budget],
+drop_kind = mk(comp, holdCHOP, 'drop_kind', [drop_env, budget],
                "1 when what passed the gate was a drop's: a freeze, not a flip.")
-drop_pulse = mk(comp, mathCHOP, 'drop_pulse', 2200, -600, [budget, drop_kind], 'A freeze passing the gate.',
+drop_pulse = mk(comp, mathCHOP, 'drop_pulse', [budget, drop_kind], 'A freeze passing the gate.',
                 chopop='mul')
-flip_pulse = mk(comp, mathCHOP, 'flip_pulse', 2200, -450, [budget, drop_pulse], 'A flip passing the gate.',
+flip_pulse = mk(comp, mathCHOP, 'flip_pulse', [budget, drop_pulse], 'A flip passing the gate.',
                 chopop='sub')
-flip_n = mk(comp, countCHOP, 'flip_n', 2400, -450, [flip_pulse], 'Flips so far.')
-flip_parity = mk(comp, limitCHOP, 'flip_parity', 2600, -450, [flip_n], 'Flipped (1) or not (0): flips so far, odd or even.',
+flip_n = mk(comp, countCHOP, 'flip_n', [flip_pulse], 'Flips so far.')
+flip_parity = mk(comp, limitCHOP, 'flip_parity', [flip_n], 'Flipped (1) or not (0): flips so far, odd or even.',
                  type='loop', min=0, max=2)
 FLIP_RATE = Expr("min({}, {} / max(op('span')[0], 0.01))".format(1 / FLIP_SLIDE, FLIP_SPAN))
-flip = mk(comp, lagCHOP, 'flip', 2800, -450, [flip_parity],
+flip = mk(comp, lagCHOP, 'flip', [flip_parity],
           'How far the map is flipped: slides 0 to 1 (or back) over {:g} s, longer at delays over {:g} s.'.format(
               FLIP_SLIDE, FLIP_SLIDE * FLIP_SPAN), lag1=0, lag2=0, clamp=True, slope1=FLIP_RATE, slope2=FLIP_RATE)
-freeze = mk(comp, triggerCHOP, 'freeze', 2400, -650, [drop_pulse],
+freeze = mk(comp, triggerCHOP, 'freeze', [drop_pulse],
             'Seconds time has been frozen, rising from 0 to Length, then back to 0 at once.',
             attack=par('Length'), ashape='linear', peak=par('Length'), peaklen=0, decay=0, sustain=0, release=0)
 
-tick = mk(comp, mathCHOP, 'steady_tick', 800, -100, [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
+section('tears', "Each beat's tears, and the delay with loudness", lane='audio')
+tick = mk(comp, mathCHOP, 'steady_tick', [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
           gain=Expr('0 if ' + WIRED + ' else 1'))
-beat_in = mk(comp, mergeCHOP, 'beat_in', 1000, -150, [asks[0].inputs[0], tick], 'Beats, or steady ticks.')
-beat_pick = mk(comp, mathCHOP, 'beat_pulse', 1200, -150, [beat_in], "One channel: a beat, for its tears.", chanop='max')
-beat_env = mk(comp, triggerCHOP, 'beat_env', 1400, -150, [beat_pick],
+beat_in = mk(comp, mergeCHOP, 'beat_in', [asks[0].inputs[0], tick], 'Beats, or steady ticks.')
+beat_pick = mk(comp, mathCHOP, 'beat_pulse', [beat_in], "One channel: a beat, for its tears.", chanop='max')
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_pick],
               'Falls from 1 to 0 over the {:g} s after a beat: its tears stay open while it is above 0.'.format(TEAR),
               attack=0, peak=1, peaklen=0, decay=TEAR, sustain=0, release=0)
-beat_n = mk(comp, countCHOP, 'beat_n', 1400, -50, [beat_pick], "Beats so far: where each beat's tears fall.")
-level_pick = mk(comp, selectCHOP, 'level_pick', 1200, 0, [audio], 'How loud it is now.', channames='level')
-level = mk(comp, filterCHOP, 'level_smooth', 1400, 0, [level_pick],
+beat_n = mk(comp, countCHOP, 'beat_n', [beat_pick], "Beats so far: where each beat's tears fall.")
+level_pick = mk(comp, selectCHOP, 'level_pick', [audio], 'How loud it is now.', channames='level')
+level = mk(comp, filterCHOP, 'level_smooth', [level_pick],
            'Loudness eased over half a second, so the delay swells and fades instead of jittering.', width=0.5)
 LOUD = ("(parent().par.Loudness * 1.5 * (op('level_smooth')[0] - 0.6) if {} else 0)".format(WIRED))
 BUILD = "(op('audio')['build'] if parent().par.Moments else 0)"
-span_to = mk(comp, constantCHOP, 'span_to', 1600, 0, comment='The delay asked for: Delay, with loudness and a build.',
+span_to = mk(comp, constantCHOP, 'span_to', comment='The delay asked for: Delay, with loudness and a build.',
              const0name='span', const0value=Expr('parent().par.Delay * max(0.2, 1 + {}) * (1 + {})'.format(LOUD, BUILD)))
-span = mk(comp, lagCHOP, 'span', 1800, 0, [span_to],
+span = mk(comp, lagCHOP, 'span', [span_to],
           'The delay, gliding to what is asked at up to {:g} s a second, so time never sweeps past faster.'.format(
               SPAN_GLIDE), lag1=0, lag2=0, clamp=True, slope1=SPAN_GLIDE, slope2=SPAN_GLIDE)
 SPAN_NOW = "max(op('span')[0], 0.01)"
-spin_rate = mk(comp, constantCHOP, 'spin_rate', 1600, 150,
+section('spin', 'Spin and drift: how far the map has turned and moved', lane='audio')
+spin_rate = mk(comp, constantCHOP, 'spin_rate',
                comment='How fast Sweep turns: Spin, slowed at long delays.', const0name='spin',
                const0value=Expr('max(-{l}, min({l}, parent().par.Spin))'.format(l='{} / {}'.format(SPIN_SPAN, SPAN_NOW))))
-turned = mk(comp, speedCHOP, 'turned', 1800, 150, [spin_rate], 'How far Sweep has turned (degrees).',
+turned = mk(comp, speedCHOP, 'turned', [spin_rate], 'How far Sweep has turned (degrees).',
             limittype='loop', min=0, max=360)
-drift_rate = mk(comp, constantCHOP, 'drift_rate', 1600, 300,
+drift_rate = mk(comp, constantCHOP, 'drift_rate',
                 comment="How fast Liquid's noise moves: Drift, slowed at long delays.", const0name='drift',
                 const0value=Expr('min(parent().par.Drift, {} / {})'.format(DRIFT_SPAN, SPAN_NOW)))
-drifted = mk(comp, speedCHOP, 'drifted', 1800, 300, [drift_rate],
+drifted = mk(comp, speedCHOP, 'drifted', [drift_rate],
              "How far Liquid's noise has moved (it repeats every 256).", limittype='loop', min=0, max=256)
 
 # ---- The history ----------------------------------------------------------------------------------
 SLOTS = 'int(math.ceil(parent().par.History * project.cookRate * {})) + 2'.format(SLACK)
 SIZE = 'parent().par.Histsize.menuIndex'
-mo = optical_flow(comp, _ROOT, source, x=-400, y=650)
-start = mk(comp, constantTOP, 'start', -400, 1450, comment='Nothing: where the one-pixel states start.',
+section('history', "The history: the input's frames kept in rings, with their motion and stamps", lane='history')
+mo = optical_flow(comp, _ROOT, source)
+start = mk(comp, constantTOP, 'start', comment='Nothing: where the one-pixel states start.',
            outputresolution='custom', resolutionw=2, resolutionh=1, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
-pace_fb = mk(comp, feedbackTOP, 'pace_fb', -200, 1450, [start], "pace's last frame.", top='pace')
-pace = glsl(comp, 'pace', 0, 1450, [mo['clock'], pace_fb], lib_glsl(_ROOT, 'pace.glsl'),
+pace_fb = mk(comp, feedbackTOP, 'pace_fb', [start], "pace's last frame.", top='pace')
+pace = glsl(comp, 'pace', [mo['clock'], pace_fb], lib_glsl(_ROOT, 'pace.glsl'),
             'One pixel: when the last new input frame came.', res=(1, 1), fmt='rgba32float', uP=(clock_seconds(), 0.25))
-stamp_fb = mk(comp, feedbackTOP, 'stamp_fb', 200, 1600, [start], "stamp's last frame.", top='stamp')
-stamp = glsl(comp, 'stamp', 200, 1450, [pace, stamp_fb], src('stamp.glsl'),
+stamp_fb = mk(comp, feedbackTOP, 'stamp_fb', [start], "stamp's last frame.", top='stamp')
+stamp = glsl(comp, 'stamp', [pace, stamp_fb], src('stamp.glsl'),
              "This cook's stamp: which cook, which input frame, when it came, whether at a cut.", res=(2, 1),
              fmt='rgba32float', uS=(clock_seconds(),))
 
 
-def ring(name, x, y, top, fmt, comment, res=None):
-    t = mk(comp, texture3dTOP, name, x, y, [top], comment, type='texture2darray', cachesize=Expr(SLOTS), format=fmt)
+def ring(name, top, fmt, comment, res=None):
+    t = mk(comp, texture3dTOP, name, [top], comment, type='texture2darray', cachesize=Expr(SLOTS), format=fmt)
     if res:
         setpars(t, outputresolution=Expr(res))
     return t
 
 
 SIZE_MENU = "{}[{}]".format([s[2] for s in SIZES], SIZE)
-pics = ring('pics', 400, 300, source, 'rgba8fixed',
+pics = ring('pics', source, 'rgba8fixed',
             'The history: the last History seconds of the input, one slot a frame, at History Size.', res=SIZE_MENU)
-flows = ring('flows', 400, 650, mo['lk4'], 'rg16float',
+flows = ring('flows', mo['lk4'], 'rg16float',
              "Each slot's optical flow: the movement since the input frame before (a quarter of pics' size).",
              res=SIZE_MENU)
-stamps = ring('stamps', 400, 1450, stamp, 'rgba32float', "Each slot's stamp.")
-frames = glsl(comp, 'frames', 600, 1450, [stamp, stamps], src('frames.glsl'),
+stamps = ring('stamps', stamp, 'rgba32float', "Each slot's stamp.")
+frames = glsl(comp, 'frames', [stamp, stamps], src('frames.glsl'),
               "The input's frames, newest first: each one's slot, how long ago it came, whether at a cut.",
               res=(64, 2), fmt='rgba32float', uF=(CLOCK, GAP))
 setpars(frames, resolutionw=Expr(SLOTS))
+section('depth', 'Depth or a mask (input 3)')
 depth = depth_in(comp)
 
 # ---- The picture ----------------------------------------------------------------------------------
@@ -296,7 +303,8 @@ TEARS = (Expr("{} * parent().par.Kick if {} and op('beat_env')[0] > 0 else 0".fo
 FILL = Expr('parent().par.Fill.menuIndex')
 FLIPPED = "abs((1 if parent().par.Reverse else 0) - op('flip')[0])"
 ANGLE = "math.radians(parent().par.Angle + op('turned')[0])"
-scan = glsl(comp, 'scan', 800, 300, [source, frames, depth, pics, flows], past + src('scan.glsl'),
+section('scan', 'The scan: each pixel taken from the frame its map points at')
+scan = glsl(comp, 'scan', [source, frames, depth, pics, flows], past + src('scan.glsl'),
             "Each pixel from its moment: the time map (Sweep, Rings, Depth, Liquid), then the history.",
             fmt='rgba8fixed',
             uMap=(Expr("min(parent().par.Map.menuIndex, 3)"), par('Bands'), Expr(FLIPPED), Expr("op('span')[0]")),
@@ -308,8 +316,8 @@ setpars(scan, inputextenduv='hold')
 FILM = "{}[parent().par.Film.menuIndex]".format([f[2] for f in FILMS])
 SIGN = '(-1 if parent().par.Reverse else 1)'
 SPEED = "min({}, parent().par.Speed * max(0.2, 1 + {})) / 720 * (0 if op('freeze')[0] > 0 else 1)".format(SPEED_MAX, LOUD)
-slit_fb = mk(comp, feedbackTOP, 'slit_fb', 800, 0, [source], "slit's last frame: the film so far.", top='slit')
-slit = glsl(comp, 'slit', 1000, 0, [source, frames, slit_fb, pics, flows],
+slit_fb = mk(comp, feedbackTOP, 'slit_fb', [source], "slit's last frame: the film so far.", top='slit')
+slit = glsl(comp, 'slit', [source, frames, slit_fb, pics, flows],
             past + lib_glsl(_ROOT, 'red_guard.glsl') + src('slit.glsl'),
             'The Slit map, strip photography, which lays the line under the slit on film running past it.',
             fmt='rgba16float',
@@ -317,7 +325,7 @@ slit = glsl(comp, 'slit', 1000, 0, [source, frames, slit_fb, pics, flows],
                    Expr('({}) * min(absTime.stepSeconds, 0.1)'.format(SPEED))),
             uSlit2=(Expr(SPEED), FILL), uTear=TEARS)
 setpars(slit, inputextenduv='hold')
-view = mk(comp, switchTOP, 'view', 1200, 150, [scan, slit], 'The map picked: scan, or slit for Slit.',
+view = mk(comp, switchTOP, 'view', [scan, slit], 'The map picked: scan, or slit for Slit.',
           index=Expr("1 if parent().par.Map == 'slit' else 0"))
 
 finish_effect(comp, view, VERSION, page)

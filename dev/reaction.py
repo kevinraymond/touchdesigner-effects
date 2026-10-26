@@ -78,14 +78,14 @@ def main():
     if os.path.exists(os.path.join(OUT, 'done')):
         os.remove(os.path.join(OUT, 'done'))
     clip, _ = testbed(host, dict(opts, beat='none'))
-    track = mk(host, audiofileinCHOP, 'track', -600, -300, comment='The song.', file=song, repeat='on')
-    view = mk(host, nullTOP, 'view', 400, 0, comment='What the output meter reads.')
+    track = mk(host, audiofileinCHOP, 'track', comment='The song.', file=song, repeat='on', at=(-600, -300))
+    view = mk(host, nullTOP, 'view', comment='What the output meter reads.', at=(400, 0))
     meters = []
     for name, what, y in (('out', view, 0), ('in', clip, -200)):
-        prev = mk(host, cacheTOP, 'prev_' + name, 400, y - 100, [what], 'The ' + name + "'s previous frame.",
-                  cachesize=2, outputindex=-1)
-        meters.append(glsl(host, 'meter_' + name, 600, y, [what, prev], METER,
-                           'Mean color and change per cell: the ' + name + '.', res=GRID, fmt='rgba32float'))
+        prev = mk(host, cacheTOP, 'prev_' + name, [what], 'The ' + name + "'s previous frame.",
+                  cachesize=2, outputindex=-1, at=(400, y - 100))
+        meters.append(glsl(host, 'meter_' + name, [what, prev], METER,
+                           'Mean color and change per cell: the ' + name + '.', res=GRID, fmt='rgba32float', at=(600, y)))
 
     runs = []
     for path in paths:

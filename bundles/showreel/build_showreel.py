@@ -29,7 +29,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.11'
+VERSION = '0.1.12'
 # Shown while nothing is wired: the dancer, the library's own footage (CC BY 4.0, 5 s, 1.3 MB), and
 # her depth map (Depth Anything 3 Mono-Large, held steady across frames, 0.5 MB) for the effects that
 # take input 3, carried in the component's Virtual File System and read by a path relative to it, so
@@ -77,34 +77,37 @@ comp.op('sample').comment = 'Shown until a TOP is wired into input 1: the dancer
 setpars(comp.op('sample'), **IN_STEP)
 # Input 3's stand-in: the dancer's depth while she is showing, else black: no depth, so each effect
 # falls back to its own way of working without (Particles: what moves).
-guess = mk(comp, constantTOP, 'no_depth', -1000, -1000, comment="Black: no depth, when input 1 is wired but input 3 is not.",
+section('depth', "Depth (input 3), else the dancer's depth while she shows: for the effects that take one")
+guess = mk(comp, constantTOP, 'no_depth', comment="Black: no depth, when input 1 is wired but input 3 is not.",
            outputresolution='custom', resolutionw=320, resolutionh=180, colorr=0, colorg=0, colorb=0, alpha=1)
-sample_depth = mk(comp, moviefileinTOP, 'sample_depth', -1000, -1150,
+sample_depth = mk(comp, moviefileinTOP, 'sample_depth',
                   comment="The dancer's depth map inside this component, in step with the dancer clip.",
                   file=Expr("'vfs:' + parent().path + ':{}'".format(CLIP_DEPTH)), **IN_STEP)
-stand_in = mk(comp, switchTOP, 'depth_stand_in', -800, -1050, [guess, sample_depth],
+stand_in = mk(comp, switchTOP, 'depth_stand_in', [guess, sample_depth],
               "The dancer's depth while the dancer clip shows (input 1 unwired), else no depth (black).",
               index=Expr('0 if parent().inputConnectors[0].connections else 1'))
-depth = depth_in(comp, stand_in, x=-600, y=-850)
+depth = depth_in(comp, stand_in)
 depth.comment = 'Input 3 (depth or mask) when it is wired, else the stand-in: for the effects that take one.'
-audio = audio_in(comp, _ROOT, -800, -550)
+section('audio', 'Cycle: when to move on to the next effect, on the bars or the clock')
+audio = audio_in(comp, _ROOT)
 audio.comment = "Input 2's bars, for Cycle (read only while View is Cycle, so it cooks only then)."
-clock = mk(comp, constantCHOP, 'clock', -800, -700, comment='The time, so cycle cooks every frame while used.',
+clock = mk(comp, constantCHOP, 'clock', comment='The time, so cycle cooks every frame while used.',
            const0name='seconds', const0value=Expr('absTime.seconds'))
-cycle = mk(comp, scriptCHOP, 'cycle', -600, -600, [audio, clock],
+cycle = mk(comp, scriptCHOP, 'cycle', [audio, clock],
            'How many times Cycle has moved on: every Every bars, or seconds with no bars; never within '
            '{:g} s of the last move (src/cycle.py).'.format(MIN_GAP))
 docked(cycle, '_callbacks', src('cycle.py'), "Cycle's callbacks: when to move on to the next effect.")
 
 # ---- The effects --------------------------------------------------------------------------------
+section('effects', 'Every effect in the library, each fed the inputs it takes')
 fxs, embeds = [], {}
-for i, (name, path) in enumerate(EFFECTS):
+for name, path in EFFECTS:
     if comp.op(name) is not None or comp.op('fx_' + name) is not None:
         raise RuntimeError('effect name {} collides with an operator of the showreel'.format(name))
     fx = comp.loadTox(path)
     if fx.name != name:
         raise RuntimeError('{} loaded as {}, not {}'.format(path, fx.name, name))
-    fx.nodeX, fx.nodeY = -250, 300 - 450 * i
+    put(fx, 'effects')
     fx.inputConnectors[0].connect(source)
     if len(fx.inputConnectors) > 1:
         fx.inputConnectors[1].connect(comp.op('in2_audio'))
@@ -120,7 +123,7 @@ for i, (name, path) in enumerate(EFFECTS):
                                 "op('cycle')['since'].eval() < {:g} else parent().par.Flashing".format(FADE + 1))
     with open(path, 'rb') as f:
         embeds[name] = hashlib.sha256(f.read()).hexdigest()
-    null = mk(comp, nullTOP, 'fx_' + name, 150, fx.nodeY, comment="{}'s picture, for view.".format(name))
+    null = mk(comp, nullTOP, 'fx_' + name, comment="{}'s picture, for view.".format(name))
     null.inputConnectors[0].connect(fx.outputConnectors[0])
     fxs.append((fx, null, fx.customPages[0].name))
 
@@ -158,15 +161,14 @@ custom(page, 'Toggle', 'Labels', 'Labels', True, "Name each effect on the pictur
 VIEW_INDEX = ("parent().par.View.menuIndex - 1 if parent().par.View != 'cycle' else "
               "(int(op('cycle')['step'].eval()) - 1) % {n} + op('cycle')['fade'].eval() "
               "if op('cycle')['step'].eval() >= 1 else 0").format(n=len(fxs))
-view = mk(comp, switchTOP, 'view', 650, 0, [null for _, null, _ in fxs] + [fxs[0][1]],
+section('view', 'The view: the effect Cycle has reached, or the one chosen, and its name')
+view = mk(comp, switchTOP, 'view', [null for _, null, _ in fxs] + [fxs[0][1]],
           "What View shows: the effect Cycle has reached, blending from the last one while it fades, or the "
           'one chosen (only the inputs it shows cook).', index=Expr(VIEW_INDEX), blend=True)
-label = glsl(comp, 'label', 850, 0, [view], names_head + src('label.glsl'),
+label = glsl(comp, 'label', [view], names_head + src('label.glsl'),
              'Names the effect showing, bottom left (Labels).',
              uLabel=(Expr("int(op('view').par.index.eval() + 0.5) % {}".format(len(fxs))), par('Labels')))
 finish_effect(comp, label, VERSION, page)
-comp.op('out_top').nodeX = 1050
-comp.op('window').nodeX = 1050
 comp.op('README').text = src('readme.txt').format(v=VERSION, effects='\n'.join(
     '  {} ({})'.format(title, fx.name) for fx, _, title in fxs))
 

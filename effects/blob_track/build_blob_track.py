@@ -27,7 +27,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.3'
+VERSION = '0.1.4'
 # The tracker and the mask run on a small copy: OpenCV's contour pass and the GPU-to-CPU
 # download scale with pixels (30 ms at full size on a speckly mask, under 3 ms here), and the
 # Blob Track TOP's positions come back normalized anyway.
@@ -162,109 +162,117 @@ custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        'section makes every box lock on again.')
 
 # ---- Detection --------------------------------------------------------------------------------
-mono = mk(comp, monochromeTOP, 'small', -400, 300, [source], 'The picture, gray and small ({} x {}) for detection.'.format(TW, TH),
+section('detect', 'Detection: what stands out from its surroundings')
+mono = mk(comp, monochromeTOP, 'small', [source], 'The picture, gray and small ({} x {}) for detection.'.format(TW, TH),
           outputresolution='custom', resolutionw=TW, resolutionh=TH)
-mean = mk(comp, blurTOP, 'local_mean', -200, 450, [mono],
+mean = mk(comp, blurTOP, 'local_mean', [mono],
           'The neighborhood of each point (Stand Out compares against it), blurred at a quarter size: it is smooth anyway.',
           size=10, outputresolution='quarter')
-state_fb = mk(comp, feedbackTOP, 'state_fb', -200, 150, [mono], "state's previous frame.", top='state')
-state = glsl(comp, 'state', 0, 300, [mono, state_fb], src('state.glsl'),
+state_fb = mk(comp, feedbackTOP, 'state_fb', [mono], "state's previous frame.", top='state')
+state = glsl(comp, 'state', [mono, state_fb], src('state.glsl'),
              'The current frame and a slow background (for Movement); advances only when the picture changes.',
              res=(TW, TH), fmt='rgba32float', uClock=(DT, BG_SLOW, BG_FAST, BG_STILL))
-mask = glsl(comp, 'mask', 200, 300, [state, mean], src('mask.glsl'),
+mask = glsl(comp, 'mask', [state, mean], src('mask.glsl'),
             'What the detectors look for (Track): movement, or what stands out (lighter, darker), 0-1.',
             res=(TW, TH), fmt='rgba8fixed', uMask=(menu('Track'), 4.0, 6.0))
 
-blurred = mk(comp, blurTOP, 'merge', 400, 450, [mask], 'Blurs the mask so nearby parts become one blob (Merge).',
+blurred = mk(comp, blurTOP, 'merge', [mask], 'Blurs the mask so nearby parts become one blob (Merge).',
              size=Expr('2 + 14 * parent().par.Merge'))
-black = mk(comp, constantTOP, 'background', 400, 600, comment='Black: the Blob Track TOP thresholds the mask itself.',
+section('tracker', "TouchDesigner's Blob Track TOP finds the blobs (Detector: Blob Track)", lane='detectors')
+black = mk(comp, constantTOP, 'background', comment='Black: the Blob Track TOP thresholds the mask itself.',
            outputresolution='custom', resolutionw=TW, resolutionh=TH, colorr=0, colorg=0, colorb=0)
-tracker = mk(comp, blobtrackTOP, 'blobs', 600, 450, [blurred, black],
+tracker = mk(comp, blobtrackTOP, 'blobs', [blurred, black],
              "TouchDesigner's Blob Track TOP on the mask (input 2 black: a plain threshold).",
              threshold=par('Threshold'), downloadtype='nextframe', drawblobs=False, minblobsize=0.005,
              maxblobsize=1.0, maxmovedistance=0.15, deleteoverlap=True, deleteoverlaptol=0.6,
              reviveblobs=True, revivetime=0.5, revivedistance=0.1, revivearea=0.5)
-info = mk(comp, infoCHOP, 'blob_info', 800, 450, comment="The Blob Track TOP's blobs: num_blobs, then id, u, v, width, height each.",
+info = mk(comp, infoCHOP, 'blob_info', comment="The Blob Track TOP's blobs: num_blobs, then id, u, v, width, height each.",
           op='blobs')
-cap = mk(comp, selectCHOP, 'blob_cap', 1000, 450, [info], 'At most {} blobs (the texture below has 5 rows per blob).'.format(MAXIN),
+cap = mk(comp, selectCHOP, 'blob_cap', [info], 'At most {} blobs (the texture below has 5 rows per blob).'.format(MAXIN),
          channames='num_blobs blob[0-{}]:*'.format(MAXIN - 1))
-data = mk(comp, choptoTOP, 'blob_data', 1200, 450, comment='The blobs as a texture, one channel per row (32-bit float).',
+data = mk(comp, choptoTOP, 'blob_data', comment='The blobs as a texture, one channel per row (32-bit float).',
           chop='blob_cap', dataformat='r', format='mono32float')
 # track.glsl's previous frame (bt_clean reads it too). Its input is only its starting state: blank,
 # not the detector, which would make a cook loop through bt_clean.
-blank = mk(comp, constantTOP, 'track_start', 1600, 0, comment="track's starting state: every slot free.",
+section('track', "Tracking: each blob matched to last frame's, its box kept steady")
+blank = mk(comp, constantTOP, 'track_start', comment="track's starting state: every slot free.",
            outputresolution='custom', resolutionw=MAXB, resolutionh=3, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
-track_fb = mk(comp, feedbackTOP, 'track_fb', 1800, 150, [blank], "track's previous frame.", top='track')
-bt_clean = glsl(comp, 'bt_clean', 1400, 450, [data, source, comp.op('track_fb')], src('bt_clean.glsl'),
+track_fb = mk(comp, feedbackTOP, 'track_fb', [blank], "track's previous frame.", top='track')
+section('tracker')
+bt_clean = glsl(comp, 'bt_clean', [data, source, comp.op('track_fb')], src('bt_clean.glsl'),
                 'Blobs within Min Size and Max Size and not mostly inside a bigger one; boxed ones rank higher.',
                 res=(MAXIN, 2), fmt='rgba32float', uPick=(par('Minsize'), par('Maxsize')))
-bt_pick = glsl(comp, 'bt_pick', 1600, 450, [bt_clean], src('bt_pick.glsl'),
+bt_pick = glsl(comp, 'bt_pick', [bt_clean], src('bt_pick.glsl'),
                'The biggest of them, as many as track has slots, as a table.',
                res=(MAXB, 2), fmt='rgba32float', uPick=(0, 0, MAXB))
 
-grid_fb = mk(comp, feedbackTOP, 'grid_fb', 400, 150, [mask], "grid's previous frame.", top='grid')
-grid = glsl(comp, 'grid', 600, 300, [mask, grid_fb], src('grid.glsl'),
+section('grid', 'Or a grid of peaks finds them (Detector: Grid)', lane='detectors')
+grid_fb = mk(comp, feedbackTOP, 'grid_fb', [mask], "grid's previous frame.", top='grid')
+grid = glsl(comp, 'grid', [mask, grid_fb], src('grid.glsl'),
             'GPU Grid: how much of each cell the mask covers, smoothed.',
             res=(GW, GH), fmt='rgba32float', uClock=(DT, 0.12))
-peaks = glsl(comp, 'grid_peaks', 800, 300, [grid, source], src('grid_peaks.glsl'),
+peaks = glsl(comp, 'grid_peaks', [grid, source], src('grid_peaks.glsl'),
              'GPU Grid: the cells that are local peaks above Threshold, with their extents.',
              res=(GW, GH), fmt='rgba32float',
              uPeak=(Expr('0.25 * parent().par.Threshold'), par('Minsize'), par('Maxsize')))
-grid_pick = glsl(comp, 'grid_pick', 1000, 300, [peaks], src('grid_pick.glsl'),
+grid_pick = glsl(comp, 'grid_pick', [peaks], src('grid_pick.glsl'),
                  'GPU Grid: the strongest peaks, as many as track has slots, as the same table as bt_pick.',
                  res=(MAXB, 2), fmt='rgba32float', uPick=(0, 0, MAXB))
-detector = mk(comp, switchTOP, 'detector', 1800, 300, [bt_pick, grid_pick],
+section('track')
+detector = mk(comp, switchTOP, 'detector', [bt_pick, grid_pick],
               'The detector chosen (Detector); a Switch TOP cooks only the one it shows.',
               index=menu('Detector'))
 
-match = glsl(comp, 'match', 2000, 150, [detector, track_fb, source], src('match.glsl'),
+match = glsl(comp, 'match', [detector, track_fb, source], src('match.glsl'),
              'For each box whose blob vanished, the new blob that overlaps it or is close by (to take over).',
              res=(MAXB, 1), fmt='rgba32float')
-track = glsl(comp, 'track', 2000, 300, [detector, track_fb, match], src('track.glsl'),
+track = glsl(comp, 'track', [detector, track_fb, match], src('track.glsl'),
              'Follows each blob by its ID: boxes glide (Smoothing), show once a blob lasts, coast through a '
              'short loss, fade in and out.',
              res=(MAXB, 3), fmt='rgba32float',
              uClock=(DT, Expr('max(0.001, 0.25 * parent().par.Smoothing)'), FADE_IN, FADE_OUT),
              uShow=(SHOW_AFTER, HOLD, par('Maxcount')))
-table = glsl(comp, 'table', 2200, 300, [track, source], src('table.glsl'),
+table = glsl(comp, 'table', [track, source], src('table.glsl'),
              'The boxes showing, packed, each with its four nearest neighbors.',
              res=(MAXB, 3), fmt='rgba32float')
 
 # ---- Audio (input 2) --------------------------------------------------------------------------
+section('audio', 'Audio (input 2): beats, bars and drops')
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -200, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count bar_count drop_count section_count')
-steps = mk(comp, slopeCHOP, 'steps', 0, -350, [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
-beat_step = mk(comp, selectCHOP, 'beat_step', 200, -300, [steps], 'A beat.', channames='beat_count')
+steps = mk(comp, slopeCHOP, 'steps', [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
+beat_step = mk(comp, selectCHOP, 'beat_step', [steps], 'A beat.', channames='beat_count')
 envelope = dict(attack=0, peak=1, peaklen=0, sustain=0, release=0)
-beat_env = mk(comp, triggerCHOP, 'beat_env', 400, -300, [beat_step],
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_step],
               'Falls from 1 to 0 over the half second after a beat: scrambles and spawned links.', decay=0.45, **envelope)
-bar_step = mk(comp, selectCHOP, 'bar_step', 200, -450, [steps], 'A bar.', channames='bar_count')
-bar_env = mk(comp, triggerCHOP, 'bar_env', 400, -450, [bar_step],
+bar_step = mk(comp, selectCHOP, 'bar_step', [steps], 'A bar.', channames='bar_count')
+bar_env = mk(comp, triggerCHOP, 'bar_env', [bar_step],
              'Falls from 1 to 0 over the 0.3 s after a bar: the labels re-label.', decay=0.3, **envelope)
-moment_step = mk(comp, selectCHOP, 'moment_step', 200, -600, [steps], 'A drop, a new section (Fosfora).',
+moment_step = mk(comp, selectCHOP, 'moment_step', [steps], 'A drop, a new section (Fosfora).',
                  channames='drop_count section_count')
-moment_env = mk(comp, triggerCHOP, 'moment_env', 400, -600, [moment_step],
+moment_env = mk(comp, triggerCHOP, 'moment_env', [moment_step],
                 'Falls from 1 to 0 over 1.5 s after a drop or a new section.', decay=1.5, **envelope)
-fill_on = mk(comp, mathCHOP, 'fill_trigger', 400, -750, [beat_step], 'Beats that may fill the boxes (Fill Boxes).',
+fill_on = mk(comp, mathCHOP, 'fill_trigger', [beat_step], 'Beats that may fill the boxes (Fill Boxes).',
              gain=Expr('1 if parent().par.Beatfill else 0'))
-drop_step = mk(comp, selectCHOP, 'drop_step', 200, -900, [steps], 'A drop.', channames='drop_count')
-drop_on = mk(comp, mathCHOP, 'drop_trigger', 400, -900, [drop_step], 'Drops that may turn the picture over (Song Moments).',
+drop_step = mk(comp, selectCHOP, 'drop_step', [steps], 'A drop.', channames='drop_count')
+drop_on = mk(comp, mathCHOP, 'drop_trigger', [drop_step], 'Drops that may turn the picture over (Song Moments).',
              gain=Expr('1 if parent().par.Moments else 0'))
-flash_in = mk(comp, mergeCHOP, 'flash_in', 600, -800, [fill_on, drop_on], 'Every flash the effect asks for.')
-flash_any = mk(comp, mathCHOP, 'flash_any', 800, -800, [flash_in], 'One channel: any flash.', chanop='max')
-gate = flash_gate(comp, flash_any, 1000, -800)
-budget = mk(comp, triggerCHOP, 'flash_budget', 1400, -650, [gate],
+section('flash', 'Flashing: fills and turns no closer together than it allows', lane='audio')
+flash_in = mk(comp, mergeCHOP, 'flash_in', [fill_on, drop_on], 'Every flash the effect asks for.')
+flash_any = mk(comp, mathCHOP, 'flash_any', [flash_in], 'One channel: any flash.', chanop='max')
+gate = flash_gate(comp, flash_any)
+budget = mk(comp, triggerCHOP, 'flash_budget', [gate],
             'After the gate: flashes {calm} s apart at Calm, {other} s otherwise (box fills and drops '
             'share it), so the total stays well under WCAG.'.format(**FLASH_SPACING),
             retrigger=Expr("{calm} if parent().par.Flashing == 'calm' else {other}".format(**FLASH_SPACING)),
             retriggerunit='seconds', attack=0, peak=1, peaklen=0, decay=0, sustain=0,
             release=0)
-flash_env = mk(comp, triggerCHOP, 'flash_env', 1600, -800, [budget], "The flash's shape: up at once, down over 0.3 s.",
+flash_env = mk(comp, triggerCHOP, 'flash_env', [budget], "The flash's shape: up at once, down over 0.3 s.",
                decay=0.3, **envelope)
-drop_now = mk(comp, selectCHOP, 'drop_now', 1200, -950, [moment_env], 'How recent a drop is.', channames='drop_count')
-flash_kind = mk(comp, holdCHOP, 'flash_kind', 1600, -950, [drop_now, budget],
+drop_now = mk(comp, selectCHOP, 'drop_now', [moment_env], 'How recent a drop is.', channames='drop_count')
+flash_kind = mk(comp, holdCHOP, 'flash_kind', [drop_now, budget],
                 "1 when the flash that passed the gate was a drop's: the whole picture, not the boxes.")
 
 LOOK = dict(uLook=(par('Linewidth'), par('Labelsize'), menu('Picture'), menu('Inside')),
@@ -276,14 +284,13 @@ LOOK = dict(uLook=(par('Linewidth'), par('Labelsize'), menu('Picture'), menu('In
             uFlash=(Expr("op('flash_env')[0]"), Expr("op('flash_kind')[0]"), Expr("op('moment_env')['drop_count']"),
                     Expr("op('audio')['section_count']")),
             uOn=(par('Beatlabels'), par('Beatlinks'), par('Beatfill'), par('Moments')))
-tiles = glsl(comp, 'tiles', 2400, 300, [table, source], '#define TABLE 0\n' + src('boxes.glsl') + src('tiles.glsl'),
+section('draw', 'Drawing: boxes, labels, lines and fills over the picture')
+tiles = glsl(comp, 'tiles', [table, source], '#define TABLE 0\n' + src('boxes.glsl') + src('tiles.glsl'),
              'Which boxes reach into each of 64 x 36 tiles, so the picture visits only those.',
              res=(64, 36), fmt='rgba32float', **LOOK)
-draw = glsl(comp, 'draw', 2600, 0, [source, table, mean, tiles],
+draw = glsl(comp, 'draw', [source, table, mean, tiles],
             font_head() + '#define TABLE 1\n' + src('boxes.glsl') + src('draw.glsl'),
             'The picture, boxes, insides, links and labels in one pass.', **LOOK)
 
 finish_effect(comp, draw, VERSION, page)
-comp.op('out_top').nodeX = 2800
-comp.op('window').nodeX = 2800
 save_effect(comp, _HERE, _ROOT)

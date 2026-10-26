@@ -30,7 +30,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 # Unwired, it shows grass swaying in front of a colorful building (TouchDesigner's sample) with a soft white
 # ball circling over it on a slow figure of eight, BALL_TIME seconds round: the grass alone moves too little and
 # too thinly to pour much, and the ball's trail shows what the effect does at once.
@@ -105,12 +105,13 @@ comp, page, source = new_effect('fluid', 'Fluid', SUMMARY, README,
 
 # Unwired: the ball circling over the sample movie.
 T = 'absTime.seconds * {:.6f}'.format(2 * 3.141592653589793 / BALL_TIME)
-ball = mk(comp, circleTOP, 'ball', -1000, -150, comment='A soft white ball on a figure of eight (unwired only).',
+section('input')
+ball = mk(comp, circleTOP, 'ball', comment='A soft white ball on a figure of eight (unwired only).',
           outputresolution='custom', resolutionw=1280, resolutionh=720, radiusx=0.07, radiusy=0.07,
           radiusunit='fraction', softness=0.05, softnessunit='fraction', centerunit='fraction',
           centerx=Expr('0.32 * math.sin({})'.format(T)), centery=Expr('0.2 * math.sin(2 * {})'.format(T)),
           fillcolorr=1, fillcolorg=1, fillcolorb=1, fillalpha=1, bgalpha=0, borderwidth=0)
-demo = mk(comp, overTOP, 'demo', -800, -250, [ball, comp.op('sample')], 'Unwired: the ball over the sample movie.',
+demo = mk(comp, overTOP, 'demo', [ball, comp.op('sample')], 'Unwired: the ball over the sample movie.',
           outputresolution='custom', resolutionw=1280, resolutionh=720)
 source.inputConnectors[1].connect(demo)
 
@@ -169,63 +170,68 @@ custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "puff out (a flash, as Beat Puffs; Fosfora's drop detection is experimental).")
 
 # ---- Audio (input 2) ---------------------------------------------------------------------------
-audio = audio_in(comp, _ROOT, x=-600, y=-1000)
-counts = mk(comp, selectCHOP, 'counts', -400, -1000, [audio], 'The running counts: watched, not the one-frame beat.',
+section('audio', 'Audio (input 2): puffs on beats and drops, through the flash gate')
+audio = audio_in(comp, _ROOT)
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count drop_count')
-steps = mk(comp, slopeCHOP, 'steps', -200, -1000, [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
+steps = mk(comp, slopeCHOP, 'steps', [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
 # A beat's puff throws the fluid (bright flames, thick smoke) up at once and makes it flare and glow: a flash,
 # so beats and drops pass through the gate (Flashing). Every beat puffing measured 2.0 flashes a second with
 # Flashing Off under the stress beat (dev/flash.py on the dancer, Fire), against the clip's 1.0.
-ask = mk(comp, renameCHOP, 'ask', 0, -1000, [steps], 'Beats and drops, asking to puff.',
+ask = mk(comp, renameCHOP, 'ask', [steps], 'Beats and drops, asking to puff.',
          renamefrom='beat_count drop_count', renameto='puff drop')
-flash = flash_gate(comp, ask, 200, -1000)
-puff_sel = mk(comp, selectCHOP, 'puff_sel', 600, -950, [flash], 'Beats that passed the gate.', channames='puff')
-mk(comp, triggerCHOP, 'puff_env', 800, -950, [puff_sel],
+flash = flash_gate(comp, ask)
+puff_sel = mk(comp, selectCHOP, 'puff_sel', [flash], 'Beats that passed the gate.', channames='puff')
+mk(comp, triggerCHOP, 'puff_env', [puff_sel],
    "A beat's puff and flare: 1 at the beat, none {:g} s later.".format(PUFF_TIME),
    attack=0, peak=1, peaklen=0, decay=PUFF_TIME, dshape='linear', sustain=0, release=0)
-drop_sel = mk(comp, selectCHOP, 'drop_sel', 600, -1100, [flash], 'Drops that passed the gate.', channames='drop')
-mk(comp, triggerCHOP, 'drop_env', 800, -1100, [drop_sel],
+drop_sel = mk(comp, selectCHOP, 'drop_sel', [flash], 'Drops that passed the gate.', channames='drop')
+mk(comp, triggerCHOP, 'drop_env', [drop_sel],
    "A drop's big puff: 1 at the drop, none {:g} s later.".format(DROP_TIME),
    attack=0, peak=1, peaklen=0, decay=DROP_TIME, dshape='linear', sustain=0, release=0)
-build = mk(comp, selectCHOP, 'build', 0, -1250, [audio], "Fosfora's build, 0..1.", channames='build')
-mk(comp, lagCHOP, 'build_lag', 200, -1250, [build], 'The build, easing out after a drop.',
+build = mk(comp, selectCHOP, 'build', [audio], "Fosfora's build, 0..1.", channames='build')
+mk(comp, lagCHOP, 'build_lag', [build], 'The build, easing out after a drop.',
    lag1=0.5, lag2=2.0, lagunit='seconds')
-level = mk(comp, selectCHOP, 'level', 0, -1400, [audio], 'Loudness, 0..1.', channames='level')
-mk(comp, lagCHOP, 'level_lag', 200, -1400, [level], 'Loudness, smoothed (up in 0.1 s, down in 0.8 s).',
+level = mk(comp, selectCHOP, 'level', [audio], 'Loudness, 0..1.', channames='level')
+mk(comp, lagCHOP, 'level_lag', [level], 'Loudness, smoothed (up in 0.1 s, down in 0.8 s).',
    lag1=0.1, lag2=0.8, lagunit='seconds')
 
 # ---- Motion ------------------------------------------------------------------------------------
-mo = optical_flow(comp, _ROOT, source, x=-400, y=600)
-still = mk(comp, constantTOP, 'still', -400, 300, comment='Nothing, and still: where the fluid starts, and Reset.',
+section('motion', "Motion: the picture's optical flow, as a speed", lane='motion')
+mo = optical_flow(comp, _ROOT, source)
+still = mk(comp, constantTOP, 'still', comment='Nothing, and still: where the fluid starts, and Reset.',
            outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
-pace, motion = flow_speed(comp, _ROOT, mo, still, x=400, y=750)
+pace, motion = flow_speed(comp, _ROOT, mo, still)
 
 # ---- Where it emits ------------------------------------------------------------------------------
-depth = depth_in(comp, x=-600, y=-500)
-near = glsl(comp, 'near', -400, -500, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
+section('depth', 'Depth or a mask (input 3): where the subject is')
+depth = depth_in(comp)
+near = glsl(comp, 'near', [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
             'Input 3 at a quarter size, as nearness; Depth Type flips distance (black: no reading).', fmt='rgba16float',
             uNear=(menu('Depthtype'), par('Maxdist')))
 setpars(near, outputresolution='quarter')
-find = glsl(comp, 'find', -200, -500, [near], lib_glsl(_ROOT, 'depth_find.glsl'),
+find = glsl(comp, 'find', [near], lib_glsl(_ROOT, 'depth_find.glsl'),
             'In the depth: what stands in front of what lies left and right of it, nearer than a limit (Sensitivity).',
             fmt='rgba16float',
             uFind=(0, STAND_OUT, Expr('max({0} * ({1} / {0}) ** parent().par.Sense, 0 if parent().inputConnectors[2]'
                                       '.connections else {2})'.format(FAR[0], FAR[1], BRIGHT_FAR))))
-none = mk(comp, constantTOP, 'none', -200, -650, comment='Black: nothing from input 3 (Emit From is Movement or '
+none = mk(comp, constantTOP, 'none', comment='Black: nothing from input 3 (Emit From is Movement or '
           'Brightness).', outputresolution='custom', resolutionw=1, resolutionh=1, colorr=0, colorg=0, colorb=0,
           alpha=1)
-subject = mk(comp, switchTOP, 'subject', 0, -500, [none, find, near],
+subject = mk(comp, switchTOP, 'subject', [none, find, near],
              'The subject on input 3 for Depth (find), the mask for Mask (near), else nothing: only that one cooks.',
              index=Expr("{'depth': 1, 'mask': 2}.get(parent().par.Emitfrom.eval(), 0)"))
-emit = glsl(comp, 'emit', 600, 600, [motion, source, subject], src('emit.glsl'),
+section('emit', 'Where it emits: movement, brightness, depth or the mask', lane='motion')
+emit = glsl(comp, 'emit', [motion, source, subject], src('emit.glsl'),
             'Where the picture pours into the fluid: by Emit From and Sensitivity.', fmt='rgba16float',
             uE=(menu('Emitfrom'), par('Sense')))
 
 # ---- The fluid -----------------------------------------------------------------------------------
-velocity_fb = mk(comp, feedbackTOP, 'velocity_fb', 600, 400, [still], 'The velocity last frame.', top='velocity')
-dye_fb = mk(comp, feedbackTOP, 'dye_fb', 600, 100, [still], 'The dye last frame.', top='dye')
-advect = glsl(comp, 'advect', 800, 400, [motion, velocity_fb, dye_fb], src('velocity.glsl'),
+section('fluid', 'The fluid: velocity advected and made incompressible, the dye carried')
+velocity_fb = mk(comp, feedbackTOP, 'velocity_fb', [still], 'The velocity last frame.', top='velocity')
+dye_fb = mk(comp, feedbackTOP, 'dye_fb', [still], 'The dye last frame.', top='dye')
+advect = glsl(comp, 'advect', [motion, velocity_fb, dye_fb], src('velocity.glsl'),
               "The velocity carried by itself, swirled, risen by the dye, dragged by the motion; a beat's puff "
               'makes it leap and churn.',
               fmt='rgba32float', uT=(DT,),
@@ -234,19 +240,19 @@ advect = glsl(comp, 'advect', 800, 400, [motion, velocity_fb, dye_fb], src('velo
                        "{})".format(SWIRL_K, per_look(SWIRL), CHURN, BEAT)),
                   Expr('{} + parent().par.Rise + {} * {}'.format(per_look(RISE), LEAP, BEAT)),
                   Expr(per_look(FLOW_HALF))))
-divergence = glsl(comp, 'divergence', 1000, 400, [advect], src('divergence.glsl'),
+divergence = glsl(comp, 'divergence', [advect], src('divergence.glsl'),
                   'How much fluid each cell gains or loses.', fmt='rgba32float')
-pressure_fb = mk(comp, feedbackTOP, 'pressure_fb', 1000, 600, [divergence], 'The pressure last frame.', top='pressure')
-pressure = glsl(comp, 'pressure', 1200, 500, [pressure_fb, divergence], src('pressure.glsl'),
+pressure_fb = mk(comp, feedbackTOP, 'pressure_fb', [divergence], 'The pressure last frame.', top='pressure')
+pressure = glsl(comp, 'pressure', [pressure_fb, divergence], src('pressure.glsl'),
                 'The pressure that cancels the divergence: {} Jacobi iterations.'.format(PASSES), fmt='rgba32float')
 setpars(pressure, npasses=PASSES)
-velocity = glsl(comp, 'velocity', 1400, 400, [advect, pressure], src('project.glsl'),
+velocity = glsl(comp, 'velocity', [advect, pressure], src('project.glsl'),
                 'The velocity made incompressible: what the dye moves with.', fmt='rgba32float')
 # Hold: a cell off the edge reads as the edge, so the velocity's differences don't jump there (the default,
 # Zero, would). The pressure keeps Zero: the fluid flows out of the frame freely.
 for g in (advect, divergence):
     setpars(g, inputextenduv='hold')
-dye = glsl(comp, 'dye', 1400, 100, [source, dye_fb, velocity, emit], lib_glsl(_ROOT, 'common.glsl') + src('dye.glsl'),
+dye = glsl(comp, 'dye', [source, dye_fb, velocity, emit], lib_glsl(_ROOT, 'common.glsl') + src('dye.glsl'),
            'What the fluid carries: ink, smoke or heat, carried by the velocity, poured in where the picture emits.',
            fmt='rgba16float',
            uT=(DT, clock_seconds()),
@@ -254,11 +260,13 @@ dye = glsl(comp, 'dye', 1400, 100, [source, dye_fb, velocity, emit], lib_glsl(_R
                     "op('level_lag')[0])) if op('audio')['source'] > 0 else 1) * (1 + {} * parent().par.Puff * "
                     "op('puff_env')[0])".format(POUR, STREAM[0], STREAM[1], FLARE)),
                Expr('{} * 4 ** (2 * parent().par.Linger - 1)'.format(per_look(HALF))), menu('Look'), menu('Color')))
-look = glsl(comp, 'look', 1600, 0, [source, dye], src('look.glsl'),
+section('look', 'The look: fire, smoke or ink over the picture')
+look = glsl(comp, 'look', [source, dye], src('look.glsl'),
             'The dye over the picture as ink, smoke or flames; on a puff the flames burn hotter, the smoke glows.',
             uL=(menu('Look'), par('Backdrop'), Expr("parent().par.Puff * op('puff_env')[0]")))
 
-reset = mk(comp, parameterexecuteDAT, 'reset', -600, 250, comment='Reset: the fluid starts again, empty and still.')
+section('fluid')
+reset = mk(comp, parameterexecuteDAT, 'reset', comment='Reset: the fluid starts again, empty and still.')
 reset.text = ('def onPulse(par):\n'
               "    if par.name == 'Reset':\n"
               "        for name in ('velocity_fb', 'pressure_fb', 'dye_fb', 'motion_fb'):\n"
