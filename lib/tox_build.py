@@ -224,6 +224,28 @@ def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-
     return ops
 
 
+def structure_tensor(comp, root, source, x=-400, y=-300, sigma=2.0):
+    """The picture's local orientation, shared by the effects that follow its edges (Paint; Reaction-diffusion
+    and Pencil to come): the structure tensor of its color (tensor: E, F, G from Jaehne's derivative filter),
+    smoothed by a Gaussian of sigma pixels at 720 high across and then down (tensor_h, tensor_v; sigma may be an
+    Expr), and its eigenanalysis (flow: rg the direction along the edges, a unit vector in pixels; b the
+    anisotropy 0-1, 0 where nothing has a direction; a the strongest change). Each pass is the input's size, in
+    16-bit float; edges hold rather than fall to black. The shaders are lib/glsl's tensor, tensor_blur and
+    tensor_flow, after Kyprianidis, Kang and Doellner (2009, 2011). Returns the operators by name."""
+    ops = {}
+    ops['tensor'] = glsl(comp, 'tensor', x, y, [source], lib_glsl(root, 'tensor.glsl'),
+                         "The structure tensor of the picture's color, per pixel.", fmt='rgba16float')
+    ops['tensor_h'] = glsl(comp, 'tensor_h', x + 200, y, [ops['tensor']], lib_glsl(root, 'tensor_blur.glsl'),
+                           'The tensor smoothed across.', fmt='rgba16float', uB=(1, 0, sigma))
+    ops['tensor_v'] = glsl(comp, 'tensor_v', x + 400, y, [ops['tensor_h']], lib_glsl(root, 'tensor_blur.glsl'),
+                           'The tensor smoothed down.', fmt='rgba16float', uB=(0, 1, sigma))
+    ops['flow'] = glsl(comp, 'flow', x + 600, y, [ops['tensor_v']], lib_glsl(root, 'tensor_flow.glsl'),
+                       'Along the edges: rg the direction, b how clear it is (anisotropy).', fmt='rgba16float')
+    for o in ops.values():
+        setpars(o, inputextenduv='hold')
+    return ops
+
+
 def clock_seconds():
     """absTime.seconds for a shader's uniform, wrapped every CLOCK seconds so a 32-bit float keeps it to 1 ms
     however long TouchDesigner has run. Smooth motion driven by it jumps once at each wrap; take

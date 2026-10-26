@@ -1,21 +1,22 @@
 {
-  "version": "0.1.10",
-  "sources_sha256": "b7a14891c6d6c066c75a346ca6128004f0c351a6dbf69dcd266c1f9f49f280a3",
+  "version": "0.1.11",
+  "sources_sha256": "e0008c8f0634e4af3340bb45724438cb68e39bcf0bec632491c50eba94484bbd",
   "embeds": {
-    "ascii": "8713d742da9fd0a412da80a509e273fd002b724c840d8c0a771d75d02f2daa7d",
-    "bent_cam": "9e89fca283e127724ddf1f0bc9b248e8422414ddd59def7224b4ea440df1b27b",
-    "blob_track": "dfc5b403e3ffe57f867f9f47fda713eaa75dd0dbda1ad5fb8f4fa3bcdb179e4a",
-    "datamosh": "be3f1c35e332cf9b044d07e1530cca08b05c4a1af9dcb88f5b2a3c05ef11b9bb",
-    "fluid": "04c89b9ae20b835647ae41f8dffa9111564d5e3ea5b86bf226029573c2d7b9f3",
-    "glitch": "fe0d95b2c229d43554683fc590f1e3c345346badc24a955f1258fab26eaa2d8c",
-    "particles": "a25b51a0509951d3bb708d7dd9f647fac56ecc5b8ca1d7b33a1be3c952a3288f",
-    "pixel_sort": "38d9fcd7e8e3d52c15841e38710c6eff8e8c78643c227718df23878eeefa5fce",
-    "point_cloud": "2aae82fb16faac157cbc87f0118ab45e678d452d2328a5ef9b808d419cd45762",
-    "slit_scan": "43c39aeea97395c95b073b586b9e060542830623ee328246b18daf1504e65550",
-    "vhs_crt": "dae11ed2e610bc3fb8a23b015561ab1c1c7b0fc2ed72da1de954f26921b1c0d0"
+    "ascii": "6eeeb0449dbc365aa9bbec238569e4b977241c7988f08a458292aaa666ccbbd0",
+    "bent_cam": "e4d4fd1e4550b8d5dba7d9a2f6320a7a7a51c36442e58446261bcc2e650ce114",
+    "blob_track": "e68e5c28e1a11a5b8575046f56abecd7ae01370807d5140b21b70c8b8027be4f",
+    "datamosh": "91d9bdd92d0ca36f669f120d5a67cf64984b7e8595c2a717daedfcd4059084ef",
+    "fluid": "6fbe17c4ba124a1266787428d820e1055acab25668447986b0506859a0d09943",
+    "glitch": "dc92c98f7d35914e8557270141be055a91e55fd05b247c06f46040288e8a2f50",
+    "paint": "6cce4e0e92887d10e4f69247e64d4c4e4140afc873cdecb143e35999b249160a",
+    "particles": "91fab7a86824dde7aa005a8e67b5f3ee04cd8749a9256b454dbced67ff410d66",
+    "pixel_sort": "36f2eb1635093bd886541f4d0c640ed9ca0ab9cba9dc23bb4b0e0926bc0e864a",
+    "point_cloud": "94f6bc7c7884bb19fb2356b8fd9a11eedb07c022ea9d7157a35686a2c5664b0a",
+    "slit_scan": "7c2d6e9fdd28b482161ca616fd9461e595e228bda00eb88b7ce59ab75e76106c",
+    "vhs_crt": "41572cac3718f5b3a07b91d65226b2f56cecc24b9a3f91221dfcb0908d2f4919"
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "aee40bcf1ac4533e662848adca6623ad1342122d2a1e75418a134a15e6fa523e",
-  "tox_bytes": 2070200
+  "tox_sha256": "2ca3afb402d6344cef8c19e59d168842f0e6d4dee4a8251ed3e46268b90fbd85",
+  "tox_bytes": 2094928
 }
