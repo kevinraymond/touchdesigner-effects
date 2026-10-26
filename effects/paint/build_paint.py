@@ -216,7 +216,8 @@ for o in (dog, lic):
     setpars(o, inputextenduv='hold')
 mean = mk(comp, analyzeTOP, 'mean', [source], "The picture's average color: Ink's middle level.",
           op='average')
-paint = glsl(comp, 'paint', [painted, lic, mean], lib_glsl(_ROOT, 'common.glsl') + src('paint.glsl'),
+paint = glsl(comp, 'paint', [painted, lic, mean],
+             lib_glsl(_ROOT, 'common.glsl') + lib_glsl(_ROOT, 'paper.glsl') + src('paint.glsl'),
              'The finished picture in the chosen style: lines, canvas, wash or ink.',
              uS=(Expr('parent().par.Style.menuIndex'), par('Lines'), LINE_EDGE, LINE_SOFT),
              uI=(INK_P, par('Inklevel'), INK_SOFT, par('Texture')))
