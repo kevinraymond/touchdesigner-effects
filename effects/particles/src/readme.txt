@@ -2,143 +2,52 @@ Particles {v}: particles peel off the subject, or fill the frame for it to shove
 touchdesigner-effects, MIT.
 Docs: https://github.com/kevinraymond/touchdesigner-effects/blob/main/docs/effects/particles.md
 
-Particles come off a subject in the picture, a person usually, like smoke or sparks, each in the
-picture's color where it was born. The air carries them up and swirls them around, and they fade
-over a few seconds. The music moves the whole cloud: loudness thickens the stream, each beat fires a
-burst and kicks the cloud outward, each bar swings the wind; with Fosfora's signal, a build stirs the
-air up and a drop sends a shockwave out from the subject. That is Behavior Emit; Push and Flow fill
-the frame instead (BEHAVIOR, below).
+Particles come off a subject in the picture, a person usually, like smoke or sparks, each in the picture's color where it was born. The air carries them up and swirls them around, and they fade over a few seconds. The music moves the whole cloud: loudness thickens the stream, each beat fires a burst and kicks the cloud outward, each bar swings the wind; with Fosfora's signal, a build stirs the air up and a drop sends a shockwave out from the subject. That is Behavior Emit; Push and Flow fill the frame instead (BEHAVIOR, below).
 
 USE
-Drag particles.tox into your network: it shows TouchDesigner's sample movie (a birch among dark
-leaves), particles peeling off the trunk. Wire your picture into input 1 (a webcam, a video); the
-result is on output 1, at the input's size. Optionally wire audio or beat channels into input 2
-(below). Open Window shows it full size; Esc closes the window.
+Drag particles.tox into your network: it shows TouchDesigner's sample movie (a birch among dark leaves), particles peeling off the trunk. Wire your picture into input 1 (a webcam, a video); the result is on output 1, at the input's size. Optionally wire audio or beat channels into input 2 (below). Open Window shows it full size; Esc closes the window.
 
-WHAT YOU HAVE, WHAT YOU GET
-Find on Auto picks for itself; set Show to Subject to see what the particles come from and a label
-saying how it was found.
-- A depth map on input 3 (Kinect, RealSense, Depth Anything), lined up with input 1, Depth Type set
-  to match: the best result. What stands in front of what is beside it emits, still or moving, in any light.
+WHAT YOU HAVE, WHAT YOU GET Find on Auto picks for itself; set Show to Subject to see what the particles come from and a label saying how it was found.
+- A depth map on input 3 (Kinect, RealSense, Depth Anything), lined up with input 1, Depth Type set to match: the best result. What stands in front of what is beside it emits, still or moving, in any light.
 - A mask on input 3 (MediaPipe, the NVIDIA Background TOP): what is inside it emits.
-- Only a picture (a webcam, a video): what moves emits. Someone who holds still fades out within a
-  couple of seconds; moving shadows count too.
-- Only a picture from a fixed camera: set Find to Background and, with the frame empty, press Capture
-  Background, which keeps input 1's picture as the empty room; then everything that isn't the empty
-  room emits, still or moving. It needs a moment with nobody in the frame: for a video where someone
-  is always there, use Movement.
-- A lit performer on a dark stage: Find on Stand Out reads the picture's brightness as depth (only
-  what is brighter than half counts).
+- Only a picture (a webcam, a video): what moves emits. Someone who holds still fades out within a couple of seconds; moving shadows count too.
+- Only a picture from a fixed camera: set Find to Background and, with the frame empty, press Capture Background, which keeps input 1's picture as the empty room; then everything that isn't the empty room emits, still or moving. It needs a moment with nobody in the frame: for a video where someone is always there, use Movement.
+- A lit performer on a dark stage: Find on Stand Out reads the picture's brightness as depth (only what is brighter than half counts).
 Auto goes by what input 3 carries: a depth input that goes black falls back to Movement on its own.
 
 BEHAVIOR
 - Emit: particles peel off the subject and drift away on the air.
-- Push: particles fill the frame, hanging in still air. The subject is solid: as it moves it shoves
-  them aside and they light up and swell, settling again as they slow, and its path stays clear
-  until new particles fill it in (over about Life seconds). Nothing is born on the subject.
-- Flow: particles stream across the frame on the wind (Drift, along Direction) and part round the
-  subject, closing in again behind it. Where the subject moves into the stream, the particles pass
-  behind it, so it leaves no hole; those born behind it carry its colors off when it moves.
-In Push and Flow, Rate x {field} particles are born a second, all over the frame, so about {field} x Rate x
-Life fill it (the defaults: about {fill:,}); particles that leave one edge come back at the other. A
-beat's burst still leaves the subject's outline, and a beat pulses the whole field out from the
-subject's middle and back. The air parts round each person in the frame; arms and other thin parts
-let a little through, out of sight behind them.
+- Push: particles fill the frame, hanging in still air. The subject is solid: as it moves it shoves them aside and they light up and swell, settling again as they slow, and its path stays clear until new particles fill it in (over about Life seconds). Nothing is born on the subject.
+- Flow: particles stream across the frame on the wind (Drift, along Direction) and part round the subject, closing in again behind it. Where the subject moves into the stream, the particles pass behind it, so it leaves no hole; those born behind it carry its colors off when it moves.
+In Push and Flow, Rate x {field} particles are born a second, all over the frame, so about {field} x Rate x Life fill it (the defaults: about {fill:,}); particles that leave one edge come back at the other. A beat's burst still leaves the subject's outline, and a beat pulses the whole field out from the subject's middle and back. The air parts round each person in the frame; arms and other thin parts let a little through, out of sight behind them.
 
 FIND
-Stand Out: nearer than Far Limit and, by Stand Out, than what lies to its left and right in the same
-row; floors and walls drop out, while someone cut off by the left or right edge of the frame drops
-out too and feet merge with the floor. Nearer Than Far Limit: everything nearer, for a mask or a
-camera that sees no floor (at a desk, close up: set Far Limit just behind you). With nothing on input
-3, both read input 1's brightness as depth, and only what is brighter than half (or than Far Limit,
-when that is higher) counts: leaves and walls in the light are bright too. Depth Type: Brighter
-Is Nearer for depth estimators and masks; Distance 0-1 for the RealSense and Kinect TOPs and Distance
-in Meters (Max Distance) for the Kinect Azure TOP, whose black (no reading) is then left out; don't
-invert a camera's depth yourself. Movement: what differs from a background that follows the scene a
-couple of seconds behind (Sensitivity); edges and patterns count more than flat colors, and the camera
-must stay still. Background: what differs from the empty room kept by Capture Background
-(Sensitivity), by hue and by brightness allowing for the camera's own exposure drift; until it is
-pressed, what moves.
+Stand Out: nearer than Far Limit and, by Stand Out, than what lies to its left and right in the same row; floors and walls drop out, while someone cut off by the left or right edge of the frame drops out too and feet merge with the floor. Nearer Than Far Limit: everything nearer, for a mask or a camera that sees no floor (at a desk, close up: set Far Limit just behind you). With nothing on input 3, both read input 1's brightness as depth, and only what is brighter than half (or than Far Limit, when that is higher) counts: leaves and walls in the light are bright too. Depth Type: Brighter Is Nearer for depth estimators and masks; Distance 0-1 for the RealSense and Kinect TOPs and Distance in Meters (Max Distance) for the Kinect Azure TOP, whose black (no reading) is then left out; don't invert a camera's depth yourself. Movement: what differs from a background that follows the scene a couple of seconds behind (Sensitivity); edges and patterns count more than flat colors, and the camera must stay still. Background: what differs from the empty room kept by Capture Background (Sensitivity), by hue and by brightness allowing for the camera's own exposure drift; until it is pressed, what moves.
 
 THE PAGE
-Show. Find, Capture Background, Sensitivity, Stand Out, Far Limit, Depth Type, Max Distance (above).
-Behavior: Emit, Push or Flow (above). Emit From (Emit): the whole subject or its outline. Rate:
-particles born per second (at most {n:,} alive at once; {field} times as many in Push and Flow). Life:
-seconds each lives. Size, in pixels at 720 high. Speed: how fast they leave the subject (in Push and
-Flow, a beat's burst). Drift (Emit, Flow): how fast the air blows; below 0, the other way.
-Direction (Emit, Flow): which way, in degrees clockwise from straight up. Turbulence: how much it
-swirls. Color: the picture's (lifted, so dark clothes still glow), orange, blue or white. Glow.
-Backdrop: how bright the picture behind is. Loudness: how much input 2's loudness thickens and thins
-the stream. Beat Bursts: a burst on each beat, sparks as often as Flashing allows, and an outward
-kick (Emit) or pulse (Push, Flow). Bar Gusts (Emit, Flow): the wind swings on each bar. Song
-Moments. Flashing: how often a burst may be sparks.
+Show. Find, Capture Background, Sensitivity, Stand Out, Far Limit, Depth Type, Max Distance (above). Behavior: Emit, Push or Flow (above). Emit From (Emit): the whole subject or its outline. Rate: particles born per second (at most {n:,} alive at once; {field} times as many in Push and Flow). Life: seconds each lives. Size, in pixels at 720 high. Speed: how fast they leave the subject (in Push and Flow, a beat's burst). Drift (Emit, Flow): how fast the air blows; below 0, the other way. Direction (Emit, Flow): which way, in degrees clockwise from straight up. Turbulence: how much it swirls. Color: the picture's (lifted, so dark clothes still glow), orange, blue or white. Glow. Backdrop: how bright the picture behind is. Loudness: how much input 2's loudness thickens and thins the stream. Beat Bursts: a burst on each beat, sparks as often as Flashing allows, and an outward kick (Emit) or pulse (Push, Flow). Bar Gusts (Emit, Flow): the wind swings on each bar. Song Moments. Flashing: how often a burst may be sparks.
 
 AUDIO (input 2, optional)
-Fosfora's signal is the best input: run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's
-integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it
-into input 2. Loudness thickens and thins the stream; each beat fires a burst of particles that
-leave faster than the rest and kicks the whole cloud outward, and as often as Flashing allows the
-burst is sparks, born bigger and shrinking as they go (Beat Bursts); each bar swings the wind (Bar
-Gusts; in Push, which has no wind, bars do nothing); with Song Moments on, a build makes the air
-swirl harder as it rises and a drop sends a ring outward from the subject that shoves the particles
-it passes (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio Device In)
-gives beats from a kick detector and a beat clock that locks to the kicks' tempo (experimental: it
-can still add or miss beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from
-its kick or onset channels. Nothing wired: a steady stream, no bursts.
+Fosfora's signal is the best input: run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it into input 2. Loudness thickens and thins the stream; each beat fires a burst of particles that leave faster than the rest and kicks the whole cloud outward, and as often as Flashing allows the burst is sparks, born bigger and shrinking as they go (Beat Bursts); each bar swings the wind (Bar Gusts; in Push, which has no wind, bars do nothing); with Song Moments on, a build makes the air swirl harder as it rises and a drop sends a ring outward from the subject that shoves the particles it passes (Fosfora's drop detection is experimental). Raw audio (Audio File In, Audio Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo (experimental: it can still add or miss beats) and a bar every 4 beats; TouchDesigner's audioAnalysis gives beats from its kick or onset channels. Nothing wired: a steady stream, no bursts.
 
 FLASHING
-A burst's sparks light up a patch of the picture at once, so they count as flashes and pass through
-one gate that follows the Flashing parameter: Off never sparks, Calm (the default) at most once a
-second (about every other beat at dance tempos), Up to 3 per second is the WCAG 2.3.1 limit (every
-beat up to 180 BPM). The bursts themselves, the kicks, the stream and the wind move and add
-particles rather than light the picture, so they come on every beat at any setting.
+A burst's sparks light up a patch of the picture at once, so they count as flashes and pass through one gate that follows the Flashing parameter: Off never sparks, Calm (the default) at most once a second (about every other beat at dance tempos), Up to 3 per second is the WCAG 2.3.1 limit (every beat up to 180 BPM). The bursts themselves, the kicks, the stream and the wind move and add particles rather than light the picture, so they come on every beat at any setting.
 
 INSIDE
-The subject: depth (input 3, or input 1's brightness) -> near (small, brighter nearer; depth_stats:
-is there any?) -> find (Stand Out, Nearer Than); source -> small -> motion (what moves) and plate (the
-empty room, at each Capture Background: capture_exec counts presses in captures); subject picks by
-Find -> emit (where particles are born; emit_stats averages it) and subject_blur (its edge, which
-way is out). The air, for Push and Flow: subject_wide (how near the subject is) and subject_middle
-(the middle of the subject nearby) -> air, a stream function whose curl is the wind and the swirl,
-going round the subject; air_in passes it only for Push and Flow, so none of it cooks in Emit. The
-particles: sim moves {n:,} of them, one per pixel of four float buffers (sim, sim_life, sim_color,
-sim_shove), which it reads back through sim_fb, sim_life_fb, sim_color_fb and sim_shove_fb;
-alive_stats counts the living, so births come to Rate. Drawing: geo puts a dot (dot, dot_mat) at every particle by
-instancing from the buffers, cam looks at them flat, render draws them, glow blurs them and look lays
-both over the picture, or shows the subject with its label. Input 2 goes through audio (lib
-audio_in); counts and steps turn its counts into steps, beat_env is a beat's burst and kick (and
-beat_rate, how fast it changes, the pulse in Push and Flow), spark_ask, flash_limit and flash let
-through the beats whose burst is sparks (spark_env), drop_env a drop's shockwave, build_lag
-the build, level_lag the loudness, gust and gust_lag the wind's angle for each bar.
+The subject: depth (input 3, or input 1's brightness) -> near (small, brighter nearer; depth_stats: is there any?) -> find (Stand Out, Nearer Than); source -> small -> motion (what moves) and plate (the empty room, at each Capture Background: capture_exec counts presses in captures); subject picks by Find -> emit (where particles are born; emit_stats averages it) and subject_blur (its edge, which way is out). The air, for Push and Flow: subject_wide (how near the subject is) and subject_middle (the middle of the subject nearby) -> air, a stream function whose curl is the wind and the swirl, going round the subject; air_in passes it only for Push and Flow, so none of it cooks in Emit. The particles: sim moves {n:,} of them, one per pixel of four float buffers (sim, sim_life, sim_color, sim_shove), which it reads back through sim_fb, sim_life_fb, sim_color_fb and sim_shove_fb; alive_stats counts the living, so births come to Rate. Drawing: geo puts a dot (dot, dot_mat) at every particle by instancing from the buffers, cam looks at them flat, render draws them, glow blurs them and look lays both over the picture, or shows the subject with its label. Input 2 goes through audio (lib audio_in); counts and steps turn its counts into steps, beat_env is a beat's burst and kick (and beat_rate, how fast it changes, the pulse in Push and Flow), spark_ask, flash_limit and flash let through the beats whose burst is sparks (spark_env), drop_env a drop's shockwave, build_lag the build, level_lag the loudness, gust and gust_lag the wind's angle for each bar.
 
 CREDITS
-- Swirl: curl noise (Bridson, Hourihan and Nordenstam, "Curl-Noise for Procedural Fluid Flow",
-  SIGGRAPH 2007) on TouchDesigner's built-in simplex noise. Push and Flow's air going round the
-  subject: the same paper's boundaries (the stream function ramped to one value across an obstacle).
-- The air's velocity from the stream function on a grid, each component taken on the sides of a cell
-  as on a staggered grid (Harlow and Welch, "Numerical Calculation of Time-Dependent Viscous
-  Incompressible Flow of Fluid with Free Surface", Physics of Fluids 1965), so no air is lost or
-  gained in a cell; particles move by the midpoint rule, a standard method.
-- Push's shove: a particle inside the subject is put back on its edge and the move becomes its speed,
-  as in position-based dynamics (Muller, Heidelberger, Hennix and Ratcliff, "Position Based
-  Dynamics", VRIPHYS 2006).
+- Swirl: curl noise (Bridson, Hourihan and Nordenstam, "Curl-Noise for Procedural Fluid Flow", SIGGRAPH 2007) on TouchDesigner's built-in simplex noise. Push and Flow's air going round the subject: the same paper's boundaries (the stream function ramped to one value across an obstacle).
+- The air's velocity from the stream function on a grid, each component taken on the sides of a cell as on a staggered grid (Harlow and Welch, "Numerical Calculation of Time-Dependent Viscous Incompressible Flow of Fluid with Free Surface", Physics of Fluids 1965), so no air is lost or gained in a cell; particles move by the midpoint rule, a standard method.
+- Push's shove: a particle inside the subject is put back on its edge and the move becomes its speed, as in position-based dynamics (Muller, Heidelberger, Hennix and Ratcliff, "Position Based Dynamics", VRIPHYS 2006).
 - Dice: the PCG hash (Jarzynski and Olano, "Hash Functions for GPU Rendering", JCGT 2020).
-- Movement: a background that follows the picture a couple of seconds behind (running-average
-  background subtraction, a standard method); Background: a picture of the empty room.
+- Movement: a background that follows the picture a couple of seconds behind (running-average background subtraction, a standard method); Background: a picture of the empty room.
 - Depth Type: the RealSense, Kinect and Kinect Azure TOPs' depth, as their help pages describe it.
 - Labels: a 5x7 pixel font drawn for this library.
 - Read during the survey, not used: the Palette's particlesGpu (Derivative).
-- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness;
-  the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it
-  is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic
-  Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001).
-  Followed, not copied.
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness; the beat clock takes its tempo from the gaps between kicks, each voting for the beat lengths it is a whole multiple of: inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001). Followed, not copied.
 - Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
-Everything else (Stand Out's row search, Background's exposure drift, Flow's particles waiting
-behind the subject, the beat's pulse) is written for this library; the depth reading (lib depth_near
-and depth_find) is shared with Point Cloud. MIT.
+Everything else (Stand Out's row search, Background's exposure drift, Flow's particles waiting behind the subject, the beat's pulse) is written for this library; the depth reading (lib depth_near and depth_find) is shared with Point Cloud. MIT.
 
 UPDATING
-Dragging a .tox in embeds a copy. To update, delete this one and drag in the new particles.tox from
-https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's External
-.tox at a downloaded copy). The version and the build it was saved in are on the About page.
+Dragging a .tox in embeds a copy. To update, delete this one and drag in the new particles.tox from https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's External .tox at a downloaded copy). The version and the build it was saved in are on the About page.

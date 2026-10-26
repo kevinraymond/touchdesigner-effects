@@ -27,13 +27,17 @@ void main()
 """
 
 
-def good(name='selftest_ok', flashing=False, depth=False):
+def good(name='selftest_ok', flashing=False, depth=False, more=None):
+    """An effect that passes every check; more(comp) adds to it before finish_effect() lays it out."""
     comp, page, source = new_effect(name, 'Selftest', 'Selftest: inverts its input.',
                                     'Selftest README.\n\nCREDITS\nOriginal: a test of the save-time checks.\n',
                                     tags=('selftest',), audio=True, flashing=flashing, depth=depth)
     custom(page, 'Float', 'Amount', 'Amount', 1.0, 'How much to invert.', 0, 1, True)
-    glsl = mk(comp, glslTOP, 'glsl', 0, 0, [source], comment='Inverts the picture.')
+    section('invert', 'Inverts the picture')
+    glsl = mk(comp, glslTOP, 'glsl', [source], comment='Inverts the picture.')
     docked(glsl, '_pixel', SHADER, 'The pixel shader: one minus the color.')
+    if more:
+        more(comp)
     finish_effect(comp, glsl, '0.0.1', page)
     return comp
 
@@ -48,12 +52,12 @@ def _set(path, **pars):
 
 
 def _extra(kind, name, comment='', **pars):
-    return lambda comp: mk(comp, kind, name, 400, -600, comment=comment, **pars)
+    return lambda comp: mk(comp, kind, name, comment=comment, at=(400, -600), **pars)
 
 
 def _own_shader(comp):
     """The mistake the docked check exists for: a new DAT wired in, the docked one left behind."""
-    mine = mk(comp, textDAT, 'my_shader', 0, -600, comment='a second shader')
+    mine = mk(comp, textDAT, 'my_shader', comment='a second shader')
     mine.text = SHADER
     comp.op('glsl').par.pixeldat = 'my_shader'
 
@@ -88,13 +92,13 @@ def _editable_version(comp):
 
 
 def _extension_lazy(comp):
-    ext = mk(comp, textDAT, 'SelftestExt', -400, -700, comment='an extension')
+    ext = mk(comp, textDAT, 'SelftestExt', comment='an extension')
     ext.text = 'class SelftestExt:\n    def __init__(self, ownerComp):\n        self.ownerComp = ownerComp\n'
     setpars(comp, ext0object="op('./SelftestExt').module.SelftestExt(me)", initextonstart=False)
 
 
 def _script_chop_always(comp):
-    chop = mk(comp, scriptCHOP, 'script', 0, -700, comment='a Script CHOP')
+    chop = mk(comp, scriptCHOP, 'script', comment='a Script CHOP')
     docked(chop, '_callbacks', 'def onCook(scriptOp):\n    scriptOp.clear()\n    return\n', 'its callbacks')
 
 
@@ -108,9 +112,18 @@ def _shader_error(comp):
 
 def _hidden_expression_error(comp):
     """An expression error on an operator nothing cooks: a Switch TOP's unselected input."""
-    sw = mk(comp, switchTOP, 'sw', 600, -700, [comp.op('glsl')], comment='x', index=0)
-    bad = mk(comp, constantTOP, 'bad', 400, -800, comment='x', colorr=Expr('sin(1)'))
+    sw = mk(comp, switchTOP, 'sw', [comp.op('glsl')], comment='x', index=0)
+    bad = mk(comp, constantTOP, 'bad', comment='x', colorr=Expr('sin(1)'))
     sw.inputConnectors[1].connect(bad)
+
+
+def _move(name, dx=0, dy=0, onto=None):
+    def apply(comp):
+        o = comp.op(name)
+        if onto:
+            o.nodeX, o.nodeY = comp.op(onto).nodeX, comp.op(onto).nodeY
+        o.nodeX, o.nodeY = o.nodeX + dx, o.nodeY + dy
+    return apply
 
 
 def _no_help(comp):
@@ -153,11 +166,21 @@ BREAKS = [
     ('node too small', _attr('', nodeWidth=100), 'node is'),
     ('no README', lambda c: c.op('README').destroy(), 'README'),
     ('a README without credits', lambda c: setattr(c.op('README'), 'text', 'Selftest README.\n'), 'CREDITS'),
+    ('a README wrapped by hand', lambda c: setattr(c.op('README'), 'text', 'Selftest README.\n\nA paragraph broken '
+     'across\ntwo lines by hand.\n\nCREDITS\nOriginal: a test of the save-time checks.\n'), 'wrapped by hand (line 4)'),
     ('two TOP outputs', _extra(outTOP, 'out_two', 'x'), 'outputs are'),
     ('a second TOP input before the audio', _extra(inTOP, 'in1b_top', 'x'), 'inputs are'),
     ('makes sound', _extra(audiodeviceoutCHOP, 'speaker', 'x', active=False), 'makes sound'),
     ('over the Non-Commercial cap', _extra(constantTOP, 'big', 'x', outputresolution='custom', resolutionw=1920,
                                             resolutionh=1080), 'exceeds'),
+    ('an operator outside every box', lambda c: mk(c, nullTOP, 'loose', [c.op('glsl')], comment='x', at=(-3000, 3000)),
+     'loose is in 0 boxes'),
+    ('a wire running backward', _move('glsl', dx=-600), 'runs backward'),
+    ('operators on top of each other', _move('sample', onto='in1_top', dx=30), 'overlap'),
+    ('a docked DAT away from its operator', _move('glsl_pixel', dx=400), 'is not under glsl'),
+    ('a box without a title', _set('box_input', Titletext=''), 'not a titled Network Box'),
+    ('an operator reading one right of it in its box',
+     lambda c: setattr(c.op('sample').par.speed, 'expr', "1 if op('source') else 1"), 'sits right of it in its box'),
 ]
 
 
@@ -166,8 +189,8 @@ def _check_source_follows_wiring(host, comp):
     when it is unwired, without anything forcing a cook: checked over later frames (run()
     with delayFrames), written to dev/out/selftest/wiring.txt."""
     source, log = comp.op('source'), []
-    feed = host.op('selftest_feed') or mk(host, noiseTOP, 'selftest_feed', -700, 0, comment='selftest input',
-                                          outputresolution='custom', resolutionw=320, resolutionh=200)
+    feed = host.op('selftest_feed') or mk(host, noiseTOP, 'selftest_feed', comment='selftest input',
+                                          outputresolution='custom', resolutionw=320, resolutionh=200, at=(-700, 0))
 
     def note(stage):
         log.append('{}: index {} source {} x {}'.format(stage, source.par.index.eval(), source.width, source.height))
@@ -189,15 +212,15 @@ def _check_source_follows_wiring(host, comp):
 
 def _check_many_inputs(host):
     """mk() wires more inputs than a new GLSL TOP has connectors, and the shader sees them all."""
-    box = host.op('selftest_inputs') or mk(host, baseCOMP, 'selftest_inputs', 0, -900, comment='x')
+    box = host.op('selftest_inputs') or mk(host, baseCOMP, 'selftest_inputs', comment='x', at=(0, -900))
     for o in list(box.children):
         o.destroy()
-    consts = [mk(box, constantTOP, 'c{}'.format(i), 0, -100 * i, comment='x', colorr=i / 10.0,
-                 outputresolution='custom', resolutionw=8, resolutionh=8) for i in range(5)]
-    g = glsl(box, 'g', 300, 0, consts, 'out vec4 fragColor;\nvoid main() {\n'
+    consts = [mk(box, constantTOP, 'c{}'.format(i), comment='x', colorr=i / 10.0,
+                 outputresolution='custom', resolutionw=8, resolutionh=8, at=(0, -100 * i)) for i in range(5)]
+    g = glsl(box, 'g', consts, 'out vec4 fragColor;\nvoid main() {\n'
              '    fragColor = vec4(texture(sTD2DInputs[1], vUV.st).r, texture(sTD2DInputs[2], vUV.st).r,\n'
              '                     texture(sTD2DInputs[3], vUV.st).r, texture(sTD2DInputs[4], vUV.st).r);\n}\n',
-             'reads inputs 2 to 5', res=(8, 8), fmt='rgba32float')
+             'reads inputs 2 to 5', res=(8, 8), fmt='rgba32float', at=(300, 0))
     g.cook(force=True)
     px = [round(float(v), 2) for v in g.numpyArray()[0, 0]]
     box.destroy()
@@ -207,10 +230,12 @@ def _check_many_inputs(host):
 
 def _check_blob_track_docked():
     """A Blob Track TOP docks DATs of its own; an effect built around one must still save."""
-    comp = good('selftest_blob')
-    bt = mk(comp, blobtrackTOP, 'blobs', 200, -300, [comp.op('source')], comment='tracks blobs')
-    for d in bt.docked:
-        d.comment = 'the tracker\'s own'
+    def blob(comp):
+        bt = mk(comp, blobtrackTOP, 'blobs', [comp.op('source')], comment='tracks blobs')
+        for d in bt.docked:
+            d.comment = 'the tracker\'s own'
+    comp = good('selftest_blob', more=blob)
+    bt = comp.op('blobs')
     try:
         all_checks(comp)
         verdict = 'ok   '
@@ -225,14 +250,16 @@ def _check_blob_track_docked():
 def _check_audio_in_saves(host):
     """An effect with audio_in() passes every check unwired, and analysis channels at a control
     rate on input 2 raise no warnings (the raw-audio filter sees them too)."""
-    comp = good('selftest_audio_saves')
-    audio_in(comp, _ROOT)
+    def audio(comp):
+        section('audio')
+        audio_in(comp, _ROOT)
+    comp = good('selftest_audio_saves', more=audio)
     try:
         all_checks(comp)
         verdict, why = 'ok   ', ''
     except RuntimeError as e:
         verdict, why = 'MISS ', ': ' + str(e).splitlines()[-1].strip()
-    chans = mk(host, constantCHOP, 'selftest_chans', -500, -1600, comment='x', const0name='energy', const0value=0.5)
+    chans = mk(host, constantCHOP, 'selftest_chans', comment='x', const0name='energy', const0value=0.5, at=(-500, -1600))
     comp.inputConnectors[1].connect(chans)
     comp.op('audio').cook(force=True)
     warnings = comp.warnings(recurse=True) + comp.errors(recurse=True)
@@ -247,16 +274,19 @@ def _check_depth_in(host):
     """An effect with input 3 (new_effect(depth=True), depth_in()) passes every check with its
     inputs in the standard order, and depth shows input 3 once a TOP is wired into it, else the
     stand-in from input 1."""
-    comp = good('selftest_depth', depth=True)
-    depth = depth_in(comp)
+    def depth(comp):
+        section('depth')
+        depth_in(comp)
+    comp = good('selftest_depth', depth=True, more=depth)
+    depth = comp.op('depth')
     try:
         all_checks(comp)
         verdict, why = 'ok   ', ''
     except RuntimeError as e:
         verdict, why = 'MISS ', ': ' + str(e).splitlines()[-1].strip()
     unwired = depth.par.index.eval()
-    feed = mk(host, noiseTOP, 'selftest_depth_feed', -700, -400, comment='x', outputresolution='custom',
-              resolutionw=64, resolutionh=36)
+    feed = mk(host, noiseTOP, 'selftest_depth_feed', comment='x', outputresolution='custom',
+              resolutionw=64, resolutionh=36, at=(-700, -400))
     comp.inputConnectors[2].connect(feed)
     depth.cook(force=True)
     wired, size = depth.par.index.eval(), (depth.width, depth.height)
@@ -276,11 +306,11 @@ def _check_flash_gate(host):
     for setting in ('off', 'calm', 'wcag'):
         comp = good('selftest_flash_' + setting, flashing=True)
         comp.par.Flashing = setting
-        lfo = mk(comp, lfoCHOP, 'pulses', -400, -900, comment='x', wavetype='square', frequency=4,
+        lfo = mk(comp, lfoCHOP, 'pulses', comment='x', wavetype='square', frequency=4,
                  offset=0.5, amp=0.5)
-        gate = flash_gate(comp, lfo, -200, -900)
-        gates[setting] = (comp, mk(comp, countCHOP, 'flashes', 200, -900, [gate], comment='x'),
-                          mk(comp, countCHOP, 'raw', 200, -1000, [lfo], comment='x'))
+        gate = flash_gate(comp, lfo)
+        gates[setting] = (comp, mk(comp, countCHOP, 'flashes', [gate], comment='x'),
+                          mk(comp, countCHOP, 'raw', [lfo], comment='x'))
     start = {}
 
     def pull():
@@ -325,34 +355,34 @@ def _check_audio_in(host):
     cases['none'] = (comp, script, [])
     for kind, beat_name, level_name, level in (('counted', 'beat_count', 'energy', 0.6), ('pulses', 'kick', 'low', 0.4)):
         comp, script = effect(kind)
-        lfo = mk(host, lfoCHOP, 'selftest_lfo_' + kind, -900, -1200, comment='x', wavetype='square',
-                 frequency=2, offset=0.5, amp=0.5)
-        beats = mk(host, countCHOP, 'selftest_count_' + kind, -700, -1200, [lfo], comment='x') if kind == 'counted' else lfo
-        named = mk(host, renameCHOP, 'selftest_named_' + kind, -500, -1200, [beats], comment='x',
-                   renamefrom='*', renameto=beat_name)
-        const = mk(host, constantCHOP, 'selftest_level_' + kind, -500, -1300, comment='x', const0name=level_name, const0value=level)
-        merged = mk(host, mergeCHOP, 'selftest_in_' + kind, -300, -1200, [named, const], comment='x')
+        lfo = mk(host, lfoCHOP, 'selftest_lfo_' + kind, comment='x', wavetype='square',
+                 frequency=2, offset=0.5, amp=0.5, at=(-900, -1200))
+        beats = mk(host, countCHOP, 'selftest_count_' + kind, [lfo], comment='x', at=(-700, -1200)) if kind == 'counted' else lfo
+        named = mk(host, renameCHOP, 'selftest_named_' + kind, [beats], comment='x',
+                   renamefrom='*', renameto=beat_name, at=(-500, -1200))
+        const = mk(host, constantCHOP, 'selftest_level_' + kind, comment='x', const0name=level_name, const0value=level, at=(-500, -1300))
+        merged = mk(host, mergeCHOP, 'selftest_in_' + kind, [named, const], comment='x', at=(-300, -1200))
         comp.inputConnectors[1].connect(merged)
         cases[kind] = (comp, script, list(dict.fromkeys([lfo, beats, named, const, merged])))
     comp, script = effect('fosfora')
     made = []
     for name, hz, y in (('beat_count', 2, -1700), ('bar_count', 0.5, -1800)):
-        lfo = mk(host, lfoCHOP, 'selftest_lfo_' + name, -900, y, comment='x', wavetype='square',
-                 frequency=hz, offset=0.5, amp=0.5)
-        count = mk(host, countCHOP, 'selftest_count_' + name, -700, y, [lfo], comment='x')
-        made += [lfo, count, mk(host, renameCHOP, 'selftest_named_' + name, -500, y, [count], comment='x',
-                                renamefrom='*', renameto=name)]
-    const = mk(host, constantCHOP, 'selftest_fosfora_levels', -500, -1900, comment='x')
+        lfo = mk(host, lfoCHOP, 'selftest_lfo_' + name, comment='x', wavetype='square',
+                 frequency=hz, offset=0.5, amp=0.5, at=(-900, y))
+        count = mk(host, countCHOP, 'selftest_count_' + name, [lfo], comment='x', at=(-700, y))
+        made += [lfo, count, mk(host, renameCHOP, 'selftest_named_' + name, [count], comment='x',
+                                renamefrom='*', renameto=name, at=(-500, y))]
+    const = mk(host, constantCHOP, 'selftest_fosfora_levels', comment='x', at=(-500, -1900))
     const.seq.const.numBlocks = 5
     made.append(setpars(const, const0name='energy', const0value=0.6, const1name='build', const1value=0.7,
                         const2name='beat_phase', const2value=0.25, const3name='bar_phase', const3value=0.5,
                         const4name='bass', const4value=0.45) or const)
-    made.append(mk(host, mergeCHOP, 'selftest_in_fosfora', -300, -1800, [made[2], made[5], made[6]], comment='x'))
+    made.append(mk(host, mergeCHOP, 'selftest_in_fosfora', [made[2], made[5], made[6]], comment='x', at=(-300, -1800)))
     comp.inputConnectors[1].connect(made[-1])
     cases['fosfora'] = (comp, script, made)
     comp, script = effect('raw')
-    music = mk(host, audiofileinCHOP, 'selftest_music', -500, -1500, comment='x',
-               file=Expr("app.samplesFolder + '/Audio/JeremyCaulfield_www.dumb-unit.com.mp3'"))
+    music = mk(host, audiofileinCHOP, 'selftest_music', comment='x',
+               file=Expr("app.samplesFolder + '/Audio/JeremyCaulfield_www.dumb-unit.com.mp3'"), at=(-500, -1500))
     comp.inputConnectors[1].connect(music)
     cases['raw'] = (comp, script, [music])
     start = {}
@@ -429,7 +459,7 @@ def main():
     report.append('info  inputs {}, outputs {}'.format([c.inOP.name for c in comp.inputConnectors],
                                                        [c.outOP.name for c in comp.outputConnectors]))
     # Loaded somewhere else, as a user's drag-in does: no errors, the sample on its output.
-    elsewhere = host.op('selftest_elsewhere') or mk(host, baseCOMP, 'selftest_elsewhere', 0, -600, comment='x')
+    elsewhere = host.op('selftest_elsewhere') or mk(host, baseCOMP, 'selftest_elsewhere', comment='x', at=(0, -600))
     loaded = elsewhere.loadTox(path)
     loaded.op('out_top').cook(force=True)
     errors = loaded.errors(recurse=True)

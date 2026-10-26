@@ -35,7 +35,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.1'
+VERSION = '0.1.2'
 STEADY = 2.0         # bursts this many seconds apart for Steady, and for On Beats or On Bars with nothing wired
 CAM_FPS = 30         # the camera's frame rate: the loop goes round this many times a second
 # The sensor's sizes; the picture's aspect is fitted into the one picked (640 x 480 takes a 16:9 picture at 640 x 360).
@@ -172,13 +172,14 @@ custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "experimental).")
 
 # ---- Audio (input 2) and the bursts -------------------------------------------------------------
+section('audio', 'Audio (input 2): beats, bars, drops or a steady clock ask for bursts')
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -200, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count bar_count drop_count')
-steady = mk(comp, constantCHOP, 'steady', -200, -500, comment='Counts {:g} s periods, for Steady bursts.'.format(STEADY),
+steady = mk(comp, constantCHOP, 'steady', comment='Counts {:g} s periods, for Steady bursts.'.format(STEADY),
             const0name='steady_count', const0value=Expr('int(absTime.seconds / {})'.format(STEADY)))
-both = mk(comp, mergeCHOP, 'all_counts', 0, -400, [counts, steady], 'Every count a burst may follow.')
-steps = mk(comp, slopeCHOP, 'steps', 200, -400, [both], 'Above 0 on the frame a count goes up.', timeslice=True)
+both = mk(comp, mergeCHOP, 'all_counts', [counts, steady], 'Every count a burst may follow.')
+steps = mk(comp, slopeCHOP, 'steps', [both], 'Above 0 on the frame a count goes up.', timeslice=True)
 WIRED = "op('audio')['source'].eval() > 0"
 asks = []
 for i, (name, chan, when, what) in enumerate((
@@ -188,34 +189,37 @@ for i, (name, chan, when, what) in enumerate((
          "parent().par.Bursts == 'steady' or (parent().par.Bursts in ('beats', 'bars') and not " + WIRED + ")",
          'the steady clock, when Bursts is Steady (or On Beats or On Bars with nothing on input 2)'),
         ('drop_on', 'drop_count', "parent().par.Moments and parent().par.Bursts != 'off'", 'drops (Song Moments)'))):
-    pick = mk(comp, selectCHOP, name + '_step', 400, -250 - 150 * i, [steps], 'Steps of {}.'.format(chan), channames=chan)
-    asks.append(mk(comp, mathCHOP, name, 600, -250 - 150 * i, [pick], 'Bursts on {}.'.format(what),
+    pick = mk(comp, selectCHOP, name + '_step', [steps], 'Steps of {}.'.format(chan), channames=chan)
+    asks.append(mk(comp, mathCHOP, name, [pick], 'Bursts on {}.'.format(what),
                    gain=Expr('1 if ({}) else 0'.format(when))))
-ask = mk(comp, mergeCHOP, 'burst_asks', 800, -450, asks, 'Every burst asked for.')
-ask_any = mk(comp, mathCHOP, 'burst_any', 1000, -450, [ask], 'One channel: any burst.', chanop='max')
-gate = flash_gate(comp, ask_any, 1200, -450)
-budget = mk(comp, triggerCHOP, 'flash_budget', 1600, -450, [gate],
+ask = mk(comp, mergeCHOP, 'burst_asks', asks, 'Every burst asked for.')
+ask_any = mk(comp, mathCHOP, 'burst_any', [ask], 'One channel: any burst.', chanop='max')
+section('flash', 'Flashing: bursts no closer together than it allows', lane='audio')
+gate = flash_gate(comp, ask_any)
+budget = mk(comp, triggerCHOP, 'flash_budget', [gate],
             'After the gate: bursts {calm} s apart at Calm, {other} s otherwise, so the total stays well under '
             'WCAG.'.format(**FLASH_SPACING),
             retrigger=Expr("{calm} if parent().par.Flashing == 'calm' else {other}".format(**FLASH_SPACING)),
             retriggerunit='seconds', attack=0, peak=1, peaklen=0, decay=0, sustain=0, release=0)
-burst = mk(comp, triggerCHOP, 'burst', 1800, -350, [budget], 'A burst: 1 for Length seconds, then gone.',
+section('bursts', "Bursts: each held for Length, numbered for its seed, a drop's marked", lane='audio')
+burst = mk(comp, triggerCHOP, 'burst', [budget], 'A burst: 1 for Length seconds, then gone.',
            attack=0, peak=1, peaklen=par('Length'), decay=0, sustain=0, release=0)
-burst_count = mk(comp, countCHOP, 'burst_count', 1800, -500, [budget], "Bursts so far: each burst's seed.")
-drop_step = mk(comp, selectCHOP, 'drop_now', 1600, -650, [asks[3]], 'A drop asking for a burst.')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 1800, -650, [drop_step], 'How recent a drop is (fades over 0.3 s).',
+burst_count = mk(comp, countCHOP, 'burst_count', [budget], "Bursts so far: each burst's seed.")
+drop_step = mk(comp, selectCHOP, 'drop_now', [asks[3]], 'A drop asking for a burst.')
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_step], 'How recent a drop is (fades over 0.3 s).',
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
-drop_kind = mk(comp, holdCHOP, 'drop_kind', 2000, -600, [drop_env, budget],
+drop_kind = mk(comp, holdCHOP, 'drop_kind', [drop_env, budget],
                "1 when the burst that passed was a drop's: the frame jumps.")
 
-tick = mk(comp, mathCHOP, 'steady_tick', 800, -100, [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
+section('kick', 'Beat kick: each beat makes the loose wires crackle', lane='audio')
+tick = mk(comp, mathCHOP, 'steady_tick', [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
           gain=Expr('0 if ' + WIRED + ' else 1'))
-beat_in = mk(comp, mergeCHOP, 'beat_in', 1000, -150, [asks[0].inputs[0], tick], 'Beats, or steady ticks.')
-beat_pick = mk(comp, mathCHOP, 'beat_pulse', 1200, -150, [beat_in], "One channel: a beat, for its sliver of slips.",
+beat_in = mk(comp, mergeCHOP, 'beat_in', [asks[0].inputs[0], tick], 'Beats, or steady ticks.')
+beat_pick = mk(comp, mathCHOP, 'beat_pulse', [beat_in], "One channel: a beat, for its sliver of slips.",
                chanop='max')
-beat_env = mk(comp, triggerCHOP, 'beat_env', 1400, -150, [beat_pick], 'Falls from 1 to 0 over the 0.3 s after a beat.',
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_pick], 'Falls from 1 to 0 over the 0.3 s after a beat.',
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
-beat_n = mk(comp, countCHOP, 'beat_n', 1400, -50, [beat_pick],
+beat_n = mk(comp, countCHOP, 'beat_n', [beat_pick],
             "Beats so far: where each beat's sliver goes, where the slips and block errors move.")
 
 # ---- The loop: the camera filming the screen -----------------------------------------------------
@@ -226,11 +230,12 @@ KICK = "op('beat_env')[0] if {} else 0".format(BEATING)
 BEAT_N = "op('beat_n')[0] % 4096 if {} else 0".format(BEATING)
 common = lib_glsl(_ROOT, 'common.glsl') + src('common.glsl')
 guard = lib_glsl(_ROOT, 'red_guard.glsl')
-still = mk(comp, constantTOP, 'still', -400, 450, comment="Nothing: where feed_fb starts, before the camera's first frame.",
+section('loop', 'The loop: a camera filming the screen that shows it')
+still = mk(comp, constantTOP, 'still', comment="Nothing: where feed_fb starts, before the camera's first frame.",
            outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba8fixed',
            colorr=0, colorg=0, colorb=0, alpha=0)
-feed_fb = mk(comp, feedbackTOP, 'feed_fb', -200, 450, [still], "The camera's last picture (isp's).", top='isp')
-screen = glsl(comp, 'screen', -400, 150, [source, feed_fb], src('screen.glsl'),
+feed_fb = mk(comp, feedbackTOP, 'feed_fb', [still], "The camera's last picture (isp's).", top='isp')
+screen = glsl(comp, 'screen', [source, feed_fb], src('screen.glsl'),
               "The screen the camera films: the picture with the camera's last picture over it (Feedback), at the "
               "sensor's size.", fmt='rgba16float', uScr=(par('Feedback'),))
 SENSOR = 'parent().par.Sensor.menuIndex'
@@ -238,9 +243,9 @@ setpars(screen, outputresolution='fit',
         resolutionw=Expr('{}[{}]'.format(tuple(s[2] for s in SENSORS), SENSOR)),
         resolutionh=Expr('{}[{}]'.format(tuple(s[3] for s in SENSORS), SENSOR)))
 BLUR_SIGMA = '(1 - parent().par.Focus) ** 2 * {}'.format(BLUR)
-lens = mk(comp, blurTOP, 'lens', -200, 150, [screen], "The camera's lens, out of focus by 1 - Focus.",
+lens = mk(comp, blurTOP, 'lens', [screen], "The camera's lens, out of focus by 1 - Focus.",
           type='gaussian', size=Expr('max(0.01, 3 * {})'.format(BLUR_SIGMA)))
-camera = glsl(comp, 'camera', 0, 150, [lens], common + src('camera.glsl'),
+camera = glsl(comp, 'camera', [lens], common + src('camera.glsl'),
               "The sensor: each pixel's view of the screen (Zoom, Rotate), through its Bayer filter, the screen's "
               "stripes beating against it (moir\u00e9), the noise.", fmt='mono16float',
               uCam=(par('Zoom'), Expr('math.radians(parent().par.Rotate)'), par('Moire'),
@@ -248,14 +253,15 @@ camera = glsl(comp, 'camera', 0, 150, [lens], common + src('camera.glsl'),
               uCam2=(Expr(BLUR_SIGMA), Expr('int(absTime.seconds * {}) % 4096'.format(CAM_FPS))))
 NEW_FRAME = ('1 if int(absTime.seconds * {f}) % 4096 != int((absTime.seconds - absTime.stepSeconds) * {f}) % 4096 '
              'else 0').format(f=CAM_FPS)
-isp = glsl(comp, 'isp', 200, 150, [camera, feed_fb], guard + src('isp.glsl'),
+isp = glsl(comp, 'isp', [camera, feed_fb], guard + src('isp.glsl'),
            "The camera's processing, once a camera frame: demosaicing, gamma, Contrast, Saturation, the red guard.",
            fmt='rgba16float', uIsp=(Expr(NEW_FRAME), par('Contrast'), par('Saturation')))
 
 # ---- Out: the bus, the JPEG, the computer -------------------------------------------------------
 BURST = dict(uBurst=(Expr("op('burst')[0]"), Expr("op('burst_count')[0]"),
                      Expr("op('drop_kind')[0] if parent().par.Moments else 0")))
-bus = glsl(comp, 'bus', 400, 150, [isp], common + LOT['glsl_table']() + src('bus.glsl'),
+section('out', 'Out: the cable, the JPEG, the computer decoding it')
+bus = glsl(comp, 'bus', [isp], common + LOT['glsl_table']() + src('bus.glsl'),
            "The sensor's bus to the bridge chip, as YUYV bytes: the camera's shorts, the byte slip, the clock's "
            'slips, the lines out of sync.', fmt='rgba8fixed',
            uBus=(par('Camera'), Expr("min(1, parent().par.Shorts + (0.5 * op('audio')['build'] if parent().par.Moments "
@@ -263,13 +269,13 @@ bus = glsl(comp, 'bus', 400, 150, [isp], common + LOT['glsl_table']() + src('bus
            uBus2=(par('Sync'), clock_seconds(), Expr(KICK), Expr(BEAT_N)),
            uBeat=(Expr('{} * parent().par.Kick * ({})'.format(CRACKLE, KICK)),
                   Expr('int(absTime.seconds * {}) % 4096'.format(CAM_FPS))), **BURST)
-dct = glsl(comp, 'dct', 600, 150, [bus], common + src('dct.glsl'),
+dct = glsl(comp, 'dct', [bus], common + src('dct.glsl'),
            "The bridge's JPEG: each block's cosine coefficients, rounded to Compression's steps; the cable's block "
            'errors.', fmt='rgba16float', uJpg=(par('Compress'), par('Blockerr'), clock_seconds(), Expr(BEAT_N)), **BURST)
-idct = glsl(comp, 'idct', 800, 150, [dct], common + src('idct.glsl'),
+idct = glsl(comp, 'idct', [dct], common + src('idct.glsl'),
             "The computer's decoder: each pixel from its blocks' coefficients, then BT.601 back to R'G'B'.",
             fmt='rgba8fixed')
-out = glsl(comp, 'out', 1000, 150, [source, idct], common + guard + src('out.glsl'),
+out = glsl(comp, 'out', [source, idct], common + guard + src('out.glsl'),
            "The camera's picture scaled up to the input's size, mirrored (Mirror), the red guard.", fmt='rgba8fixed',
            uOut=(Expr('parent().par.Mirror.menuIndex'), par('Segments')))
 

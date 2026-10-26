@@ -33,7 +33,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.2.1'
+VERSION = '0.2.2'
 # The tape's raster: this many samples a line, whatever the picture's size (each a fraction of the width;
 # the shaders turn the deck's bandwidths into samples from the picture's aspect).
 RASTER_W = 1280
@@ -176,13 +176,14 @@ custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "detection is experimental).")
 
 # ---- Audio (input 2) and the bursts -------------------------------------------------------------
+section('audio', 'Audio (input 2): beats, bars, drops or a steady clock ask for bursts')
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -200, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count bar_count drop_count')
-steady = mk(comp, constantCHOP, 'steady', -200, -500, comment='Counts {:g} s periods, for Steady bursts.'.format(STEADY),
+steady = mk(comp, constantCHOP, 'steady', comment='Counts {:g} s periods, for Steady bursts.'.format(STEADY),
             const0name='steady_count', const0value=Expr('int(absTime.seconds / {})'.format(STEADY)))
-both = mk(comp, mergeCHOP, 'all_counts', 0, -400, [counts, steady], 'Every count a burst may follow.')
-steps = mk(comp, slopeCHOP, 'steps', 200, -400, [both], 'Above 0 on the frame a count goes up.', timeslice=True)
+both = mk(comp, mergeCHOP, 'all_counts', [counts, steady], 'Every count a burst may follow.')
+steps = mk(comp, slopeCHOP, 'steps', [both], 'Above 0 on the frame a count goes up.', timeslice=True)
 WIRED = "op('audio')['source'].eval() > 0"
 asks = []
 for i, (name, chan, when, what) in enumerate((
@@ -192,37 +193,40 @@ for i, (name, chan, when, what) in enumerate((
          "parent().par.Bursts == 'steady' or (parent().par.Bursts in ('beats', 'bars') and not " + WIRED + ")",
          'the steady clock, when Bursts is Steady (or On Beats or On Bars with nothing on input 2)'),
         ('drop_on', 'drop_count', "parent().par.Moments and parent().par.Bursts != 'off'", 'drops (Song Moments)'))):
-    pick = mk(comp, selectCHOP, name + '_step', 400, -250 - 150 * i, [steps], 'Steps of {}.'.format(chan), channames=chan)
-    asks.append(mk(comp, mathCHOP, name, 600, -250 - 150 * i, [pick], 'Bursts on {}.'.format(what),
+    pick = mk(comp, selectCHOP, name + '_step', [steps], 'Steps of {}.'.format(chan), channames=chan)
+    asks.append(mk(comp, mathCHOP, name, [pick], 'Bursts on {}.'.format(what),
                    gain=Expr('1 if ({}) else 0'.format(when))))
-ask = mk(comp, mergeCHOP, 'burst_asks', 800, -450, asks, 'Every burst asked for.')
-ask_any = mk(comp, mathCHOP, 'burst_any', 1000, -450, [ask], 'One channel: any burst.', chanop='max')
-gate = flash_gate(comp, ask_any, 1200, -450)
-budget = mk(comp, triggerCHOP, 'flash_budget', 1600, -450, [gate],
+ask = mk(comp, mergeCHOP, 'burst_asks', asks, 'Every burst asked for.')
+ask_any = mk(comp, mathCHOP, 'burst_any', [ask], 'One channel: any burst.', chanop='max')
+section('flash', 'Flashing: bursts no closer together than it allows', lane='audio')
+gate = flash_gate(comp, ask_any)
+budget = mk(comp, triggerCHOP, 'flash_budget', [gate],
             'After the gate: bursts {calm} s apart at Calm, {other} s otherwise, so the total stays well under '
             'WCAG.'.format(**FLASH_SPACING),
             retrigger=Expr("{calm} if parent().par.Flashing == 'calm' else {other}".format(**FLASH_SPACING)),
             retriggerunit='seconds', attack=0, peak=1, peaklen=0, decay=0, sustain=0, release=0)
-burst = mk(comp, triggerCHOP, 'burst', 1800, -350, [budget],
+section('bursts', 'Bursts: the heads lose tracking, a drop slips the picture, e-ink refreshes', lane='audio')
+burst = mk(comp, triggerCHOP, 'burst', [budget],
            'A burst: 1 for Length seconds, then gone over 0.15 s.',
            attack=0, peak=1, peaklen=par('Length'), decay=0.15, sustain=0, release=0)
-burst_count = mk(comp, countCHOP, 'burst_count', 1800, -500, [budget], "Bursts so far: each burst's seed.")
-drop_step = mk(comp, selectCHOP, 'drop_now', 1600, -650, [asks[3]], 'A drop asking for a burst.')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 1800, -650, [drop_step], 'How recent a drop is (fades over 0.3 s).',
+burst_count = mk(comp, countCHOP, 'burst_count', [budget], "Bursts so far: each burst's seed.")
+drop_step = mk(comp, selectCHOP, 'drop_now', [asks[3]], 'A drop asking for a burst.')
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_step], 'How recent a drop is (fades over 0.3 s).',
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
-drop_kind = mk(comp, holdCHOP, 'drop_kind', 2000, -600, [drop_env, budget],
+drop_kind = mk(comp, holdCHOP, 'drop_kind', [drop_env, budget],
                "1 when the burst that passed was a drop's: it slips the picture.")
-refresh = mk(comp, triggerCHOP, 'refresh', 1800, -200, [budget],
+refresh = mk(comp, triggerCHOP, 'refresh', [budget],
              "E-ink's full refresh, a burst's place on e-ink: to black over {} s, held {} s, back over {} s.".format(
                  *REFRESH),
              attack=REFRESH[0], peak=1, peaklen=REFRESH[1], decay=REFRESH[2], sustain=0, release=0)
 
-tick = mk(comp, mathCHOP, 'steady_tick', 800, -100, [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
+section('kick', 'Beat kick: the time base jumps on each beat', lane='audio')
+tick = mk(comp, mathCHOP, 'steady_tick', [asks[2].inputs[0]], 'Steady ticks, only while input 2 is empty.',
           gain=Expr('0 if ' + WIRED + ' else 1'))
-beat_in = mk(comp, mergeCHOP, 'beat_in', 1000, -150, [asks[0].inputs[0], tick], 'Beats, or steady ticks.')
-beat_pick = mk(comp, mathCHOP, 'beat_pulse', 1200, -150, [beat_in], 'One channel: a beat, for the time base kick.',
+beat_in = mk(comp, mergeCHOP, 'beat_in', [asks[0].inputs[0], tick], 'Beats, or steady ticks.')
+beat_pick = mk(comp, mathCHOP, 'beat_pulse', [beat_in], 'One channel: a beat, for the time base kick.',
                chanop='max')
-beat_env = mk(comp, triggerCHOP, 'beat_env', 1400, -150, [beat_pick], 'Falls from 1 to 0 over the 0.3 s after a beat.',
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_pick], 'Falls from 1 to 0 over the 0.3 s after a beat.',
               attack=0, peak=1, peaklen=0, decay=0.3, sustain=0, release=0)
 
 # ---- Picture ----------------------------------------------------------------------------------
@@ -241,27 +245,29 @@ TAPE = dict(
     uBurst=(Expr("0 if {} else op('burst')[0]".format(INK)), Expr("op('burst_count')[0]"),
             Expr("op('audio')['level']")))
 common = lib_glsl(_ROOT, 'common.glsl') + src('common.glsl')
-line_in = glsl(comp, 'line_in', -400, 150, [source], common + src('line_in.glsl'),
+section('tape', "The tape: the deck's time base, its filters and noise, the signal into the TV")
+line_in = glsl(comp, 'line_in', [source], common + src('line_in.glsl'),
                "Each line of the picture where the deck's time base puts it, as YIQ.", res=(RASTER_W, 240),
                fmt='rgba16float', uMode=Expr('parent().par.Signal.menuIndex'), **TAPE)
-tape = glsl(comp, 'tape', -200, 150, [line_in, source], common + src('tape.glsl'),
+tape = glsl(comp, 'tape', [line_in, source], common + src('tape.glsl'),
             "The deck: its luma and chroma filters, noise, specks, dropouts, mistracking.", res=(RASTER_W, 240),
             fmt='rgba16float', uSpeed=tuple(Expr('{}[parent().par.Speed.menuIndex]'.format(tuple(s[k] for s in SPEEDS)))
                                              for k in (2, 3, 4)) + (SHARPEN,), **TAPE)
-deck = glsl(comp, 'deck', 0, 150, [tape, source], src('deck.glsl'),
+deck = glsl(comp, 'deck', [tape, source], src('deck.glsl'),
             "The deck's steep output filter on the luma (3 MHz): keeps tape noise out of the color subcarrier.",
             res=(RASTER_W, 240), fmt='rgba16float', uDeck=par('Tape'))
-signal = glsl(comp, 'signal', 200, 150, [deck, source], lib_glsl(_ROOT, 'red_guard.glsl') + src('signal.glsl'),
+signal = glsl(comp, 'signal', [deck, source], lib_glsl(_ROOT, 'red_guard.glsl') + src('signal.glsl'),
               'Into the TV: composite (dots, rainbows), S-Video or RGB, back to RGB.', res=(RASTER_W, 240),
               fmt='rgba16float', uSig=(Expr('parent().par.Signal.menuIndex'), 0, par('Lines')))
 for o in (line_in, tape, deck, signal):
     o.par.resolutionh.expr = 'parent().par.Lines'
-glow_src = glsl(comp, 'glow_src', 200, 0, [source, signal], src('glow.glsl'),
+section('crt', 'The CRT: beams, the phosphor mask, the glow in the glass')
+glow_src = glsl(comp, 'glow_src', [source, signal], src('glow.glsl'),
                 'The signal at an eighth of the size, in linear light, for the glow.', fmt='rgba16float')
 glow_src.par.outputresolution = 'eighth'
-glow = mk(comp, blurTOP, 'glow', 400, 0, [glow_src], 'The light the glass spreads around bright parts.',
+glow = mk(comp, blurTOP, 'glow', [glow_src], 'The light the glass spreads around bright parts.',
           type='gaussian', size=GLOW_SIZE)
-screen = glsl(comp, 'screen', 600, 150, [source, signal, glow], lib_glsl(_ROOT, 'red_guard.glsl') + src('screen.glsl'),
+screen = glsl(comp, 'screen', [source, signal, glow], lib_glsl(_ROOT, 'red_guard.glsl') + src('screen.glsl'),
               'The tube: each line a beam that widens as it brightens, the phosphor mask, the glow, the curved face '
               '(Screen CRT); the signal, flat (None).',
               uScr=(Expr("1 if parent().par.Screen == 'crt' else 0"), Expr('parent().par.Mask.menuIndex'),
@@ -270,19 +276,22 @@ screen = glsl(comp, 'screen', 600, 150, [source, signal, glow], lib_glsl(_ROOT, 
 
 # ---- The other screens ---------------------------------------------------------------------------
 panel = src('panel.glsl')
-still = mk(comp, constantTOP, 'still', 400, 450, comment='Nothing: where every Feedback TOP starts.',
+section('screens', 'The other screens: LCD, plasma, e-ink', lane='screens')
+still = mk(comp, constantTOP, 'still', comment='Nothing: where every Feedback TOP starts.',
            outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
-lcd_fb = mk(comp, feedbackTOP, 'lcd_fb', 600, 600, [still], "lcd_state's last frame.", top='lcd_state')
-lcd_state = glsl(comp, 'lcd_state', 600, 450, [source, signal, lcd_fb], panel + src('lcd_state.glsl'),
+lcd_fb = mk(comp, feedbackTOP, 'lcd_fb', [still], "lcd_state's last frame.", top='lcd_state')
+lcd_state = glsl(comp, 'lcd_state', [source, signal, lcd_fb], panel + src('lcd_state.glsl'),
                  "The LCD's crystal: each cell turning toward the signal over milliseconds, more slowly to lighter.",
                  fmt='rgba16float', uLcd=(par('Masksize'), par('Response'), DT))
-lcd = glsl(comp, 'lcd', 800, 450, [source, lcd_state], lib_glsl(_ROOT, 'red_guard.glsl') + panel + src('lcd.glsl'),
+lcd = glsl(comp, 'lcd', [source, lcd_state], lib_glsl(_ROOT, 'red_guard.glsl') + panel + src('lcd.glsl'),
            "The LCD's face: the cells in their black matrix, the backlight, the tones the viewing angle shifts.",
            uLcd=(par('Masksize'), 0, 0, par('Angle')))
-mo = optical_flow(comp, _ROOT, source, x=0, y=800)
-pace, motion = flow_speed(comp, _ROOT, mo, still, x=800, y=800)
-plasma = glsl(comp, 'plasma', 1000, 800, [source, signal, glow, motion],
+section('motion', "Motion: how the picture moves, for plasma's false contours", lane='motion')
+mo = optical_flow(comp, _ROOT, source)
+pace, motion = flow_speed(comp, _ROOT, mo, still)
+section('screens')
+plasma = glsl(comp, 'plasma', [source, signal, glow, motion],
               lib_glsl(_ROOT, 'red_guard.glsl') + panel + src('plasma.glsl'),
               "The plasma panel: grays made of a frame's pulses, read along the eye's path (false contours), the "
               "phosphors' afterglow, the cells, the glass's glow.",
@@ -293,13 +302,14 @@ WAVE = "(0.45, 0.29, 0.12)[parent().par.Inkmode.menuIndex]"
 INK_PARS = dict(uInk=(Expr('int(absTime.seconds / {}) % 1024'.format(WAVE)), Expr('absTime.seconds / {} % 1'.format(WAVE)),
                       Expr('parent().par.Inkmode.menuIndex'), par('Ghosting')),
                 uInk2=(Expr("op('refresh')[0]"),))
-eink_fb = mk(comp, feedbackTOP, 'eink_fb', 1000, 600, [still], "eink_state's last frame.", top='eink_state')
-eink_state = glsl(comp, 'eink_state', 1000, 450, [source, signal, eink_fb], panel + src('eink_state.glsl'),
+eink_fb = mk(comp, feedbackTOP, 'eink_fb', [still], "eink_state's last frame.", top='eink_state')
+eink_state = glsl(comp, 'eink_state', [source, signal, eink_fb], panel + src('eink_state.glsl'),
                   'The e-ink panel: the gray each pixel is driven to a few times a second, and the ghosts it leaves.',
                   fmt='rgba16float', **INK_PARS)
-eink = glsl(comp, 'eink', 1200, 450, [source, eink_state], lib_glsl(_ROOT, 'common.glsl') + src('eink.glsl'),
+eink = glsl(comp, 'eink', [source, eink_state], lib_glsl(_ROOT, 'common.glsl') + src('eink.glsl'),
             "The e-ink panel's face: ink and paper grays, each update easing in, the full refresh.", **INK_PARS)
-shown = mk(comp, switchTOP, 'shown', 1000, 150, [screen, lcd, plasma, eink],
+section('output', 'Output: the screen Screen picks')
+shown = mk(comp, switchTOP, 'shown', [screen, lcd, plasma, eink],
            'The screen Screen picks (None is the flat signal, from screen): only that one cooks.',
            index=Expr("{'lcd': 1, 'plasma': 2, 'eink': 3}.get(parent().par.Screen.eval(), 0)"))
 

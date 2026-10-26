@@ -42,7 +42,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.3.2'
+VERSION = '0.3.3'
 # The particles' buffers: at most PW x PH alive at once.
 PW, PH = 256, 256
 # The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
@@ -235,119 +235,123 @@ custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "out from the subject (Fosfora's drop detection is experimental).")
 
 # ---- Audio (input 2) ---------------------------------------------------------------------------
+section('audio', 'Audio (input 2): beats, sparks through the flash gate, drops, builds, the wind')
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -400, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count drop_count')
-steps = mk(comp, slopeCHOP, 'steps', -200, -350, [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
-beat_step = mk(comp, selectCHOP, 'beat_step', 0, -300, [steps], 'A beat.', channames='beat_count')
-beat_env = mk(comp, triggerCHOP, 'beat_env', 200, -300, [beat_step],
+steps = mk(comp, slopeCHOP, 'steps', [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
+beat_step = mk(comp, selectCHOP, 'beat_step', [steps], 'A beat.', channames='beat_count')
+beat_env = mk(comp, triggerCHOP, 'beat_env', [beat_step],
               "A beat's burst: 1 at the beat, none {:g} s later.".format(BURST_TIME),
               attack=0, peak=1, peaklen=0, decay=BURST_TIME, dshape='linear', sustain=0, release=0)
 # A burst's sparks light up a patch of the frame at once, so they are flashes: they come only on the
 # beats the gate lets through (Calm: one a second); the burst and the kick come on every beat.
-spark_ask = mk(comp, selectCHOP, 'spark_ask', 0, -200, [steps], 'A beat, asking for sparks.', channames='beat_count',
+spark_ask = mk(comp, selectCHOP, 'spark_ask', [steps], 'A beat, asking for sparks.', channames='beat_count',
                renamefrom='*', renameto='spark')
-spark_gate = flash_gate(comp, spark_ask, 200, -200)
-spark_env = mk(comp, triggerCHOP, 'spark_env', 600, -200, [spark_gate],
+spark_gate = flash_gate(comp, spark_ask)
+spark_env = mk(comp, triggerCHOP, 'spark_env', [spark_gate],
                "1 for the {:g} s of a burst whose births are sparks.".format(BURST_TIME),
                attack=0, peak=1, peaklen=BURST_TIME, decay=0, sustain=0, release=0)
-beat_rate = mk(comp, slopeCHOP, 'beat_rate', 400, -300, [beat_env],
+beat_rate = mk(comp, slopeCHOP, 'beat_rate', [beat_env],
                "How fast beat_env changes, per second: in Push and Flow the field moves out and back with it.",
                timeslice=True)
-drop_step = mk(comp, selectCHOP, 'drop_step', 0, -450, [steps], 'A drop.', channames='drop_count')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 200, -450, [drop_step],
+drop_step = mk(comp, selectCHOP, 'drop_step', [steps], 'A drop.', channames='drop_count')
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_step],
               "A drop's shockwave: 1 as it leaves the subject, 0 when it is {:g} frame heights out, {:g} s "
               'later.'.format(WAVE_REACH, WAVE_TIME),
               attack=0, peak=1, peaklen=0, decay=WAVE_TIME, dshape='linear', sustain=0, release=0)
-build = mk(comp, selectCHOP, 'build', 0, -600, [audio], "Fosfora's build, 0..1.", channames='build')
-build_lag = mk(comp, lagCHOP, 'build_lag', 200, -600, [build], 'The build, easing out after a drop.',
+build = mk(comp, selectCHOP, 'build', [audio], "Fosfora's build, 0..1.", channames='build')
+build_lag = mk(comp, lagCHOP, 'build_lag', [build], 'The build, easing out after a drop.',
                lag1=0.5, lag2=2.0, lagunit='seconds')
-level = mk(comp, selectCHOP, 'level', 0, -750, [audio], 'Loudness, 0..1.', channames='level')
-level_lag = mk(comp, lagCHOP, 'level_lag', 200, -750, [level], 'Loudness, smoothed (up in 0.1 s, down in 0.8 s).',
+level = mk(comp, selectCHOP, 'level', [audio], 'Loudness, 0..1.', channames='level')
+level_lag = mk(comp, lagCHOP, 'level_lag', [level], 'Loudness, smoothed (up in 0.1 s, down in 0.8 s).',
                lag1=0.1, lag2=0.8, lagunit='seconds')
-gust = mk(comp, constantCHOP, 'gust', 0, -900, comment="The wind's angle for this bar, from straight up (radians).",
+gust = mk(comp, constantCHOP, 'gust', comment="The wind's angle for this bar, from straight up (radians).",
           const0name='angle', const0value=Expr("math.sin(op('audio')['bar_count'] * 2.4) * {} * parent().par.Gusts"
                                                .format(GUST_ANGLE)))
-gust_lag = mk(comp, lagCHOP, 'gust_lag', 200, -900, [gust], 'The wind easing to its new angle over {:g} s.'.format(GUST_EASE),
+gust_lag = mk(comp, lagCHOP, 'gust_lag', [gust], 'The wind easing to its new angle over {:g} s.'.format(GUST_EASE),
               lag1=GUST_EASE, lag2=GUST_EASE, lagunit='seconds')
 
 # ---- The subject ---------------------------------------------------------------------------------
-depth = depth_in(comp, x=-600, y=-1100)
-near = glsl(comp, 'near', -400, -1100, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
+section('depth', 'Depth or a mask (input 3): where people are')
+depth = depth_in(comp)
+near = glsl(comp, 'near', [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
             'The depth, {} x {}, as nearness; Depth Type flips distance (black: no reading).'.format(MW, MH),
             res=(MW, MH), fmt='rgba16float', uNear=(menu('Depthtype'), par('Maxdist')))
-depth_stats = mk(comp, analyzeTOP, 'depth_stats', -400, -1250, [near],
+depth_stats = mk(comp, analyzeTOP, 'depth_stats', [near],
                  'The nearest reading in the depth: none (black) means input 3 carries no depth.',
                  op='maximum', analyzechannel='independent', format='rgba16float')
-people = glsl(comp, 'find', -200, -1100, [near], lib_glsl(_ROOT, 'depth_find.glsl'),
+people = glsl(comp, 'find', [near], lib_glsl(_ROOT, 'depth_find.glsl'),
               'In the depth: nearer than Far Limit and (Stand Out) than what lies left and right of it.',
               res=(MW, MH), fmt='rgba16float',
               uFind=(Expr("1 if parent().par.Find == 'nearer' else 0"), par('Standout'),
                      Expr('parent().par.Far.eval() if parent().inputConnectors[2].connections else '
                           'max(parent().par.Far.eval(), {:g})'.format(BRIGHT_FAR))))
-small = glsl(comp, 'small', -400, -1450, [source], src('small.glsl'),
+section('subject', 'The subject: people, movement or what differs from the empty room')
+small = glsl(comp, 'small', [source], src('small.glsl'),
              'The picture, {} x {}, for Movement and Background.'.format(MW, MH), res=(MW, MH), fmt='rgba16float')
-motion_start = mk(comp, constantTOP, 'motion_start', -400, -1600, comment="motion's starting state: no frame yet.",
+motion_start = mk(comp, constantTOP, 'motion_start', comment="motion's starting state: no frame yet.",
                   outputresolution='custom', resolutionw=MW, resolutionh=MH, format='rgba32float',
                   colorr=0, colorg=0, colorb=0, alpha=-1)
-motion_fb = mk(comp, feedbackTOP, 'motion_fb', -200, -1600, [motion_start], "motion's last frame.", top='motion')
-motion = glsl(comp, 'motion', -200, -1450, [small, motion_fb], src('motion.glsl'),
+motion_fb = mk(comp, feedbackTOP, 'motion_fb', [motion_start], "motion's last frame.", top='motion')
+motion = glsl(comp, 'motion', [small, motion_fb], src('motion.glsl'),
               'What moves: the picture against a background a couple of seconds behind (Movement).',
               res=(MW, MH), fmt='rgba32float',
               uMotion=(DT, Expr('{} + ({} - {}) * parent().par.Sense'.format(SENSE[0], SENSE[1], SENSE[0]))))
-captures = mk(comp, constantCHOP, 'captures', -200, -1750, comment='How many times Capture Background has been pressed.',
+captures = mk(comp, constantCHOP, 'captures', comment='How many times Capture Background has been pressed.',
               const0name='count', const0value=0)
-capture_exec = mk(comp, parameterexecuteDAT, 'capture_exec', 0, -1750,
+capture_exec = mk(comp, parameterexecuteDAT, 'capture_exec',
                   comment='Capture Background: counts the press, and plate keeps the picture for that count.')
 capture_exec.text = ('def onPulse(par):\n'
                      "    if par.name == 'Capture':\n"
                      "        n = op('captures').par.const0value\n"
                      '        n.val = n.eval() + 1\n')
 setpars(capture_exec, op='..', pars='Capture', onpulse=True, valuechange=False)
-plate_start = mk(comp, constantTOP, 'plate_start', 0, -1600, comment="plate's starting state: nothing captured.",
+plate_start = mk(comp, constantTOP, 'plate_start', comment="plate's starting state: nothing captured.",
                  outputresolution='custom', resolutionw=MW, resolutionh=MH, format='rgba32float',
                  colorr=0, colorg=0, colorb=0, alpha=0)
-plate_fb = mk(comp, feedbackTOP, 'plate_fb', 200, -1600, [plate_start], "plate's last frame.", top='plate')
-plate = glsl(comp, 'plate', 0, -1450, [small, plate_fb], src('plate.glsl'),
+plate_fb = mk(comp, feedbackTOP, 'plate_fb', [plate_start], "plate's last frame.", top='plate')
+plate = glsl(comp, 'plate', [small, plate_fb], src('plate.glsl'),
              'The empty room: the picture when Capture Background was last pressed (Background).',
              res=(MW, MH), fmt='rgba32float', uPlate=(Expr("op('captures')['count']"),))
-gain = glsl(comp, 'gain', 200, -1450, [small, plate], src('gain.glsl'),
+gain = glsl(comp, 'gain', [small, plate], src('gain.glsl'),
             "How much brighter the picture is than the empty room: a 64-bin histogram, row by row.",
             res=(64, MH // 2), fmt='rgba32float')
-gain_sum = glsl(comp, 'gain_sum', 400, -1450, [gain], src('gain_sum.glsl'), "The histogram's rows added up.",
+gain_sum = glsl(comp, 'gain_sum', [gain], src('gain_sum.glsl'), "The histogram's rows added up.",
                 res=(64, 1), fmt='rgba32float')
-drift = glsl(comp, 'drift', 600, -1450, [gain_sum], src('drift.glsl'),
+drift = glsl(comp, 'drift', [gain_sum], src('drift.glsl'),
              "The camera's exposure drift since the capture: the histogram's tallest bin (the room).",
              res=(1, 1), fmt='rgba32float')
 # Only Find on Background needs the empty room and the drift: these Switch TOPs show black otherwise,
 # and a Switch TOP cooks only what it shows, so none of that chain runs in the other modes.
 BACKGROUND = Expr("1 if parent().par.Find == 'background' else 0")
-none = mk(comp, constantTOP, 'none', 400, -1750, comment='Black: no empty room, no drift (Find is not Background), no air (Behavior is Emit).',
+none = mk(comp, constantTOP, 'none', comment='Black: no empty room, no drift (Find is not Background), no air (Behavior is Emit).',
           outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float', colorr=0, colorg=0, colorb=0, alpha=0)
-plate_in = mk(comp, switchTOP, 'plate_in', 400, -1300, [none, plate], 'The empty room, while Find is Background.',
+plate_in = mk(comp, switchTOP, 'plate_in', [none, plate], 'The empty room, while Find is Background.',
               index=BACKGROUND)
-drift_in = mk(comp, switchTOP, 'drift_in', 800, -1450, [none, drift], 'The drift, while Find is Background.',
+drift_in = mk(comp, switchTOP, 'drift_in', [none, drift], 'The drift, while Find is Background.',
               index=BACKGROUND)
-subject = glsl(comp, 'subject', 0, -1100, [people, motion, plate_in, small, depth_stats, drift_in], src('subject.glsl'),
+subject = glsl(comp, 'subject', [people, motion, plate_in, small, depth_stats, drift_in], src('subject.glsl'),
                'The subject, as Find says: the depth, what moves, or what differs from the empty room.',
                res=(MW, MH), fmt='rgba16float',
                uFind=(menu('Find'), Expr('1 if parent().inputConnectors[2].connections else 0'),
                       Expr('{} + ({} - {}) * parent().par.Sense'.format(SENSE[0], SENSE[1], SENSE[0])),
                       Expr('1 if parent().inputConnectors[0].connections else 0')))
-emit = glsl(comp, 'emit', 200, -1100, [subject], src('emit.glsl'), 'Where particles may be born: the subject, its outline.',
+emit = glsl(comp, 'emit', [subject], src('emit.glsl'), 'Where particles may be born: the subject, its outline.',
             res=(MW, MH), fmt='rgba32float')
-emit_stats = mk(comp, analyzeTOP, 'emit_stats', 400, -1100, [emit],
+emit_stats = mk(comp, analyzeTOP, 'emit_stats', [emit],
                 'How much of the frame the subject and its outline cover, and their middle (the average of emit).',
                 op='average', analyzechannel='independent', format='rgba32float')
-subject_blur = mk(comp, blurTOP, 'subject_blur', 200, -1250, [subject],
+subject_blur = mk(comp, blurTOP, 'subject_blur', [subject],
                   'The subject, blurred: its edge, and which way is out (down its slope).', size=8)
 
 # ---- The air (Push and Flow) -----------------------------------------------------------------------
-subject_wide = mk(comp, blurTOP, 'subject_wide', 400, -800, [subject],
+section('air', 'The air: how the subject pushes the particles (Push and Flow)')
+subject_wide = mk(comp, blurTOP, 'subject_wide', [subject],
                   'The subject, blurred widely: how near it is, where the air starts to part round it.', size=WIDE)
-subject_middle = mk(comp, blurTOP, 'subject_middle', 400, -650, [emit],
+subject_middle = mk(comp, blurTOP, 'subject_middle', [emit],
                     'emit, blurred more widely still: the middle of the subject nearby, for the air.', size=MIDDLE)
-air = glsl(comp, 'air', 600, -800, [subject_wide, subject_middle], src('air.glsl'),
+air = glsl(comp, 'air', [subject_wide, subject_middle], src('air.glsl'),
            'The air for Push and Flow: a stream function whose curl is the wind and the swirl, going round the subject.',
            res=(MW, MH), fmt='rgba32float',
            uAir=(Expr("0 if parent().par.Behavior == 'push' else parent().par.Drift * math.sin(math.radians("
@@ -357,18 +361,19 @@ air = glsl(comp, 'air', 600, -800, [subject_wide, subject_middle], src('air.glsl
                  Expr("{} * parent().par.Turbulence * (1 + 2 * op('build_lag')[0] * parent().par.Moments)".format(AIR_SWIRL)),
                  clock_seconds()),
            uFrame=(Expr("op('source').width / max(1, op('source').height)"),))
-air_in = mk(comp, switchTOP, 'air_in', 800, -800, [none, air], 'The air, while Behavior is Push or Flow.',
+air_in = mk(comp, switchTOP, 'air_in', [none, air], 'The air, while Behavior is Push or Flow.',
             index=Expr("0 if parent().par.Behavior == 'emit' else 1"))
 
 # ---- The particles ---------------------------------------------------------------------------------
-empty = mk(comp, constantTOP, 'empty', -200, 300, comment="The particles' starting state: every one free.",
+section('sim', 'The particles: born on the subject, moved, aged (one pixel each)')
+empty = mk(comp, constantTOP, 'empty', comment="The particles' starting state: every one free.",
            outputresolution='custom', resolutionw=PW, resolutionh=PH, format='rgba32float',
            colorr=0, colorg=0, colorb=0, alpha=0)
-fb = [mk(comp, feedbackTOP, name + '_fb', 0, y, [empty], "{}'s last frame.".format(name), top=name)
+fb = [mk(comp, feedbackTOP, name + '_fb', [empty], "{}'s last frame.".format(name), top=name)
       for name, y in (('sim', 450), ('sim_life', 300), ('sim_color', 150), ('sim_shove', 0))]
-alive = mk(comp, analyzeTOP, 'alive_stats', 200, 600, [fb[1]], 'How many particles were alive last frame (a).',
+alive = mk(comp, analyzeTOP, 'alive_stats', [fb[1]], 'How many particles were alive last frame (a).',
            op='average', analyzechannel='independent', format='rgba32float')
-sim = glsl(comp, 'sim', 400, 300, fb + [emit, subject_blur, source, alive, emit_stats, air_in], src('sim.glsl'),
+sim = glsl(comp, 'sim', fb + [emit, subject_blur, source, alive, emit_stats, air_in], src('sim.glsl'),
            'The particles: born on the subject (or off it), carried by the air, the turbulence and the music.',
            res=(PW, PH), fmt='rgba32float',
            uClock=(DT, clock_seconds(), Expr('absTime.frame % 16777216'),
@@ -389,37 +394,38 @@ sim = glsl(comp, 'sim', 400, 300, fb + [emit, subject_blur, source, alive, emit_
 setpars(sim, numcolorbufs=4, inputextenduv='hold')
 for name, i, y, what in (('sim_life', 1, 300, 'age, life, size, alive'), ('sim_color', 2, 150, 'color and how visible'),
                          ('sim_shove', 3, 0, 'shove and size at rest')):
-    mk(comp, renderselectTOP, name, 600, y, comment="sim's buffer {}: each particle's {}.".format(i, what),
+    mk(comp, renderselectTOP, name, comment="sim's buffer {}: each particle's {}.".format(i, what),
        top='sim', bufferindex=i)
 
 # ---- Drawing -------------------------------------------------------------------------------------
-dot = mk(comp, circleTOP, 'dot', 600, -200, comment='One particle: a soft white dot.',
+section('draw', 'Drawing: a dot at every particle, and their glow')
+dot = mk(comp, circleTOP, 'dot', comment='One particle: a soft white dot.',
          outputresolution='custom', resolutionw=32, resolutionh=32, radiusx=0.45, radiusy=0.45, radiusunit='fraction',
          softness=0.35, softnessunit='fraction', fillcolorr=1, fillcolorg=1, fillcolorb=1, fillalpha=1,
          bgcolorr=0, bgcolorg=0, bgcolorb=0, bgalpha=0, borderwidth=0)
-mk(comp, constantMAT, 'dot_mat', 800, -200, comment='The dot, its color from the particle, added onto what is drawn.',
+mk(comp, constantMAT, 'dot_mat', comment='The dot, its color from the particle, added onto what is drawn.',
    colormap='dot', blending=True, srcblend='one', destblend='one', depthtest=False, depthwriting=False)
-geo = mk(comp, geometryCOMP, 'geo', 800, 300, comment="A dot at every particle: instancing reads sim's buffers.",
+geo = mk(comp, geometryCOMP, 'geo', comment="A dot at every particle: instancing reads sim's buffers.",
          instancing=True, instancecountmode='oplength', instanceop='sim', instancetx='r', instancety='g',
          instancesop='sim_life', instancesx='b', instancesy='b', instancecolorop='sim_color', instancer='r',
          instanceg='g', instanceb='b', instancea='a', instancecolorpremult='premultinshader', material='dot_mat')
 for o in list(geo.children):             # a new Geometry COMP holds a torus
     o.destroy()
-quad = mk(geo, rectangleSOP, 'quad', 0, 0, comment='A square one unit across, which instancing scales to Size.',
-          sizex=1, sizey=1, texture='face')
+quad = mk(geo, rectangleSOP, 'quad', comment='A square one unit across, which instancing scales to Size.',
+          sizex=1, sizey=1, texture='face', at=(0, 0))
 quad.render = quad.display = True
-cam = mk(comp, cameraCOMP, 'cam', 800, 450, comment='Looks straight at the particles, flat: one frame height tall.',
+cam = mk(comp, cameraCOMP, 'cam', comment='Looks straight at the particles, flat: one frame height tall.',
    projection='ortho', orthowidth=Expr("op('source').width / max(1, op('source').height)"), tz=5)
 # A new Camera COMP holds a File In POP (its own picture in the viewer); nothing here draws it.
 for o in list(cam.children):
     o.destroy()
-render = mk(comp, renderTOP, 'render', 1000, 300, comment='The particles, drawn at the picture size.',
+render = mk(comp, renderTOP, 'render', comment='The particles, drawn at the picture size.',
             camera='cam', geometry='geo', lights='', bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=0,
             format='rgba16float', outputresolution='custom', resolutionw=Expr("op('source').width"),
             resolutionh=Expr("op('source').height"))
-glow = mk(comp, blurTOP, 'glow', 1200, 150, [render], 'The particles blurred, half size: their glow.',
+glow = mk(comp, blurTOP, 'glow', [render], 'The particles blurred, half size: their glow.',
           size=12, outputresolution='half')
-look = glsl(comp, 'look', 1400, 0, [source, render, glow, subject], labels_head() + src('look.glsl'),
+look = glsl(comp, 'look', [source, render, glow, subject], labels_head() + src('look.glsl'),
             'The particles and their glow over the picture (Backdrop), or the subject and how it was found (Show).',
             uLook=(par('Backdrop'), par('Glow'), menu('Show')))
 

@@ -24,7 +24,7 @@ for w in TDLIB_ARGS:
 for o in list(host.children):
     if o.valid:
         o.destroy()
-cam = mk(host, videodeviceinTOP, 'camera', -600, 0, comment="The Mac's camera.")
+cam = mk(host, videodeviceinTOP, 'camera', comment="The Mac's camera.", at=(-600, 0))
 # The first device isn't always the built-in one: an iPhone nearby joins as a Continuity Camera.
 names, labels = list(cam.par.device.menuNames), list(cam.par.device.menuLabels)
 pick = [n for n, l in zip(names, labels) if opts['device'].lower() in l.lower()]

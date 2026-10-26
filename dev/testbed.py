@@ -31,15 +31,15 @@ def test_args(args):
 
 def testbed(host, opts):
     path = os.path.join(READY, opts['clip'] + '.mp4')
-    clip = mk(host, moviefileinTOP, 'clip', -600, 0, comment='The test clip.',
-              file=path if os.path.exists(path) else app.samplesFolder + '/Map/Nature/Movie.1.mp4')
+    clip = mk(host, moviefileinTOP, 'clip', comment='The test clip.',
+              file=path if os.path.exists(path) else app.samplesFolder + '/Map/Nature/Movie.1.mp4', at=(-600, 0))
     depth = os.path.join(READY, opts['clip'] + '_depth.mp4')
     if os.path.exists(path) and os.path.exists(depth):
-        follow_frame(host, clip, mk(host, moviefileinTOP, 'clip_depth', -600, -150, comment="The test clip's depth.",
-                                    file=depth))
+        follow_frame(host, clip, mk(host, moviefileinTOP, 'clip_depth', comment="The test clip's depth.",
+                                    file=depth, at=(-600, -150)))
     if opts['beat'] == 'none':
         return clip, None
-    beat = mk(host, constantCHOP, 'stress', -600, -300, comment='A beat far busier than music.')
+    beat = mk(host, constantCHOP, 'stress', comment='A beat far busier than music.', at=(-600, -300))
     chans = (('beat_count', 'int(absTime.seconds * 8)'), ('bar_count', 'int(absTime.seconds * 2)'),
              ('drop_count', 'int(absTime.seconds)'), ('boundary_count', 'int(absTime.seconds / 2)'),
              ('build', '0.5 + 0.5 * math.sin(absTime.seconds)'), ('energy', '0.8'),
@@ -61,8 +61,8 @@ def follow_frame(host, movie, other):
     playing by itself. A movie playing by itself moves on only while something pulls it, so a depth
     clip that only one effect reads falls behind its picture clip whenever the picture runs without
     that effect (dev/flash.py records the clip alone first; the demo shows one effect at a time)."""
-    info = mk(host, infoCHOP, other.name + '_at', other.nodeX - 200, other.nodeY,
-              comment='Where {} is (index: its frame), for {}.'.format(movie.name, other.name), op=movie.name)
+    info = mk(host, infoCHOP, other.name + '_at',
+              comment='Where {} is (index: its frame), for {}.'.format(movie.name, other.name), op=movie.name, at=(other.nodeX - 200, other.nodeY))
     setpars(other, playmode='specify', indexunit='indices', index=Expr("op('{}')['index']".format(info.name)))
     return info
 

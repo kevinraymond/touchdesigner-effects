@@ -111,10 +111,17 @@ def setpars(o, **values):
             pars[name].val = value
 
 
-def mk(host, kind, name, x, y, inputs=(), comment='', **pars):
-    """Create, place, comment, set parameters and wire the inputs in one call."""
+def mk(host, kind, name, inputs=(), comment='', at=None, **pars):
+    """Create, comment, set parameters and wire the inputs in one call. Inside the effect being built the
+    operator joins the current section() and finish_effect() places it; anywhere else at=(x, y) places it."""
     o = host.create(kind, name)
-    o.nodeX, o.nodeY = x, y
+    if host.path == _LAYOUT['comp']:
+        if _LAYOUT['current'] is None:
+            raise RuntimeError('{} was made before any section(): say which part of the network it belongs '
+                               'to'.format(o.name))
+        _LAYOUT['of'][o.name] = _LAYOUT['current']
+    elif at is not None:
+        o.nodeX, o.nodeY = at
     setpars(o, **pars)
     # Multi-input operators (Switch, Merge, Layout) grow a connector as each one is wired; a GLSL
     # TOP stops at 3, so glsl() handles more.
@@ -148,13 +155,13 @@ def uniforms(g, **values):
                 p.val = x
 
 
-def glsl(host, name, x, y, inputs, pixel, comment, res=None, fmt=None, **values):
+def glsl(host, name, inputs, pixel, comment, res=None, fmt=None, at=None, **values):
     """A GLSL TOP with its docked pixel shader filled (never a second DAT beside it), any number
     of inputs, an optional custom resolution and pixel format, and uniforms (see uniforms())."""
     # A new GLSL TOP has 3 input connectors that don't grow within one Python call, and
     # setInputs() doesn't add more either; its TOPs parameter appends further inputs as
     # sTD2DInputs[3], [4]... (2025.33230, dev/selftest.py checks a 5-input GLSL TOP).
-    g = mk(host, glslTOP, name, x, y, inputs[:3], comment)
+    g = mk(host, glslTOP, name, inputs[:3], comment, at=at)
     if len(inputs) > 3:
         g.par.tops = ' '.join(o.name for o in inputs[3:])
     docked(g, '_pixel', pixel, comment)
@@ -167,7 +174,7 @@ def glsl(host, name, x, y, inputs, pixel, comment, res=None, fmt=None, **values)
     return g
 
 
-def audio_in(comp, root, x=-600, y=-350):
+def audio_in(comp, root):
     """The effect's audio front end. Whatever is wired into input 2 (Fosfora's signal, raw audio,
     TouchDesigner's audioAnalysis or Essentia rhythm CHOP, or nothing) becomes the channels beat,
     beat_count, bar_count, beat_phase, level, build, drop_count, section_count and source;
@@ -177,14 +184,14 @@ def audio_in(comp, root, x=-600, y=-350):
     it measures the low band itself (numpy), since a time-sliced Audio Filter CHOP there cooked
     every frame, used or not (2025.33230). Needs new_effect(..., audio=True); returns the Script
     CHOP."""
-    script = mk(comp, scriptCHOP, 'audio', x, y, [comp.op('in2_audio')],
+    script = mk(comp, scriptCHOP, 'audio', [comp.op('in2_audio')],
                 'Input 2 as beat, beat_count, level and the rest (lib/audio_callbacks.py).')
     docked(script, '_callbacks', open(os.path.join(root, 'lib', 'audio_callbacks.py')).read(),
            'Turns whatever is on input 2 into beat, beat_count, level and the rest.')
     return script
 
 
-def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4.0, 0.25)):
+def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4.0, 0.25)):
     """The input's motion, shared by Datamosh and Fluid: its luma at 1/8 and 1/4 (lum8, lum4; lum2 too
     when levels has 2), each beside the previous input frame's (lum8p...); whether this frame brings a
     new input frame and whether it is a cut (change, change_avg, clock: r new frame, g cut); and
@@ -195,36 +202,36 @@ def optical_flow(comp, root, source, x=-400, y=450, levels=(8, 4), new_frame=2e-
     an expression reading another operator's size kept an unwired sample movie cooking while nothing
     used the effect. The shaders are lib/glsl's lum, change, clock and lk. Returns the operators by name."""
     ops = {}
-    for k, dy in ((8, 300), (4, 150), (2, 0)):
+    for k in (8, 4, 2):
         if k not in levels:
             continue
-        ops['lum{}'.format(k)] = glsl(comp, 'lum{}'.format(k), x, y + dy, [source], lib_glsl(root, 'lum.glsl'),
+        ops['lum{}'.format(k)] = glsl(comp, 'lum{}'.format(k), [source], lib_glsl(root, 'lum.glsl'),
                                       'Luma at 1/{}.'.format(k), fmt='mono32float', uK=k)
         setpars(ops['lum{}'.format(k)], outputresolution={8: 'eighth', 4: 'quarter', 2: 'half'}[k])
-        ops['lum{}p'.format(k)] = mk(comp, cacheTOP, 'lum{}p'.format(k), x + 200, y + dy + 60, [ops['lum{}'.format(k)]],
+        ops['lum{}p'.format(k)] = mk(comp, cacheTOP, 'lum{}p'.format(k), [ops['lum{}'.format(k)]],
                                      'lum{} of the previous input frame.'.format(k), cachesize=2, outputindex=-1)
     lum8, lum4 = ops['lum8'], ops['lum4']
-    seen = ops['seen'] = mk(comp, feedbackTOP, 'seen', x + 200, y + 600, [lum8],
+    seen = ops['seen'] = mk(comp, feedbackTOP, 'seen', [lum8],
                             'What change saw last frame: its g is the luma then.', top='change')
-    ops['change'] = glsl(comp, 'change', x + 200, y + 450, [lum8, seen], lib_glsl(root, 'change.glsl'),
+    ops['change'] = glsl(comp, 'change', [lum8, seen], lib_glsl(root, 'change.glsl'),
                          'Per pixel, how much the input changed since the last frame seen.', fmt='rgba32float',
                          uTime=clock_seconds())
-    avg = ops['change_avg'] = mk(comp, analyzeTOP, 'change_avg', x + 400, y + 450, [ops['change']],
+    avg = ops['change_avg'] = mk(comp, analyzeTOP, 'change_avg', [ops['change']],
                                  'The mean change: 0 when no new frame came.', op='average',
                                  analyzechannel='independent')
-    clock_fb = ops['clock_fb'] = mk(comp, feedbackTOP, 'clock_fb', x + 600, y + 600, [avg], "The clock's last frame.",
+    clock_fb = ops['clock_fb'] = mk(comp, feedbackTOP, 'clock_fb', [avg], "The clock's last frame.",
                                     top='clock')
-    ops['clock'] = glsl(comp, 'clock', x + 600, y + 450, [avg, clock_fb], lib_glsl(root, 'clock.glsl'),
+    ops['clock'] = glsl(comp, 'clock', [avg, clock_fb], lib_glsl(root, 'clock.glsl'),
                         'One pixel: is this a new input frame, is it a cut (experimental).', fmt='rgba32float',
                         uS=(new_frame, cut[0], cut[1], 0.1), uC=(clock_seconds(), cut[2]))
-    ops['lk8'] = glsl(comp, 'lk8', x + 400, y + 300, [lum8, ops['lum8p'], lum8], lib_glsl(root, 'lk.glsl'),
+    ops['lk8'] = glsl(comp, 'lk8', [lum8, ops['lum8p'], lum8], lib_glsl(root, 'lk.glsl'),
                       'Optical flow at 1/8.', fmt='rgba32float', uP=(0, 1e-4, 4))
-    ops['lk4'] = glsl(comp, 'lk4', x + 600, y + 200, [lum4, ops['lum4p'], ops['lk8']], lib_glsl(root, 'lk.glsl'),
+    ops['lk4'] = glsl(comp, 'lk4', [lum4, ops['lum4p'], ops['lk8']], lib_glsl(root, 'lk.glsl'),
                       'Optical flow at 1/4, starting from lk8.', fmt='rgba32float', uP=(1, 1e-4, 8))
     return ops
 
 
-def structure_tensor(comp, root, source, x=-400, y=-300, sigma=2.0):
+def structure_tensor(comp, root, source, sigma=2.0):
     """The picture's local orientation, shared by the effects that follow its edges (Paint; Reaction-diffusion
     and Pencil to come): the structure tensor of its color (tensor: E, F, G from Jaehne's derivative filter),
     smoothed by a Gaussian of sigma pixels at 720 high across and then down (tensor_h, tensor_v; sigma may be an
@@ -233,13 +240,13 @@ def structure_tensor(comp, root, source, x=-400, y=-300, sigma=2.0):
     16-bit float; edges hold rather than fall to black. The shaders are lib/glsl's tensor, tensor_blur and
     tensor_flow, after Kyprianidis, Kang and Doellner (2009, 2011). Returns the operators by name."""
     ops = {}
-    ops['tensor'] = glsl(comp, 'tensor', x, y, [source], lib_glsl(root, 'tensor.glsl'),
+    ops['tensor'] = glsl(comp, 'tensor', [source], lib_glsl(root, 'tensor.glsl'),
                          "The structure tensor of the picture's color, per pixel.", fmt='rgba16float')
-    ops['tensor_h'] = glsl(comp, 'tensor_h', x + 200, y, [ops['tensor']], lib_glsl(root, 'tensor_blur.glsl'),
+    ops['tensor_h'] = glsl(comp, 'tensor_h', [ops['tensor']], lib_glsl(root, 'tensor_blur.glsl'),
                            'The tensor smoothed across.', fmt='rgba16float', uB=(1, 0, sigma))
-    ops['tensor_v'] = glsl(comp, 'tensor_v', x + 400, y, [ops['tensor_h']], lib_glsl(root, 'tensor_blur.glsl'),
+    ops['tensor_v'] = glsl(comp, 'tensor_v', [ops['tensor_h']], lib_glsl(root, 'tensor_blur.glsl'),
                            'The tensor smoothed down.', fmt='rgba16float', uB=(0, 1, sigma))
-    ops['flow'] = glsl(comp, 'flow', x + 600, y, [ops['tensor_v']], lib_glsl(root, 'tensor_flow.glsl'),
+    ops['flow'] = glsl(comp, 'flow', [ops['tensor_v']], lib_glsl(root, 'tensor_flow.glsl'),
                        'Along the edges: rg the direction, b how clear it is (anisotropy).', fmt='rgba16float')
     for o in ops.values():
         setpars(o, inputextenduv='hold')
@@ -253,35 +260,35 @@ def clock_seconds():
     return Expr('absTime.seconds % {}'.format(CLOCK))
 
 
-def flow_speed(comp, root, mo, start, x=400, y=750, dead=0.25, hold=0.3):
+def flow_speed(comp, root, mo, start, dead=0.25, hold=0.3):
     """The input's motion as a speed, shared by Fluid and VHS + CRT, from optical_flow()'s ops (mo): pace (one
     pixel: when the last new input frame came, and the gap between frames) and motion (lk4 smoothed over 5 x 5
     and divided by that gap: rg cells per second at a quarter of the input's size, b confidence), held between
     the input's frames, so a slow clip moves like a live camera, dying away hold seconds after the last new frame,
     and nothing across a cut; dead is a dead zone in cells per frame. start is a 1 x 1 32-bit TOP both Feedback
     TOPs (pace_fb, motion_fb) start from. The shaders are lib/glsl's pace and speed. Returns (pace, motion)."""
-    pace_fb = mk(comp, feedbackTOP, 'pace_fb', x, y + 450, [start], "pace's last frame.", top='pace')
-    pace = glsl(comp, 'pace', x, y + 300, [mo['clock'], pace_fb], lib_glsl(root, 'pace.glsl'),
+    pace_fb = mk(comp, feedbackTOP, 'pace_fb', [start], "pace's last frame.", top='pace')
+    pace = glsl(comp, 'pace', [mo['clock'], pace_fb], lib_glsl(root, 'pace.glsl'),
                 'One pixel: when the last new input frame came, and the gap between frames.', fmt='rgba32float',
                 uP=(clock_seconds(), 0.25))
-    motion_fb = mk(comp, feedbackTOP, 'motion_fb', x, y + 150, [start], "motion's last frame.", top='motion')
-    motion = glsl(comp, 'motion', x, y, [mo['lk4'], motion_fb, pace], lib_glsl(root, 'speed.glsl'),
+    motion_fb = mk(comp, feedbackTOP, 'motion_fb', [start], "motion's last frame.", top='motion')
+    motion = glsl(comp, 'motion', [mo['lk4'], motion_fb, pace], lib_glsl(root, 'speed.glsl'),
                   "The input's motion at a quarter of its size, as a speed, held between the input's frames.",
                   fmt='rgba32float', uM=(clock_seconds(), Expr('min(absTime.stepSeconds, 0.05)'), dead, hold))
     return pace, motion
 
 
-def flash_gate(comp, trigger, x, y, name='flash'):
+def flash_gate(comp, trigger, name='flash'):
     """Every flash an effect makes goes through here (docs/TD_IDIOMS.md A1). A Trigger CHOP turns
     trigger's channels into one-frame-wide pulses no closer together than the Flashing parameter
     allows (Re-Trigger Delay = FLASH_INTERVAL), and a Math CHOP passes nothing when Flashing is
     Off. Shape the flash itself (its envelope) downstream; never bypass the gate."""
     calm, wcag = FLASH_INTERVAL['calm'], FLASH_INTERVAL['wcag']
-    limit = mk(comp, triggerCHOP, name + '_limit', x, y, [trigger],
+    limit = mk(comp, triggerCHOP, name + '_limit', [trigger],
                'Flashes no closer together than the Flashing parameter allows.',
                retrigger=Expr("{} if parent().par.Flashing == 'wcag' else {}".format(wcag, calm)),
                retriggerunit='seconds', attack=0, peak=1, decay=0, sustain=0)
-    return mk(comp, mathCHOP, name, x + 200, y, [limit], 'Nothing passes when Flashing is Off.',
+    return mk(comp, mathCHOP, name, [limit], 'Nothing passes when Flashing is Off.',
               gain=Expr("0 if parent().par.Flashing == 'off' else 1"))
 
 
@@ -305,6 +312,292 @@ def custom(page, kind, name, label, default, help_text, lo=None, hi=None, clamp=
         p.normMax, p.max, p.clampMax = hi, hi, clamp
     p.help = help_text
     return p
+
+
+# ---- Laying out the network ------------------------------------------------------------------------
+# Opening an effect shows its network read left to right in titled Network Boxes, one for each part of the
+# effect, in rows (lanes): the picture's along the top from input 1 to the output, then any others, then the
+# audio and the depth, which start from inputs 2 and 3 (docs/BUILDING.md, Laying out the network). The builder
+# names the parts with section(); finish_effect() places every operator from what reads what, and
+# assert_laid_out() checks the result.
+LAYOUT_COL = 200       # from one column of operators to the next (a column holding a wider node is wider)
+LAYOUT_NODE_W = 130    # an operator's usual width (2025.33230)
+LAYOUT_GAP = 40        # between two operators stacked in a column
+LAYOUT_DOCK_GAP = 30   # between an operator and the DAT docked under it (TouchDesigner's own: 120 from its bottom)
+LAYOUT_PAD = 20        # a box's margin around its operators
+LAYOUT_TITLE = 30      # a box's title bar (the Annotate COMP's Title Height)
+LAYOUT_TITLE_CHAR = 10  # the width a box leaves for each character of its title
+LAYOUT_BOX_GAP = 20    # between two boxes side by side
+LAYOUT_LANE_GAP = 60   # between two lanes
+FIRST_LANES = ('docs', 'picture')
+LAST_LANES = ('audio', 'depth')
+# Box colors: dark, so the operators stand out, and never the only sign of what a box holds (its title is).
+BOX_COLORS = {'docs': (0.22, 0.22, 0.22), 'io': (0.17, 0.22, 0.3), 'picture': (0.24, 0.2, 0.3),
+              'audio': (0.16, 0.25, 0.18), 'depth': (0.28, 0.22, 0.15)}
+# The effect being built (its path), its sections (key -> title, lane, order), which section each operator mk()
+# made belongs to (name -> key), and the section operators join now.
+_LAYOUT = {'comp': None, 'sections': {}, 'of': {}, 'current': None}
+_OP_NAME = re.compile(r"""op\(\s*['"]([A-Za-z0-9_]+)['"]\s*\)""")
+
+
+def section(key, title=None, lane=None):
+    """The operators mk() makes from here on (and everything built on it: glsl(), the lib helpers) go in the
+    Network Box key, titled with what that part of the effect does, in plain words. lane is the row of boxes it
+    sits in: 'picture' (the default) runs along the top from input 1 to the output; 'audio' and 'depth' come last,
+    since they start from inputs 2 and 3; any other name makes a lane of its own between them, in the order first
+    named. Within a lane, boxes run left to right in the order their contents read each other. Naming a section
+    again goes back into it."""
+    s = _LAYOUT['sections'].setdefault(key, {'title': None, 'lane': None, 'order': len(_LAYOUT['sections'])})
+    if title is not None:
+        s['title'] = title
+    if lane is not None:
+        s['lane'] = lane
+    _LAYOUT['current'] = key
+
+
+def put(o, key):
+    """Move o, made some other way than mk() (a loaded .tox), into section key."""
+    _LAYOUT['of'][o.name] = key
+
+
+def plan_layout(nodes, sections):
+    """Where each operator and box goes. Plain Python, no TouchDesigner, so it can be tried on a dumped network.
+    nodes: name -> dict(w, h, section, wires (the names wired into it), refs (the names its parameters read, not a
+    Feedback TOP's loop), docked (the heights of the DATs docked to it, top to bottom)), in the order they were made.
+    sections: key -> dict(title, lane, order).
+
+    Columns: what an operator is wired from sits left of it, and so does what it reads from its own box (a
+    reference to another box is left free: TouchDesigner draws no line for it, and the picture's shaders read the
+    audio's values all along the way). Each box keeps its columns together, wide enough for its title; boxes in a
+    lane run side by side in the order they are wired; the 'output' box takes the last column. Each operator sits
+    as far right as what reads it allows, and level with what it reads in its box. Returns ({name: (x, y)},
+    [(key, x, y, w, h)]) in TouchDesigner's units: y up, each the lower-left corner."""
+    used = [k for k in sorted(sections, key=lambda k: sections[k]['order'])
+            if any(n['section'] == k for n in nodes.values())]
+    lane_of = {k: sections[k]['lane'] or 'picture' for k in used}
+    lanes = [ln for ln in FIRST_LANES if ln in lane_of.values()]
+    for k in used:
+        if lane_of[k] not in lanes and lane_of[k] not in LAST_LANES:
+            lanes.append(lane_of[k])
+    lanes += [ln for ln in LAST_LANES if ln in lane_of.values()]
+    names = list(nodes)
+    index = {n: i for i, n in enumerate(names)}
+    sec = {n: nodes[n]['section'] for n in names}
+    members = {k: [n for n in names if sec[n] == k] for k in used}
+    reads = {n: sorted({r for r in nodes[n]['wires'] if r in nodes} |
+                       {r for r in nodes[n]['refs'] if r in nodes and sec[r] == sec[n]}) for n in names}
+    users = {n: [m for m in names if n in reads[m]] for n in names}
+
+    # Everything an operator reads comes before it: a loop can't be laid out left to right.
+    order, state = [], {}
+
+    def visit(n, path):
+        if state.get(n) == 'done':
+            return
+        if state.get(n) == 'open':
+            raise RuntimeError('these operators read each other in a loop, so none of them can sit right of all it '
+                               'reads: {} (only a Feedback TOP may close a loop)'.format(
+                                   ' -> '.join(path[path.index(n):] + [n])))
+        state[n] = 'open'
+        for r in reads[n]:
+            visit(r, path + [n])
+        state[n] = 'done'
+        order.append(n)
+    for n in names:
+        visit(n, [])
+
+    # Boxes in a lane run in the order they are wired (else in the order they were named).
+    in_lane = {}
+    for ln in lanes:
+        ks = [k for k in used if lane_of[k] == ln]
+        after = {k: {sec[r] for n in members[k] for r in reads[n] if sec[r] != k and sec[r] in ks} for k in ks}
+        seq = []
+        while len(seq) < len(ks):
+            ready = [k for k in ks if k not in seq and after[k] <= set(seq)]
+            if not ready:
+                raise RuntimeError('sections {} in lane {} are wired to each other both ways: put them in one '
+                                   'section or in separate lanes'.format(sorted(k for k in ks if k not in seq), ln))
+            seq.append(min(ready, key=lambda k: sections[k]['order']))
+        in_lane[ln] = seq
+
+    def columns(col):
+        """Where each column starts: LAYOUT_COL apart, more after a column holding a node wider than the usual."""
+        widest = {}
+        for n in names:
+            widest[col[n]] = max(widest.get(col[n], 0), nodes[n]['w'])
+        xs = [0]
+        for c in range(max(col.values()) + 2):
+            xs.append(xs[-1] + max(LAYOUT_COL, widest.get(c, 0) + LAYOUT_COL - LAYOUT_NODE_W))
+        return xs
+
+    def span(k, col, xs):
+        lo = min(xs[col[n]] for n in members[k])
+        hi = max(xs[col[n]] + nodes[n]['w'] for n in members[k])
+        return lo, max(hi, lo + len(sections[k]['title']) * LAYOUT_TITLE_CHAR)
+
+    col = {n: 0 for n in names}
+    for _ in range(4 * len(names) + 10):
+        changed = False
+        for n in order:
+            want = max([col[r] + 1 for r in reads[n]] + [col[n]])
+            if want > col[n]:
+                col[n], changed = want, True
+        # Each operator as far right as what reads it allows, so a chain sits next to what it feeds; one read only
+        # from other boxes goes no further than its own box already reaches, so boxes never push each other on.
+        for n in reversed(order):
+            if sec[n] == 'output' or not users[n]:
+                continue
+            want = min(col[m] for m in users[n]) - 1
+            if not any(sec[m] == sec[n] for m in users[n]):
+                others = [col[m] for m in members[sec[n]] if m != n]
+                if not others:
+                    continue
+                want = min(want, max(others))
+            if want > col[n]:
+                col[n], changed = want, True
+        for ln in lanes:
+            right = None
+            for k in in_lane[ln]:
+                lo, hi = span(k, col, columns(col))
+                while right is not None and lo - LAYOUT_PAD < right + LAYOUT_BOX_GAP:
+                    for n in members[k]:
+                        col[n] += 1
+                    changed = True
+                    lo, hi = span(k, col, columns(col))
+                right = hi + LAYOUT_PAD
+        if 'output' in used:
+            xs = columns(col)
+            rest = max(span(k, col, xs)[1] for k in used if k != 'output')
+            last = max(col[n] for n in names if sec[n] != 'output') + 1
+            while xs[last] - LAYOUT_PAD < rest + LAYOUT_PAD + LAYOUT_BOX_GAP:
+                last += 1
+            for n in members['output']:
+                if col[n] < last:
+                    col[n], changed = last, True
+        if not changed:
+            break
+    else:
+        raise RuntimeError('the layout did not settle')
+
+    def extent(n):
+        return nodes[n]['h'] + sum(LAYOUT_DOCK_GAP + h for h in nodes[n]['docked'])
+
+    # Down from the top of each box's contents, a column at a time: stacked in the order of where the operators
+    # each one is wired to sit (what it reads on a sweep to the right, what reads it on a sweep back), then each as
+    # level with what it reads as the ones above it allow.
+    down, height = {n: 0 for n in names}, {}
+    for k in used:
+        cols = sorted({col[n] for n in members[k]})
+
+        def stack(c, near):
+            here = []
+            for n in members[k]:
+                if col[n] == c:
+                    mine = [down[m] for m in near(n) if sec[m] == k and col[m] != c]
+                    here.append((sum(mine) / len(mine) if mine else down[n], index[n], n))
+            cursor = 0
+            for want, _, n in sorted(here):
+                down[n] = max(want, cursor)
+                cursor = down[n] + extent(n) + LAYOUT_GAP
+            return cursor - LAYOUT_GAP
+        for c in cols:
+            stack(c, lambda n: reads[n])
+        for c in reversed(cols):
+            stack(c, lambda n: users[n])
+        for c in cols:
+            stack(c, lambda n: reads[n])
+        top = min(down[n] for n in members[k])
+        for n in members[k]:
+            down[n] -= top
+        height[k] = max(down[n] + extent(n) for n in members[k])
+
+    xs = columns(col)
+    pos, boxes, top = {}, [], 0
+    for ln in lanes:
+        box_h = max(height[k] for k in in_lane[ln]) + 2 * LAYOUT_PAD + LAYOUT_TITLE
+        for k in in_lane[ln]:
+            for n in members[k]:
+                pos[n] = (xs[col[n]], top - LAYOUT_TITLE - LAYOUT_PAD - down[n] - nodes[n]['h'])
+            lo, hi = span(k, col, xs)
+            boxes.append((k, lo - LAYOUT_PAD, top - box_h, hi - lo + 2 * LAYOUT_PAD, box_h))
+        top -= box_h + LAYOUT_LANE_GAP
+    return pos, boxes
+
+
+def _reads(o, siblings):
+    """The names among siblings that o reads, as (wires, refs): what is wired into it, and what its parameters
+    name (an OP parameter, or op('name') in an expression), except a Feedback TOP's Target TOP, the loop it
+    closes."""
+    wires, found = set(), set()
+    for ic in o.inputConnectors:
+        wires.update(c.owner.name for c in ic.connections)
+    for p in o.pars():
+        if o.OPType == 'feedbackTOP' and p.name == 'top':
+            continue
+        if p.mode == ParMode.EXPRESSION:
+            found.update(_OP_NAME.findall(p.expr))
+        elif p.isOP and isinstance(p.val, str):
+            found.update(v.rstrip('/').split('/')[-1] for v in p.val.split())
+    return wires & siblings, found & siblings - wires - {o.name}
+
+
+def _prune_docked(comp):
+    """A GLSL TOP comes with three docked DATs (2025.33230): its pixel shader, a compute shader and an Info DAT.
+    Drop the shader its mode doesn't run, which would read as part of the effect. Keep the Info DAT: when a shader
+    fails to compile, the node only says so, and the Info DAT says where."""
+    for o in comp.findChildren(type=glslTOP):
+        compute = o.par.mode.eval() == 'compute'
+        unused = o.name + ('_pixel' if compute else '_compute')
+        setpars(o, **{'pixeldat' if compute else 'computedat': ''})
+        for d in list(o.docked):
+            if d.name == unused:
+                d.destroy()
+
+
+def _docked(o):
+    """The DATs docked to o, top to bottom: shaders and callbacks first, then an Info DAT."""
+    return sorted(o.docked, key=lambda d: (d.OPType == 'infoDAT', d.name))
+
+
+def lay_out(comp):
+    """Place every operator in comp by plan_layout(), each docked DAT under its operator, and a Network Box
+    (an Annotate COMP) around each section, titled; done by finish_effect(). Every operator must belong to a
+    titled section."""
+    _prune_docked(comp)
+    items = [o for o in comp.children if o.dock is None and o.OPType != 'annotateCOMP']
+    names = {o.name for o in items}
+    stray = sorted(n for n in names if n not in _LAYOUT['of'])
+    if stray:
+        raise RuntimeError('{}: not in any section(): {}'.format(comp.path, ', '.join(stray)))
+    for k in sorted({_LAYOUT['of'][n] for n in names}):
+        if not _LAYOUT['sections'][k]['title']:
+            raise RuntimeError('{}: section {!r} has no title'.format(comp.path, k))
+    by = {o.name: o for o in items}
+    made = [n for n in _LAYOUT['of'] if n in by]
+    nodes = {}
+    for n in made:
+        wires, refs = _reads(by[n], names)
+        nodes[n] = {'w': by[n].nodeWidth, 'h': by[n].nodeHeight, 'section': _LAYOUT['of'][n], 'wires': wires,
+                    'refs': refs, 'docked': [d.nodeHeight for d in _docked(by[n])]}
+    pos, boxes = plan_layout(nodes, _LAYOUT['sections'])
+    for n, (x, y) in pos.items():
+        o = by[n]
+        o.nodeX, o.nodeY = x, y
+        for d in _docked(o):
+            y -= LAYOUT_DOCK_GAP + d.nodeHeight
+            d.nodeX, d.nodeY = x, y
+    for key, x, y, w, h in boxes:
+        s = _LAYOUT['sections'][key]
+        box = comp.create(annotateCOMP, 'box_' + key)
+        box.name = 'box_' + key   # an Annotate COMP names itself annotate1 whatever create() asks
+        kind = 'io' if key in ('input', 'output') else s['lane'] if s['lane'] in BOX_COLORS else 'picture'
+        if key == 'docs':
+            kind = 'docs'
+        setpars(box, Mode='networkbox', Titletext=s['title'], Backcolorr=BOX_COLORS[kind][0],
+                Backcolorg=BOX_COLORS[kind][1], Backcolorb=BOX_COLORS[kind][2])
+        box.nodeX, box.nodeY, box.nodeWidth, box.nodeHeight = x, y, w, h
+        box.comment = 'A Network Box around this part of the effect: ' + s['title']
+    _LAYOUT['comp'] = None
 
 
 def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=False, sample=SAMPLE_MEDIA,
@@ -332,50 +625,64 @@ def new_effect(name, title, summary, readme, tags=(), audio=False, flashing=Fals
     for tag in ('touchdesigner-effects',) + tuple(tags) + (('flashing',) if flashing else ()):
         comp.tags.add(tag)
     page = comp.appendCustomPage(title)
-    mk(comp, textDAT, 'README', -800, 400, comment='What this effect does and how to use it.').text = readme
+    _LAYOUT.update(comp=comp.path, sections={}, of={}, current=None)
+    section('docs', 'Read me', lane='docs')
+    # One line per paragraph (src/readme.txt): the viewer wraps it to its own width.
+    mk(comp, textDAT, 'README', comment='What this effect does and how to use it.', wordwrap='on').text = readme
 
     # A COMP orders its inputs by the In operators' names, not their positions (TouchDesigner
     # 2025.33230, dev/probes/input_order.py): the digit keeps the TOP first.
-    mk(comp, inTOP, 'in1_top', -800, 0, comment='Input 1: the picture to process.')
-    mk(comp, moviefileinTOP, 'sample', -800, -150, comment='Shown until a TOP is wired into input 1.',
-       file=Expr(sample))
-    source = mk(comp, switchTOP, 'source', -600, -50, [comp.op('in1_top'), comp.op('sample')],
+    section('input', 'Input 1, or a sample picture while nothing is wired in', lane='picture')
+    mk(comp, inTOP, 'in1_top', comment='Input 1: the picture to process.')
+    mk(comp, moviefileinTOP, 'sample', comment='Shown until a TOP is wired into input 1.', file=Expr(sample))
+    source = mk(comp, switchTOP, 'source', [comp.op('in1_top'), comp.op('sample')],
                 comment='Input 1 when it is wired, the sample picture when it is not.',
                 index=Expr('0 if parent().inputConnectors[0].connections else 1'))
+    # Inputs 2 and 3 open the audio and depth lanes; the builder titles them when it builds on them.
     if audio:
-        mk(comp, inCHOP, 'in2_audio', -800, -350,
-           comment='Input 2 (optional): audio or beat channels, e.g. Fosfora or audio analysis.')
+        section('audio', 'Audio (input 2)', lane='audio')
+        mk(comp, inCHOP, 'in2_audio', comment='Input 2 (optional): audio or beat channels, e.g. Fosfora or audio analysis.')
     if depth:
         if not audio:
             raise ValueError('depth=True needs audio=True: input 2 is always the audio, input 3 the depth')
-        mk(comp, inTOP, 'in3_top', -800, -650,
+        section('depth', 'Depth or a mask (input 3)', lane='depth')
+        mk(comp, inTOP, 'in3_top',
            comment='Input 3 (optional): a depth map or mask, grayscale: brighter is nearer, or inside.')
+    _LAYOUT['current'] = None
     return comp, page, source
 
 
-def depth_in(comp, fallback=None, x=-600, y=-650):
+def depth_in(comp, fallback=None):
     """Input 3 (new_effect(..., depth=True)) when a TOP is wired into it, else fallback: a TOP the
     effect makes from input 1, or by default input 1's brightness (brighter is nearer), so the
     effect works with nothing on input 3. Returns the Switch TOP to read the depth from."""
     if fallback is None:
-        fallback = mk(comp, monochromeTOP, 'depth_guess', x - 200, y - 150, [comp.op('source')],
+        fallback = mk(comp, monochromeTOP, 'depth_guess', [comp.op('source')],
                       "Input 1's brightness, standing in for depth while nothing is wired into input 3.")
-    return mk(comp, switchTOP, 'depth', x, y, [comp.op('in3_top'), fallback],
+    return mk(comp, switchTOP, 'depth', [comp.op('in3_top'), fallback],
               'Input 3 (depth or mask) when it is wired, else the stand-in.',
               index=Expr('0 if parent().inputConnectors[2].connections else 1'))
 
 
 def finish_effect(comp, last, version, page=None):
-    """Add the output, Open Window, the About page and the node's picture. save_effect() next."""
+    """Add the output, Open Window, the About page and the node's picture, and lay out the network
+    (lay_out()). save_effect() next."""
     if page is None:
         page = comp.customPages[0]
     # DATs TouchDesigner docked to an operator and the builder left as they were (a GLSL
     # TOP's info DAT, say) belong to their host; say so rather than leave them blank.
     for o in comp.findChildren():
         for d in o.docked:
-            if not d.comment.strip():
+            if d.comment.strip():
+                continue
+            if d.OPType == 'infoDAT' and o.OPType in ('glslTOP', 'glslMAT'):
+                d.comment = ("What TouchDesigner reports compiling {}'s shaders: where they fail, if they "
+                             'do.'.format(o.name))
+            else:
                 d.comment = 'Docked to {}; TouchDesigner made it with it.'.format(o.name)
-    out = mk(comp, outTOP, 'out_top', 800, 0, [last], "Output 1: the effect's picture.")
+    section('output', lane='picture')
+    _LAYOUT['sections']['output']['title'] = _LAYOUT['sections']['output']['title'] or 'Output'
+    mk(comp, outTOP, 'out_top', [last], "Output 1: the effect's picture.")
 
     if 'flashing' in comp.tags:
         flash = custom(page, 'Menu', 'Flashing', 'Flashing', None,
@@ -392,7 +699,7 @@ def finish_effect(comp, last, version, page=None):
            'Open the window filling the whole display, for a projector or a second screen.')
     custom(page, 'Int', 'Display', 'Display', 0, 'Which display the window opens on; 0 is the primary display.',
            0, 3).clampMin = True
-    mk(comp, windowCOMP, 'window', 800, -300, comment='Open Window shows out_top here; Esc closes it.',
+    mk(comp, windowCOMP, 'window', comment='Open Window shows out_top here; Esc closes it.',
        winop='out_top', title=comp.name, justifyoffsetto='specifydisplay', display=Expr('parent().par.Display'),
        justifyh='center', justifyv='center', size=Expr("'fill' if parent().par.Fullscreen else 'custom'"),
        winw=WINDOW_W, winh=WINDOW_H, borders=Expr('not parent().par.Fullscreen'), blocksleep=True,
@@ -404,7 +711,8 @@ def finish_effect(comp, last, version, page=None):
                      'The TouchDesigner build this .tox was saved in; older builds may not open it.')):
         p.readOnly = True
     custom(about, 'Pulse', 'Help', 'Open Docs', None, "Open this effect's page in a browser.")
-    parexec = mk(comp, parameterexecuteDAT, 'parexec', -800, 250, comment='Open Window and Open Docs.')
+    section('docs')
+    parexec = mk(comp, parameterexecuteDAT, 'parexec', comment='Open Window and Open Docs.')
     parexec.text = ('def onPulse(par):\n'
                     "    if par.name == 'Openwindow':\n"
                     "        op('window').par.winopen.pulse()\n"
@@ -414,6 +722,7 @@ def finish_effect(comp, last, version, page=None):
 
     comp.par.opviewer = './out_top'
     comp.viewer = True
+    lay_out(comp)
     return comp
 
 
@@ -430,8 +739,39 @@ def save_effect(comp, comp_dir, root):
 
 
 # ---- Save-time checks ---------------------------------------------------------------------------
+README_HEADING = re.compile(r'^[A-Z][A-Z0-9]+\b(?!\S*[a-z]).{0,50}$')   # USE, INPUT 2 (optional): audio...
+README_ITEM = re.compile(r'^(- | |http|\{|\d+[.:)] )')                   # a list item, numbered too, a link...
+
+
+def hard_wrapped(text):
+    """The lines of a README where a paragraph runs on to the next line (docs/BUILDING.md, The README): the
+    README holds one line per paragraph and per list item, so the viewer wraps it to its own width. After the
+    first block (title, license, docs link), a line may be followed directly only by a list item (- or
+    numbered), an indented line, a link or a format placeholder; a heading, a list item or a link by anything."""
+    lines = text.split('\n')
+    start = lines.index('') if '' in lines else len(lines)
+    found = []
+    for i in range(start, len(lines) - 1):
+        a, b = lines[i], lines[i + 1]
+        if not a.strip() or not b.strip() or README_HEADING.match(a) or README_ITEM.match(a) or README_ITEM.match(b):
+            continue
+        found.append(i + 1)
+    return found
+
+
+def _in_box(o, comp):
+    """Whether o is part of a Network Box inside comp: TouchDesigner's own Annotate COMP, cloned from /sys."""
+    p = o.parent()
+    while p is not None and p.path != comp.path:
+        if p.OPType == 'annotateCOMP':
+            return True
+        p = p.parent()
+    return False
+
+
 def _all(comp):
-    return [comp] + list(comp.findChildren())
+    """comp and everything inside it, except the insides of its Network Boxes."""
+    return [comp] + [o for o in comp.findChildren() if not _in_box(o, comp)]
 
 
 def assert_self_contained(comp):
@@ -500,7 +840,7 @@ def assert_no_unused_docked(comp):
 
 def assert_readable(comp):
     """Opening the .tox shows how it works: a README with its CREDITS (the papers, techniques, code
-    and projects it uses or follows, docs/BUILDING.md), a comment on every operator, help on every
+    and projects it uses or follows, docs/BUILDING.md), one line per paragraph, a comment on every operator, help on every
     parameter, the About page, tags, the library color and a node big enough to read."""
     problems = []
     readme = comp.op('README')
@@ -509,6 +849,9 @@ def assert_readable(comp):
     elif not re.search(r'^CREDITS\n+\S', readme.text, re.M):
         problems.append('the README has no CREDITS section: what the effect uses or follows (docs/BUILDING.md, '
                         'Credits)')
+    elif hard_wrapped(readme.text):
+        problems.append('the README is wrapped by hand (line {}): write one line per paragraph and per list item, '
+                        'so the viewer wraps it to its width (docs/BUILDING.md)'.format(hard_wrapped(readme.text)[0] + 1))
     for o in _all(comp):
         if not o.comment.strip():
             problems.append('{} has no comment'.format(o.path))
@@ -591,7 +934,7 @@ def assert_idiomatic(comp):
     extensions = [p for p in comp.pars() if _EXTENSION_PAR.match(p.name) and (p.eval() or p.expr)]
     if extensions and not comp.par.initextonstart.eval():
         problems.append('E1: it has extensions but Init Extensions on Start is off')
-    for o in comp.findChildren():
+    for o in _all(comp)[1:]:
         if o.OPType == 'scriptCHOP':
             dat = o.par.callbacks.eval()
             if dat is None or 'CookLevel.WHEN_USED' not in dat.text:
@@ -644,8 +987,61 @@ def assert_loads_clean(comp):
         raise RuntimeError('{} does not load clean:\n  {}'.format(comp.path, '\n  '.join(problems)))
 
 
+def assert_laid_out(comp):
+    """The network reads left to right in titled Network Boxes (docs/TD_IDIOMS.md D7, lay_out()): every operator
+    in exactly one box, boxes and operators clear of each other, each docked DAT under its operator, every wire
+    running from left to right, and nothing an operator reads from its own box right of it (a Feedback TOP's
+    Target TOP is the loop it closes, and exempt)."""
+    problems = []
+    boxes = [b for b in comp.children if b.OPType == 'annotateCOMP']
+    items = [o for o in comp.children if o.OPType != 'annotateCOMP']
+    names = {o.name for o in items}
+
+    def rect(o):
+        return o.nodeX, o.nodeY, o.nodeX + o.nodeWidth, o.nodeY + o.nodeHeight
+
+    def overlap(a, b):
+        a, b = rect(a), rect(b)
+        return a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+
+    for b in boxes:
+        if b.par.Mode.eval() != 'networkbox' or not b.par.Titletext.eval().strip():
+            problems.append('{} is not a titled Network Box'.format(b.name))
+    for i, a in enumerate(boxes):
+        for b in boxes[i + 1:]:
+            if overlap(a, b):
+                problems.append('boxes {} and {} overlap'.format(a.name, b.name))
+    box_of = {}
+    for o in items:
+        x0, y0, x1, y1 = rect(o)
+        inside = [b.name for b in boxes if rect(b)[0] <= x0 and x1 <= rect(b)[2] and rect(b)[1] <= y0
+                  and y1 <= rect(b)[3] - b.par.Titleheight.eval()]
+        box_of[o.name] = inside[0] if inside else None
+        if len(inside) != 1:
+            problems.append('{} is in {} boxes{}'.format(o.name, len(inside), ': ' + ', '.join(inside) if inside else ''))
+        if o.dock is not None and not (o.nodeX == o.dock.nodeX and o.nodeY < o.dock.nodeY):
+            problems.append('{} is not under {}, which it is docked to'.format(o.name, o.dock.name))
+    for i, a in enumerate(items):
+        for b in items[i + 1:]:
+            if overlap(a, b):
+                problems.append('{} and {} overlap'.format(a.name, b.name))
+    for o in items:
+        if o.dock is not None:
+            continue
+        for ic in o.inputConnectors:
+            for c in ic.connections:
+                if c.owner.nodeX + c.owner.nodeWidth >= o.nodeX:
+                    problems.append('the wire from {} to {} runs backward'.format(c.owner.name, o.name))
+        for name in _reads(o, names)[1]:
+            r = comp.op(name)
+            if r.dock is None and box_of[name] == box_of[o.name] and r.nodeX > o.nodeX:
+                problems.append('{} reads {}, which sits right of it in its box'.format(o.name, name))
+    if problems:
+        raise RuntimeError('{} is not laid out (docs/TD_IDIOMS.md D7):\n  {}'.format(comp.path, '\n  '.join(problems)))
+
+
 EFFECT_CHECKS = (assert_self_contained, assert_no_unused_docked, assert_readable, assert_standard_io,
-                 assert_nc_resolution, assert_idiomatic, assert_loads_clean)
+                 assert_nc_resolution, assert_idiomatic, assert_loads_clean, assert_laid_out)
 
 
 def save_tox(comp, out_dir, stem, manifest, checks=EFFECT_CHECKS):

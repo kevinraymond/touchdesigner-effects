@@ -55,7 +55,7 @@ clip.cook(force=True)
 depth = host.op('clip_depth')
 aspect = clip.width / max(1, clip.height)
 
-cam = mk(host, cameraCOMP, 'cam', 0, 600, comment='Orbits the target.', projection='perspective', near=0.01, far=100)
+cam = mk(host, cameraCOMP, 'cam', comment='Orbits the target.', projection='perspective', near=0.01, far=100, at=(0, 600))
 for o in list(cam.children):
     o.destroy()
 fov_pars = [p.name for p in cam.pars() if any(k in p.name for k in ('fov', 'viewangle', 'focal', 'aperture'))]
@@ -69,8 +69,8 @@ if hasattr(cam.par, 'viewanglemethod'):
         method = vert[0]
 vertical = 'vert' in str(method).lower()
 D0 = (0.5 if vertical else aspect / 2) / math.tan(math.radians(FOV / 2))
-target = mk(host, nullCOMP, 'target', 200, 600, comment='What the camera looks at: the middle of the cloud.',
-            tz=-0.4 * D0)
+target = mk(host, nullCOMP, 'target', comment='What the camera looks at: the middle of the cloud.',
+            tz=-0.4 * D0, at=(200, 600))
 cam.par.lookat = 'target'
 
 
@@ -87,14 +87,14 @@ renders = {}
 
 for i, (name, (edge, snap, smooth, gw, gh, disc, look, size, jitter)) in enumerate(VARIANTS.items()):
     x = i * 400
-    pos = glsl(host, 'pos_' + name, x, 0, [depth], open(os.path.join(_HERE, 'pos.glsl')).read(),
+    pos = glsl(host, 'pos_' + name, [depth], open(os.path.join(_HERE, 'pos.glsl')).read(),
                'Every grid point in 3D.', res=(gw, gh), fmt='rgba32float',
-               uGeo=(aspect, DEPTH, edge, snap), uSmooth=(smooth, round(3 * gh / 180)), uCam=(D0, jitter))
+               uGeo=(aspect, DEPTH, edge, snap), uSmooth=(smooth, round(3 * gh / 180)), uCam=(D0, jitter), at=(x, 0))
     splat = look == 'splat'
     mats = []
     for suffix, pass_, lk in ((('vis', (1, 0.03), 4), ('acc', (0, 0), 3)) if splat else (('', (0, 0), look),)):
-        mat = mk(host, glslMAT, 'mat{}_{}'.format(suffix, name), x + (100 if suffix == 'acc' else 0), -150,
-                 comment='Dots from pos.')
+        mat = mk(host, glslMAT, 'mat{}_{}'.format(suffix, name),
+                 comment='Dots from pos.', at=(x + (100 if suffix == 'acc' else 0), -150))
         docked(mat, '_vertex', open(os.path.join(_HERE, 'dots_vertex.glsl')).read(), 'The dots.')
         docked(mat, '_pixel', open(os.path.join(_HERE, 'dots_pixel.glsl')).read(), 'A dot.')
         mat.seq.sampler.numBlocks = 2
@@ -106,24 +106,24 @@ for i, (name, (edge, snap, smooth, gw, gh, disc, look, size, jitter)) in enumera
             setpars(mat, blending=True, srcblend='one', destblend='one', srcblenda='one', destblenda='one',
                     depthtest=True, depthwriting=False, premultrgbbyalpha=False)
         mats.append(mat)
-    geo = mk(host, geometryCOMP, 'geo_' + name, x, -300, comment='A square per grid point.', instancing=True,
+    geo = mk(host, geometryCOMP, 'geo_' + name, comment='A square per grid point.', instancing=True,
              instancecountmode='oplength', instanceop=pos.name, instancetx='r', instancety='g', instancetz='b',
-             material=mats[0].name)
+             material=mats[0].name, at=(x, -300))
     for o in list(geo.children):
         o.destroy()
-    quad = mk(geo, rectangleSOP, 'quad', 0, 0, comment='One dot.', sizex=1, sizey=1)
+    quad = mk(geo, rectangleSOP, 'quad', comment='One dot.', sizex=1, sizey=1, at=(0, 0))
     quad.render = quad.display = True
-    render = mk(host, renderTOP, 'render_' + name, x, -450, comment='The cloud.', camera='cam',
+    render = mk(host, renderTOP, 'render_' + name, comment='The cloud.', camera='cam',
                 geometry=geo.name, lights='', bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=1,
-                outputresolution='custom', resolutionw=clip.width, resolutionh=clip.height)
+                outputresolution='custom', resolutionw=clip.width, resolutionh=clip.height, at=(x, -450))
     if splat:
         # A Render Pass TOP draws into its input's buffers, so the float format the sums need is set here.
         setpars(render, drawdepthonly=True, format='rgba16float', bgcolora=0)
-        acc = mk(host, renderpassTOP, 'pass_' + name, x, -600, [render], 'The splats added up over the depth pass.',
+        acc = mk(host, renderpassTOP, 'pass_' + name, [render], 'The splats added up over the depth pass.',
                  camera='cam', geometry=geo.name, lights='', cleardepth=False, clearcolor=True,
-                 overridemat=mats[1].name, bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=0)
-        render = glsl(host, 'norm_' + name, x, -750, [acc], open(os.path.join(_HERE, 'splat_norm.glsl')).read(),
-                      'Color divided by weight.')
+                 overridemat=mats[1].name, bgcolorr=0, bgcolorg=0, bgcolorb=0, bgcolora=0, at=(x, -600))
+        render = glsl(host, 'norm_' + name, [acc], open(os.path.join(_HERE, 'splat_norm.glsl')).read(),
+                      'Color divided by weight.', at=(x, -750))
         print('render pass', acc.name, 'format', getattr(acc, 'pixelFormat', '?'), 'errors', acc.errors())
     renders[name] = render
 

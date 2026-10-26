@@ -56,7 +56,7 @@ def main():
               if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip, beat = testbed(host, opts)
     overrides = {k: v for k, v in opts.items() if k[:1].isupper()}
-    view = mk(host, nullTOP, 'view', 400, 0, comment='Pulls the effect every frame.')
+    view = mk(host, nullTOP, 'view', comment='Pulls the effect every frame.', at=(400, 0))
     effects = []
     for path in paths:
         fx = host.loadTox(path)

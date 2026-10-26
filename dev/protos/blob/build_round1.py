@@ -46,8 +46,8 @@ def fresh(name):
 
 
 def glsl(comp, name, x, y, inputs, code, w=1280, h=720, fmt='rgba8fixed', comment='', vecs=()):
-    g = mk(comp, glslTOP, name, x, y, inputs, comment=comment, outputresolution='custom',
-           resolutionw=w, resolutionh=h, format=fmt)
+    g = mk(comp, glslTOP, name, inputs, comment=comment, outputresolution='custom',
+           resolutionw=w, resolutionh=h, format=fmt, at=(x, y))
     docked(g, '_pixel', code, comment or name)
     if vecs:
         g.seq.vec.numBlocks = len(vecs)
@@ -70,26 +70,26 @@ def wanted(name):
 inp = host.op('inputs')
 if inp is None or wanted('inputs'):
     inp = fresh('inputs')
-    m4 = mk(inp, moviefileinTOP, 'movie4', 0, 0, file=Expr("app.samplesFolder + '/Map/Nature/Movie.4.mp4'"))
-    m2 = mk(inp, moviefileinTOP, 'movie2', 0, -150, file=Expr("app.samplesFolder + '/Map/Nature/Movie.2.mp4'"))
-    syn = glsl(inp, 'synth', 0, -300, [], src('synth.glsl'), comment='Synthetic moving blobs.',
-               vecs=[('uTime', [T])])
-    sel = mk(inp, switchTOP, 'sel', 250, -150, [m4, m2, syn], index=0)
-    mk(inp, nullTOP, 'out', 450, -150, [sel])
+    m4 = mk(inp, moviefileinTOP, 'movie4', file=Expr("app.samplesFolder + '/Map/Nature/Movie.4.mp4'"), at=(0, 0))
+    m2 = mk(inp, moviefileinTOP, 'movie2', file=Expr("app.samplesFolder + '/Map/Nature/Movie.2.mp4'"), at=(0, -150))
+    syn = glsl(inp, 'synth', [], src('synth.glsl'), comment='Synthetic moving blobs.',
+               vecs=[('uTime', [T])], at=(0, -300))
+    sel = mk(inp, switchTOP, 'sel', [m4, m2, syn], index=0, at=(250, -150))
+    mk(inp, nullTOP, 'out', [sel], at=(450, -150))
     # Beats from the sample WAV with TouchDesigner's own CHOPs (no Palette): low-passed RMS
     # against its own slow average; the Trigger CHOP's Re-Trigger Delay is the flash limit
     # (1 s = Calm). No Audio Device Out: nothing is heard.
-    au = mk(inp, audiofileinCHOP, 'audio', 0, -500, file=Expr("app.samplesFolder + '/Audio/SonarBlackie666.wav'"),
-            playmode='sequential', repeat=True, mono=True)
-    lp = mk(inp, audiofilterCHOP, 'lowpass', 200, -500, [au], filter='lowpass', cutofffrequency=150)
-    rms = mk(inp, analyzeCHOP, 'rms', 400, -500, [lp], function='rmspower')
-    slow = mk(inp, lagCHOP, 'slow', 600, -600, [rms], lag1=0.6, lag2=0.6)
-    onset = mk(inp, mathCHOP, 'onset', 800, -500, [rms, slow], chopop='sub')
-    beat = mk(inp, triggerCHOP, 'beat', 1000, -500, [onset], threshup=BEAT_THRESHOLD, retrigger=1.0,
-              attack=0, peak=1, decay=0.4, sustain=0, release=0)
-    count = mk(inp, countCHOP, 'count', 1200, -600, [beat])
-    mk(inp, mergeCHOP, 'trailin', 1000, -800, [rms, onset, beat])
-    mk(inp, trailCHOP, 'trail', 1200, -800, [inp.op('trailin')], wlength=8)
+    au = mk(inp, audiofileinCHOP, 'audio', file=Expr("app.samplesFolder + '/Audio/SonarBlackie666.wav'"),
+            playmode='sequential', repeat=True, mono=True, at=(0, -500))
+    lp = mk(inp, audiofilterCHOP, 'lowpass', [au], filter='lowpass', cutofffrequency=150, at=(200, -500))
+    rms = mk(inp, analyzeCHOP, 'rms', [lp], function='rmspower', at=(400, -500))
+    slow = mk(inp, lagCHOP, 'slow', [rms], lag1=0.6, lag2=0.6, at=(600, -600))
+    onset = mk(inp, mathCHOP, 'onset', [rms, slow], chopop='sub', at=(800, -500))
+    beat = mk(inp, triggerCHOP, 'beat', [onset], threshup=BEAT_THRESHOLD, retrigger=1.0,
+              attack=0, peak=1, decay=0.4, sustain=0, release=0, at=(1000, -500))
+    count = mk(inp, countCHOP, 'count', [beat], at=(1200, -600))
+    mk(inp, mergeCHOP, 'trailin', [rms, onset, beat], at=(1000, -800))
+    mk(inp, trailCHOP, 'trail', [inp.op('trailin')], wlength=8, at=(1200, -800))
 SRC = inp.op('out').path
 AUD = inp.path
 
@@ -98,12 +98,12 @@ def tracker(comp, x, y, prep, background, **pars):
     """Blob Track TOP in background-subtraction mode (input 2 connected): true rectangles,
     faster than SimpleBlobDetector. Its Info CHOP as a data texture (row 0 num_blobs, then
     id, u, v, width, height per blob)."""
-    bt = mk(comp, blobtrackTOP, 'track', x, y, [prep, background], downloadtype='nextframe', **pars)
-    info = mk(comp, infoCHOP, 'info', x + 200, y, op=bt.path)
+    bt = mk(comp, blobtrackTOP, 'track', [prep, background], downloadtype='nextframe', **pars, at=(x, y))
+    info = mk(comp, infoCHOP, 'info', op=bt.path, at=(x + 200, y))
     # One channel per row: keep at most 96 blobs (481 rows); past 1280 rows the Non-Commercial
     # key clamps the texture.
-    cap = mk(comp, selectCHOP, 'cap', x + 300, y - 100, [info], channames='num_blobs blob[0-95]:*')
-    data = mk(comp, choptoTOP, 'data', x + 400, y, chop=cap.path, dataformat='r', format='mono32float')
+    cap = mk(comp, selectCHOP, 'cap', [info], channames='num_blobs blob[0-95]:*', at=(x + 300, y - 100))
+    data = mk(comp, choptoTOP, 'data', chop=cap.path, dataformat='r', format='mono32float', at=(x + 400, y))
     return bt, info, data
 
 
@@ -113,26 +113,26 @@ TW, TH = 320, 180
 
 
 def black(comp, x, y):
-    return mk(comp, constantTOP, 'black', x, y, outputresolution='custom', resolutionw=TW, resolutionh=TH,
-              colorr=0, colorg=0, colorb=0)
+    return mk(comp, constantTOP, 'black', outputresolution='custom', resolutionw=TW, resolutionh=TH,
+              colorr=0, colorg=0, colorb=0, at=(x, y))
 
 
 def small_mono(comp, x, y, s):
-    return mk(comp, monochromeTOP, 'mono', x, y, [s], outputresolution='custom', resolutionw=TW, resolutionh=TH)
+    return mk(comp, monochromeTOP, 'mono', [s], outputresolution='custom', resolutionw=TW, resolutionh=TH, at=(x, y))
 
 
 def highlights(comp, x, y, mono, subtract=0.6, gain=2.0):
     """Brighter than the neighborhood (prep.glsl), so one threshold fits dark and bright footage."""
-    blur = mk(comp, blurTOP, 'local_mean', x, y - 150, [mono], size=28)
-    return glsl(comp, 'prep', x + 200, y, [mono, blur], src('prep.glsl'), w=TW, h=TH,
-                vecs=[('uK', [subtract, gain, 0, 0])])
+    blur = mk(comp, blurTOP, 'local_mean', [mono], size=28, at=(x, y - 150))
+    return glsl(comp, 'prep', [mono, blur], src('prep.glsl'), w=TW, h=TH,
+                vecs=[('uK', [subtract, gain, 0, 0])], at=(x + 200, y))
 
 
 def finish(comp, last):
-    out = mk(comp, nullTOP, 'out', last.nodeX + 200, last.nodeY, [last])
+    out = mk(comp, nullTOP, 'out', [last], at=(last.nodeX + 200, last.nodeY))
     # DEV ONLY: keeps the chain cooking every frame (tracking IDs and running backgrounds need
     # every frame); capture_round1.py turns the whole COMP's cooking off afterwards.
-    mk(comp, cacheTOP, 'keep', out.nodeX + 200, out.nodeY, [out], cachesize=1, alwayscook=True)
+    mk(comp, cacheTOP, 'keep', [out], cachesize=1, alwayscook=True, at=(out.nodeX + 200, out.nodeY))
     return out
 
 
@@ -141,42 +141,42 @@ built = []
 # ---- A "trace": highlights, one GLSL pass over a compact blob table ---------------------------
 if wanted('a_trace'):
     a = fresh('a_trace')
-    s = mk(a, selectTOP, 'src', 0, 0, top=SRC)
+    s = mk(a, selectTOP, 'src', top=SRC, at=(0, 0))
     mono = small_mono(a, 200, -200, s)
     prep = highlights(a, 400, -200, mono)
     bt, info, data = tracker(a, 800, -200, prep, black(a, 600, -350), threshold=0.42, minblobsize=0.02,
                              deleteoverlap=True, deleteoverlaptol=0.6)
-    table = glsl(a, 'table', 1000, -300, [data], shader('unpack.glsl', data=0), w=96, h=2, fmt='rgba32float')
-    draw = glsl(a, 'draw', 1200, 0, [s, table], shader('a_trace.glsl', packed=1),
-                vecs=[('uTime', [T]), ('uLook', [1, 1, 1, 0.55]), ('uLook2', [24, 0, 0, 0])])
+    table = glsl(a, 'table', [data], shader('unpack.glsl', data=0), w=96, h=2, fmt='rgba32float', at=(1000, -300))
+    draw = glsl(a, 'draw', [s, table], shader('a_trace.glsl', packed=1),
+                vecs=[('uTime', [T]), ('uLook', [1, 1, 1, 0.55]), ('uLook2', [24, 0, 0, 0])], at=(1200, 0))
     finish(a, draw)
     built.append(a)
 
 # ---- B "instanced": motion against a running background; Geometry COMP instancing ------------
 if wanted('b_instanced'):
     b = fresh('b_instanced')
-    s = mk(b, selectTOP, 'src', 0, 0, top=SRC)
+    s = mk(b, selectTOP, 'src', top=SRC, at=(0, 0))
     mono0 = small_mono(b, 200, -200, s)
-    mono = mk(b, blurTOP, 'soft', 300, -200, [mono0], size=3)
-    fb = mk(b, feedbackTOP, 'fb', 200, -400, [mono], top='bg')
-    bg = mk(b, crossTOP, 'bg', 400, -400, [fb, mono], cross=0.2)
-    mot = glsl(b, 'motion', 600, -400, [mono, bg], src('motion.glsl'), w=TW, h=TH, vecs=[('uK', [0, 10, 0, 0])])
-    motb = mk(b, blurTOP, 'motion_blur', 800, -400, [mot], size=6)
-    bt = mk(b, blobtrackTOP, 'track', 1000, -200, [motb, black(b, 800, -550)], downloadtype='nextframe',
-            threshold=0.18, minblobsize=0.02, maxblobsize=0.35, deleteoverlap=True)
-    info = mk(b, infoDAT, 'info', 800, -200, op=bt.path)
-    blobs = mk(b, dattoCHOP, 'blobs', 1000, -200, dat=info.path, output='chanpercol', firstrow='names',
-               firstcolumn='values')
-    mat = mk(b, lineMAT, 'lines', 1200, -500, widthnear=1.5, widthfar=1.5, linenearcolorr=1, linenearcolorg=0.6,
-             linenearcolorb=0.18)
-    matw = mk(b, lineMAT, 'lines_white', 1200, -650, widthnear=1, widthfar=1, linenearcolorr=0.7, linenearcolorg=0.7,
-              linenearcolorb=0.7)
+    mono = mk(b, blurTOP, 'soft', [mono0], size=3, at=(300, -200))
+    fb = mk(b, feedbackTOP, 'fb', [mono], top='bg', at=(200, -400))
+    bg = mk(b, crossTOP, 'bg', [fb, mono], cross=0.2, at=(400, -400))
+    mot = glsl(b, 'motion', [mono, bg], src('motion.glsl'), w=TW, h=TH, vecs=[('uK', [0, 10, 0, 0])], at=(600, -400))
+    motb = mk(b, blurTOP, 'motion_blur', [mot], size=6, at=(800, -400))
+    bt = mk(b, blobtrackTOP, 'track', [motb, black(b, 800, -550)], downloadtype='nextframe',
+            threshold=0.18, minblobsize=0.02, maxblobsize=0.35, deleteoverlap=True, at=(1000, -200))
+    info = mk(b, infoDAT, 'info', op=bt.path, at=(800, -200))
+    blobs = mk(b, dattoCHOP, 'blobs', dat=info.path, output='chanpercol', firstrow='names',
+               firstcolumn='values', at=(1000, -200))
+    mat = mk(b, lineMAT, 'lines', widthnear=1.5, widthfar=1.5, linenearcolorr=1, linenearcolorg=0.6,
+             linenearcolorb=0.18, at=(1200, -500))
+    matw = mk(b, lineMAT, 'lines_white', widthnear=1, widthfar=1, linenearcolorr=0.7, linenearcolorg=0.7,
+              linenearcolorb=0.7, at=(1200, -650))
     asp = 1280 / 720
-    geo = mk(b, geometryCOMP, 'boxes', 1200, -200, material='lines', instancing=True, instanceop='blobs',
-             instancetx='u', instancety='v', instancesx='width', instancesy='height', sx=asp)
+    geo = mk(b, geometryCOMP, 'boxes', material='lines', instancing=True, instanceop='blobs',
+             instancetx='u', instancety='v', instancesx='width', instancesy='height', sx=asp, at=(1200, -200))
     for ch in list(geo.children):
         ch.destroy()
-    pts = mk(geo, tableDAT, 'bracket_pts', 0, 200, comment='Corner brackets and a center cross, unit box.')
+    pts = mk(geo, tableDAT, 'bracket_pts', comment='Corner brackets and a center cross, unit box.', at=(0, 200))
     rows = [['P(0)', 'P(1)', 'P(2)']]
     prims = [['vertices', 'close']]
     k = 0.22
@@ -190,100 +190,100 @@ if wanted('b_instanced'):
     pts.clear()
     for r in rows:
         pts.appendRow(r)
-    pr = mk(geo, tableDAT, 'bracket_prims', 0, 0, comment='Polylines through bracket_pts.')
+    pr = mk(geo, tableDAT, 'bracket_prims', comment='Polylines through bracket_pts.', at=(0, 0))
     pr.clear()
     for r in prims:
         pr.appendRow(r)
-    sop = mk(geo, dattoSOP, 'brackets', 200, 100, pointsdat='bracket_pts', primsdat='bracket_prims')
+    sop = mk(geo, dattoSOP, 'brackets', pointsdat='bracket_pts', primsdat='bracket_prims', at=(200, 100))
     sop.render = sop.display = True
-    chain = mk(b, geometryCOMP, 'chain', 1200, -350, material='lines_white', sx=asp)
+    chain = mk(b, geometryCOMP, 'chain', material='lines_white', sx=asp, at=(1200, -350))
     for ch in list(chain.children):
         ch.destroy()
     # The chain runs left to right: samples sorted by u.
-    srt = mk(b, sortCHOP, 'by_u', 900, -650, [blobs], method='increasing', select='byname', names='u')
-    cu = mk(b, selectCHOP, 'sel_uv', 1000, -650, [srt], channames='u v width')
+    srt = mk(b, sortCHOP, 'by_u', [blobs], method='increasing', select='byname', names='u', at=(900, -650))
+    cu = mk(b, selectCHOP, 'sel_uv', [srt], channames='u v width', at=(1000, -650))
     # tz is the box width: the orthographic camera ignores it, and CHOP to SOP wants all three.
-    mk(b, renameCHOP, 'chain_pts', 1200, -650, [cu], renamefrom='u v width', renameto='tx ty tz')
-    cs = mk(chain, choptoSOP, 'path', 0, 0, chop='../chain_pts')
+    mk(b, renameCHOP, 'chain_pts', [cu], renamefrom='u v width', renameto='tx ty tz', at=(1200, -650))
+    cs = mk(chain, choptoSOP, 'path', chop='../chain_pts', at=(0, 0))
     cs.render = cs.display = True
-    cam = mk(b, cameraCOMP, 'cam', 1400, -350, projection='ortho', orthowidth=asp, tx=asp / 2, ty=0.5, tz=5)
-    ren = mk(b, renderTOP, 'render', 1600, -200, camera='cam', geometry='boxes chain', outputresolution='custom',
-             resolutionw=1280, resolutionh=720, bgcolora=0)
+    cam = mk(b, cameraCOMP, 'cam', projection='ortho', orthowidth=asp, tx=asp / 2, ty=0.5, tz=5, at=(1400, -350))
+    ren = mk(b, renderTOP, 'render', camera='cam', geometry='boxes chain', outputresolution='custom',
+             resolutionw=1280, resolutionh=720, bgcolora=0, at=(1600, -200))
     # Labels: Text TOP + Specification DAT (x, y in pixels, text), built from the blob CHOP with CHOPs.
-    su = mk(b, selectCHOP, 'sel_u', 1000, -800, [blobs], channames='u')
-    xu = mk(b, mathCHOP, 'x_px', 1200, -800, [su], gain=1280)
-    rx = mk(b, renameCHOP, 'x', 1400, -800, [xu], renamefrom='u', renameto='x')
-    sh = mk(b, selectCHOP, 'sel_h', 1000, -950, [blobs], channames='height')
-    hh = mk(b, mathCHOP, 'half_h', 1200, -950, [sh], gain=0.5)
-    sv = mk(b, selectCHOP, 'sel_v', 1000, -1100, [blobs], channames='v')
-    vh = mk(b, mergeCHOP, 'v_h', 1400, -1000, [sv, hh])
-    top_ = mk(b, mathCHOP, 'top_edge', 1600, -1000, [vh], chanop='add')
-    yp = mk(b, mathCHOP, 'y_px', 1800, -1000, [top_], gain=720, postoff=4)
-    ry = mk(b, renameCHOP, 'y', 2000, -1000, [yp], renamefrom='*', renameto='y')
-    si = mk(b, selectCHOP, 'sel_id', 1000, -1250, [blobs], channames='id')
-    rt = mk(b, renameCHOP, 'text', 1200, -1250, [si], renamefrom='id', renameto='text')
-    sc = mk(b, mergeCHOP, 'spec_chop', 2200, -900, [rx, ry, rt])
-    spec = mk(b, choptoDAT, 'spec', 2400, -900, chop=sc.path, output='colperchan', names=True)
-    txt = mk(b, textTOP, 'labels', 2600, -900, specdat=spec.path,
+    su = mk(b, selectCHOP, 'sel_u', [blobs], channames='u', at=(1000, -800))
+    xu = mk(b, mathCHOP, 'x_px', [su], gain=1280, at=(1200, -800))
+    rx = mk(b, renameCHOP, 'x', [xu], renamefrom='u', renameto='x', at=(1400, -800))
+    sh = mk(b, selectCHOP, 'sel_h', [blobs], channames='height', at=(1000, -950))
+    hh = mk(b, mathCHOP, 'half_h', [sh], gain=0.5, at=(1200, -950))
+    sv = mk(b, selectCHOP, 'sel_v', [blobs], channames='v', at=(1000, -1100))
+    vh = mk(b, mergeCHOP, 'v_h', [sv, hh], at=(1400, -1000))
+    top_ = mk(b, mathCHOP, 'top_edge', [vh], chanop='add', at=(1600, -1000))
+    yp = mk(b, mathCHOP, 'y_px', [top_], gain=720, postoff=4, at=(1800, -1000))
+    ry = mk(b, renameCHOP, 'y', [yp], renamefrom='*', renameto='y', at=(2000, -1000))
+    si = mk(b, selectCHOP, 'sel_id', [blobs], channames='id', at=(1000, -1250))
+    rt = mk(b, renameCHOP, 'text', [si], renamefrom='id', renameto='text', at=(1200, -1250))
+    sc = mk(b, mergeCHOP, 'spec_chop', [rx, ry, rt], at=(2200, -900))
+    spec = mk(b, choptoDAT, 'spec', chop=sc.path, output='colperchan', names=True, at=(2400, -900))
+    txt = mk(b, textTOP, 'labels', specdat=spec.path,
              fontfile=Expr("app.samplesFolder + '/Fonts/PTMono-Regular.ttf'"), fontsizex=13, alignx='center',
              aligny='bottom', outputresolution='custom', resolutionw=1280, resolutionh=720, bgalpha=0,
-             fontcolorr=1, fontcolorg=0.6, fontcolorb=0.18)
-    full = mk(b, monochromeTOP, 'mono_full', 1400, 0, [s])
-    dim = mk(b, levelTOP, 'dim', 1600, 0, [full], brightness1=0.55)
-    o1 = mk(b, overTOP, 'over_boxes', 1800, 0, [ren, dim])
-    o2 = mk(b, overTOP, 'over_labels', 2000, 0, [txt, o1])
+             fontcolorr=1, fontcolorg=0.6, fontcolorb=0.18, at=(2600, -900))
+    full = mk(b, monochromeTOP, 'mono_full', [s], at=(1400, 0))
+    dim = mk(b, levelTOP, 'dim', [full], brightness1=0.55, at=(1600, 0))
+    o1 = mk(b, overTOP, 'over_boxes', [ren, dim], at=(1800, 0))
+    o2 = mk(b, overTOP, 'over_labels', [txt, o1], at=(2000, 0))
     finish(b, o2)
     built.append(b)
 
 # ---- C "scanner": edge density; magnified one-bit contents ------------------------------------
 if wanted('c_scan'):
     c = fresh('c_scan')
-    s = mk(c, selectTOP, 'src', 0, 0, top=SRC)
+    s = mk(c, selectTOP, 'src', top=SRC, at=(0, 0))
     mono = small_mono(c, 200, -200, s)
-    mean = mk(c, blurTOP, 'mean', 400, -450, [mono], size=4)
-    edge = mk(c, edgeTOP, 'edge', 400, -200, [mono], strength=4)
-    blur = mk(c, blurTOP, 'blur', 600, -200, [edge], size=5)
+    mean = mk(c, blurTOP, 'mean', [mono], size=4, at=(400, -450))
+    edge = mk(c, edgeTOP, 'edge', [mono], strength=4, at=(400, -200))
+    blur = mk(c, blurTOP, 'blur', [edge], size=5, at=(600, -200))
     bt, info, data = tracker(c, 800, -200, blur, black(c, 600, -350), threshold=0.3, minblobsize=0.03,
                              maxblobsize=0.3, deleteoverlap=True)
-    table = glsl(c, 'table', 1400, -300, [data], shader('unpack.glsl', data=0), w=96, h=2, fmt='rgba32float')
-    draw = glsl(c, 'draw', 1600, 0, [s, table, mean], shader('c_scan.glsl', packed=1),
-                vecs=[('uTime', [T]), ('uLook', [2.0, 0.06, 1, 12])])
+    table = glsl(c, 'table', [data], shader('unpack.glsl', data=0), w=96, h=2, fmt='rgba32float', at=(1400, -300))
+    draw = glsl(c, 'draw', [s, table, mean], shader('c_scan.glsl', packed=1),
+                vecs=[('uTime', [T]), ('uLook', [2.0, 0.06, 1, 12])], at=(1600, 0))
     finish(c, draw)
     built.append(c)
 
 # ---- D "beat": highlights, audio-driven words, partner lines and rate-limited flashes ---------
 if wanted('d_beat'):
     d = fresh('d_beat')
-    s = mk(d, selectTOP, 'src', 0, 0, top=SRC)
+    s = mk(d, selectTOP, 'src', top=SRC, at=(0, 0))
     mono = small_mono(d, 200, -200, s)
     prep = highlights(d, 400, -200, mono)
     bt, info, data = tracker(d, 800, -200, prep, black(d, 600, -350), threshold=0.42, minblobsize=0.02,
                              deleteoverlap=True, deleteoverlaptol=0.6)
-    table = glsl(d, 'table', 1000, -300, [data], shader('unpack.glsl', data=0), w=96, h=2, fmt='rgba32float')
-    draw = glsl(d, 'draw', 1200, 0, [s, table], shader('d_beat.glsl', packed=1, pre=WORDS_GLSL),
+    table = glsl(d, 'table', [data], shader('unpack.glsl', data=0), w=96, h=2, fmt='rgba32float', at=(1000, -300))
+    draw = glsl(d, 'draw', [s, table], shader('d_beat.glsl', packed=1, pre=WORDS_GLSL),
                 vecs=[('uTime', [T]),
                       ('uBeat', [Expr("op('{}/beat')[0]".format(AUD)), Expr("op('{}/count')[0]".format(AUD)),
                                  Expr("min(1, op('{}/rms')[0] * 6)".format(AUD)), 1]),
-                      ('uLook', [1, 0.3, 0, 0])])
+                      ('uLook', [1, 0.3, 0, 0])], at=(1200, 0))
     finish(d, draw)
     built.append(d)
 
 # ---- E "grid": GPU-only detection (no Blob Track TOP, nothing read back to the CPU) -----------
 if wanted('e_grid'):
     e = fresh('e_grid')
-    s = mk(e, selectTOP, 'src', 0, 0, top=SRC)
-    prev = mk(e, feedbackTOP, 'prev', 200, -300, [s], top='src')
+    s = mk(e, selectTOP, 'src', top=SRC, at=(0, 0))
+    prev = mk(e, feedbackTOP, 'prev', [s], top='src', at=(200, -300))
     gw, gh = 48, 27
     P_ = ('uP', [0.05, 1.0, 0.6, 0.55])
-    energy = glsl(e, 'energy', 400, -200, [s, prev], shader('e_grid.glsl', pre='#define PASS 1\n'), w=gw, h=gh,
-                  fmt='rgba16float', vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])])
-    fb = mk(e, feedbackTOP, 'smooth_fb', 400, -450, [energy], top='smooth')
-    smooth = glsl(e, 'smooth', 600, -200, [energy, fb], shader('e_grid.glsl', pre='#define PASS 2\n'), w=gw, h=gh,
-                  fmt='rgba16float', vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])])
-    peaks = glsl(e, 'peaks', 800, -200, [smooth], shader('e_grid.glsl', pre='#define PASS 3\n'), w=gw, h=gh,
-                 fmt='rgba32float', vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])])
-    draw = glsl(e, 'draw', 1000, 0, [s, peaks], shader('e_grid.glsl', pre='#define PASS 4\n'),
-                vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])])
+    energy = glsl(e, 'energy', [s, prev], shader('e_grid.glsl', pre='#define PASS 1\n'), w=gw, h=gh,
+                  fmt='rgba16float', vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])], at=(400, -200))
+    fb = mk(e, feedbackTOP, 'smooth_fb', [energy], top='smooth', at=(400, -450))
+    smooth = glsl(e, 'smooth', [energy, fb], shader('e_grid.glsl', pre='#define PASS 2\n'), w=gw, h=gh,
+                  fmt='rgba16float', vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])], at=(600, -200))
+    peaks = glsl(e, 'peaks', [smooth], shader('e_grid.glsl', pre='#define PASS 3\n'), w=gw, h=gh,
+                 fmt='rgba32float', vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])], at=(800, -200))
+    draw = glsl(e, 'draw', [s, peaks], shader('e_grid.glsl', pre='#define PASS 4\n'),
+                vecs=[('uTime', [T]), P_, ('uLook', [1, 0.35, 0, 0])], at=(1000, 0))
     finish(e, draw)
     built.append(e)
 

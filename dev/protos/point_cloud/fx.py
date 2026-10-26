@@ -42,8 +42,8 @@ if opts['clip'] != 'sample':
 elif beat is not None:
     fx.inputConnectors[1].connect(beat)
 if opts['depth'] == 'black':          # wired but carrying nothing, as a camera unplugged
-    black = host.op('black') or mk(host, constantTOP, 'black', -600, -450, comment='All black: no depth.',
-                                   colorr=0, colorg=0, colorb=0, alpha=1)
+    black = host.op('black') or mk(host, constantTOP, 'black', comment='All black: no depth.',
+                                   colorr=0, colorg=0, colorb=0, alpha=1, at=(-600, -450))
     fx.inputConnectors[2].connect(black)
 if opts['dfile']:
     host.op('clip_depth').par.file = os.path.expanduser(opts['dfile'])

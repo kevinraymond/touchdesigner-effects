@@ -31,7 +31,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 STYLES = (('oil', 'Oil'), ('watercolor', 'Watercolor'), ('ink', 'Ink'))
 WASH = 1.5           # Watercolor's strokes are this much broader than Brush: a wash covers more than a stroke
 MAX_RADIUS = 40      # pixels: the brush's largest radius, after depth and the music
@@ -142,39 +142,41 @@ custom(page, 'Float', 'Length', 'Length', 1.0, 'How long a drop paints in broad 
        True).enableExpr = 'me.par.Moments'
 
 # ---- Audio (input 2): how much bigger the brush is now --------------------------------------------
+section('audio', 'Audio (input 2): how much bigger the brush is now')
 audio = audio_in(comp, _ROOT)
-counts = mk(comp, selectCHOP, 'counts', -200, -350, [audio], 'The running counts: watched, not the one-frame beat.',
+counts = mk(comp, selectCHOP, 'counts', [audio], 'The running counts: watched, not the one-frame beat.',
             channames='beat_count drop_count')
-steps = mk(comp, slopeCHOP, 'steps', 0, -350, [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
-beat_now = mk(comp, selectCHOP, 'beat_now', 200, -300, [steps], 'A beat arriving.', channames='beat_count')
-sweep = mk(comp, triggerCHOP, 'sweep', 400, -250, [beat_now],
+steps = mk(comp, slopeCHOP, 'steps', [counts], 'Above 0 on the frame a count goes up.', timeslice=True)
+beat_now = mk(comp, selectCHOP, 'beat_now', [steps], 'A beat arriving.', channames='beat_count')
+sweep = mk(comp, triggerCHOP, 'sweep', [beat_now],
            "Each beat's sweep: 0 to 1 over {:g} s as its band crosses the picture, then 0.".format(SWEEP),
            attack=SWEEP, peak=1, peaklen=0, decay=0, sustain=0, release=0)
-beat_n = mk(comp, countCHOP, 'beat_n', 400, -350, [beat_now], 'Beats so far: which way each sweep runs.')
-drop_now = mk(comp, selectCHOP, 'drop_now', 200, -450, [steps], 'A drop arriving (Fosfora, experimental).',
+beat_n = mk(comp, countCHOP, 'beat_n', [beat_now], 'Beats so far: which way each sweep runs.')
+drop_now = mk(comp, selectCHOP, 'drop_now', [steps], 'A drop arriving (Fosfora, experimental).',
               channames='drop_count')
-drop_env = mk(comp, triggerCHOP, 'drop_env', 400, -450, [drop_now],
+drop_env = mk(comp, triggerCHOP, 'drop_env', [drop_now],
               "A drop's broad strokes: up in 0.3 s, held for Length, back over 0.8 s.",
               attack=0.3, peak=1, peaklen=par('Length'), decay=0.8, sustain=0, release=0)
-level_pick = mk(comp, selectCHOP, 'level_pick', 200, -150, [audio], 'How loud it is now.', channames='level')
-level = mk(comp, filterCHOP, 'level_smooth', 400, -150, [level_pick],
+level_pick = mk(comp, selectCHOP, 'level_pick', [audio], 'How loud it is now.', channames='level')
+level = mk(comp, filterCHOP, 'level_smooth', [level_pick],
            'Loudness eased over half a second, so the strokes swell and shrink instead of jittering.', width=0.5)
 WIRED = "op('audio')['source'].eval() > 0"
 SWELL = ("(2 ** ({loud} * parent().par.Loudness * (op('level_smooth')[0] - 0.5)) if {wired} else 1)"
          " * ((1 + {build} * op('audio')['build'] + {drop} * op('drop_env')[0])"
          " if parent().par.Moments else 1)").format(loud=LOUD, wired=WIRED, build=BUILD, drop=DROP)
-swell = mk(comp, constantCHOP, 'swell', 600, -150, comment='How much bigger the whole brush is now: loudness, a build '
+swell = mk(comp, constantCHOP, 'swell', comment='How much bigger the whole brush is now: loudness, a build '
            'or a drop.', const0name='swell', const0value=Expr(SWELL))
 
 # ---- Depth (input 3): finer near, broader far -----------------------------------------------------
-flat = mk(comp, constantTOP, 'depth_none', -800, -800, comment='Halfway: with nothing on input 3 the brush keeps its '
+section('depth', 'Depth (input 3): finer strokes near, broader far, and the beat sweep')
+flat = mk(comp, constantTOP, 'depth_none', comment='Halfway: with nothing on input 3 the brush keeps its '
           'size.', outputresolution='custom', resolutionw=1, resolutionh=1, colorr=0.5, colorg=0.5, colorb=0.5, alpha=1)
 depth = depth_in(comp, fallback=flat)
-near = glsl(comp, 'near', -400, -650, [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
+near = glsl(comp, 'near', [depth], lib_glsl(_ROOT, 'depth_near.glsl'),
             'Input 3 at a quarter size, as nearness; Depth Type flips distance (black: no reading).', fmt='rgba16float',
             uNear=(Expr('parent().par.Depthtype.menuIndex'), par('Maxdist')))
 setpars(near, outputresolution='quarter')
-scale = glsl(comp, 'brush_scale', -200, -650, [source, near], src('scale.glsl'),
+scale = glsl(comp, 'brush_scale', [source, near], src('scale.glsl'),
              "How big the brush is at each pixel: finer near, broader far (Depth Brush), and the beat's sweep.",
              fmt='mono16float', uD=(par('Depthbrush'),),
              uS=(Expr("op('sweep')[0]"), Expr("op('beat_n')[0] % 4096 * 2.3999632"),
@@ -182,12 +184,14 @@ scale = glsl(comp, 'brush_scale', -200, -650, [source, near], src('scale.glsl'),
 setpars(scale, outputresolution='quarter')
 
 # ---- The picture ----------------------------------------------------------------------------------
-st = structure_tensor(comp, _ROOT, source, -400, 300, sigma=SMOOTH_FLOW)
+section('edges', "Edges: which way the picture's edges run (structure tensor)")
+st = structure_tensor(comp, _ROOT, source, sigma=SMOOTH_FLOW)
 flow = st['flow']
 RADIUS = "parent().par.Brush * ({} if parent().par.Style == 'watercolor' else 1) * op('swell')[0]".format(WASH)
+section('painting', 'The painting: flat strokes along the edges (anisotropic Kuwahara)')
 passes = []
 for i in range(3):
-    k = glsl(comp, 'kuwahara{}'.format(i + 1), 400 + 200 * i, 150 - 150 * i,
+    k = glsl(comp, 'kuwahara{}'.format(i + 1),
              [passes[-1] if passes else source, flow, scale], src('kuwahara.glsl'),
              'The painting, pass {}: each pixel the evenest sectors of an ellipse along the flow (anisotropic '
              'Kuwahara).'.format(i + 1),
@@ -195,23 +199,24 @@ for i in range(3):
     setpars(k, inputextenduv='hold', inputfiltertype='mipmap')
     passes.append(k)
 setpars(passes[0], outputresolution=Expr("'half' if parent().par.Halfsize else 'useinput'"))
-last = mk(comp, switchTOP, 'kuwahara', 1000, 0, passes, 'The last pass asked for (Passes): only its passes cook.',
+last = mk(comp, switchTOP, 'kuwahara', passes, 'The last pass asked for (Passes): only its passes cook.',
           index=Expr('parent().par.Passes - 1'))
-up = glsl(comp, 'upsample', 1200, 150, [source, last], src('upsample.glsl'),
+up = glsl(comp, 'upsample', [source, last], src('upsample.glsl'),
           'Half Size: the painting back at full size, its strokes ending on the picture\'s edges.', uU=(UP_SIGMA, 1.0))
 setpars(up, inputfiltertype='mipmap')
-painted = mk(comp, switchTOP, 'painted', 1400, 0, [last, up], 'The painting at full size.',
+painted = mk(comp, switchTOP, 'painted', [last, up], 'The painting at full size.',
              index=Expr('1 if parent().par.Halfsize else 0'))
-dog = glsl(comp, 'dog', 1600, 150, [painted, flow], src('dog.glsl'),
+section('finish', 'Ink lines along the edges, and the finish: oil, watercolor or ink')
+dog = glsl(comp, 'dog', [painted, flow], src('dog.glsl'),
            "The painting's brightness, blurred twice across the edges (Line Width).", fmt='rg16float',
            uE=(par('Linewidth'), K))
-lic = glsl(comp, 'lic', 1800, 150, [dog, flow], src('lic.glsl'), 'Both blurs smoothed along the edges.',
+lic = glsl(comp, 'lic', [dog, flow], src('lic.glsl'), 'Both blurs smoothed along the edges.',
            fmt='rg16float', uM=(LINE_SMOOTH,))
 for o in (dog, lic):
     setpars(o, inputextenduv='hold')
-mean = mk(comp, analyzeTOP, 'mean', 1800, 300, [source], "The picture's average color: Ink's middle level.",
+mean = mk(comp, analyzeTOP, 'mean', [source], "The picture's average color: Ink's middle level.",
           op='average')
-paint = glsl(comp, 'paint', 2000, 0, [painted, lic, mean], lib_glsl(_ROOT, 'common.glsl') + src('paint.glsl'),
+paint = glsl(comp, 'paint', [painted, lic, mean], lib_glsl(_ROOT, 'common.glsl') + src('paint.glsl'),
              'The finished picture in the chosen style: lines, canvas, wash or ink.',
              uS=(Expr('parent().par.Style.menuIndex'), par('Lines'), LINE_EDGE, LINE_SOFT),
              uI=(INK_P, par('Inklevel'), INK_SOFT, par('Texture')))

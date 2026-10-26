@@ -10,7 +10,8 @@ repo's integrations/touchdesigner/), else TouchDesigner's sample MP3. When the c
 clip beside it (<clip>_depth.mp4), clip_depth shows it at the clip's frame (clip_info reads where the
 clip is), so the two stay in step whichever effect is showing, and goes to input 3 of the effects
 that take one. Then it puts a copy of
-every effects/<n>/<n>.tox in it, wired to them. Run it again after building
+every effects/<n>/<n>.tox in it, and of each bundle (bundles/showreel/showreel.tox), wired to them. Run it
+again after building
 an effect: only the effects whose .tox changed are reloaded (and any whose .tox is gone are
 removed), so the clip, the track and their settings stay as they are (change the clip in
 /tdlib_demo/clip's File parameter, then run it again to pick up that clip's depth). The track is
@@ -174,7 +175,9 @@ source_exec.par.op, source_exec.par.pars = '..', 'Source'
 source_exec.par.valuechange, source_exec.par.onpulse = True, False
 
 loaded = []
-paths = sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
+# Every effect, then each bundle (the Showreel), which holds a copy of every effect.
+paths = sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox'))) + \
+    sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
 names = [os.path.splitext(os.path.basename(p))[0] for p in paths]
 for fx in demo.findChildren(type=COMP, depth=1):
     if fx.name not in names and fx.name != 'fosfora_signal':
