@@ -15,7 +15,8 @@ lib/glsl/                     shaders several effects share: depth_near.glsl (in
                               (the input's motion: optical_flow() builds them); pace and speed (that motion as a
                               speed: flow_speed()); common.glsl (Catmull-Rom resampling, a hash);
                               red_guard.glsl (keeps reds short of WCAG's red flash line); tensor, tensor_blur,
-                              tensor_ease and tensor_flow (the direction of the picture's edges: structure_tensor())
+                              tensor_ease and tensor_flow (the direction of the picture's edges: structure_tensor());
+                              paper.glsl (gradient noise and a paper's grain, drawn rather than loaded: Paint, Pencil)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -89,10 +90,11 @@ parameter, the only way that works), and `uniforms()` sets its vector uniforms; 
 the one way an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's
 motion as Datamosh and Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or
 a cut, and Lucas-Kanade optical flow, each size following the input), and `flow_speed()` turns that
-flow into a speed, held between the input's frames, as Fluid and VHS + CRT's plasma use it;
+flow into a speed, held between the input's frames, as Fluid and VHS + CRT's plasma use it (Pencil passes a smaller
+`dead` zone, so a slow pan carries its strokes too);
 `structure_tensor(comp, _ROOT, source)` gives the direction of the picture's edges at every pixel
-and how clear it is (the smoothed structure tensor's minor eigenvector and anisotropy, as Paint and
-Reaction-Diffusion use it; Pencil is to share it), and with `ease=` seconds eases the tensor over time
+and how clear it is (the smoothed structure tensor's minor eigenvector and anisotropy, as Paint,
+Reaction-Diffusion and Pencil use it), and with `ease=` seconds eases the tensor over time
 first, so the direction turns smoothly instead of jittering with the picture's noise (Reaction-Diffusion);
 `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as the bitmap font (`glsl_font()` gives
 the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and `lib_glsl(_ROOT, 'depth_near.glsl')` a
@@ -305,6 +307,16 @@ second and the tone over a quarter), the pattern growing in on blank paper measu
 (it now starts as an even tone and crossfades into the grown pattern), and a ripple sliding the stripes on every beat
 added a flash a second at its full depth (it goes through the flash gate). Measure the pattern after it has grown in as
 well as from the start: flash.py's recording began while it was still growing.
+
+Two more from Pencil, whose drawing has a drawing's contrast. Its lines multiply small changes in the picture's
+edges many times over (a faint edge in drifting smoke comes out a dark line), so a video's noise, followed at once,
+flickered them: half a flash a second over the dancer clip's own with no beat at all, and a loud input pressing the
+lines harder tipped it over again after a tenth of a second of easing; the edges now ease over a fifth. And a pencil
+drawing has few true darks, so its tone map lifts a picture's darks to mid tones: the koi's near-black pond is drawn
+mid-gray, and ripples too dark to count in the clip (0.006 to 0.02 in linear light) move the drawing by about 0.1,
+WCAG's step. Capping the histogram (contrast-limited, at three times an even share a level) keeps a narrow band of
+tones from being stretched over every tone and took the koi's worst cell from 4 flashes a second to 3, but what remains
+is the clip's own change at a drawing's contrast (1.5 against the clip's 0.5), within WCAG's 3.
 
 One more from Pixel Sort. A sort ties every pixel of a span to every other: when a span gains or loses a pixel at an
 end, its whole streak sorts anew. So whatever moves the ends of spans from frame to frame flashes, with Flashing Off as
@@ -521,7 +533,10 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - A GLSL TOP's Input Smoothness (`inputfiltertype`) at Mipmap gives its inputs mipmaps, and `textureLod()` reads their
   levels: level 3 of a checkerboard of 1-pixel squares reads 0.502 (2025.33230, `dev/probes/glsl_mipmap.py`). Paint
   reads its brush from the level that averages the pixels between its samples, so a broad brush costs no more than a
-  fine one.
+  fine one. Only the wired inputs (0 to 2) get mipmaps: an input the TOPs parameter adds (`sTD2DInputs[3]` and on) reads
+  its base level at any `textureLod()` (`dev/probes/glsl_mipmap_tops.py`), so Pencil wires its stroke textures. And
+  the last level (1 x 1) of a 512 x 512 input's mipmap reads black, as does any level asked for past it; the 2 x 2
+  level read at its middle gives the texture's mean (`textureQueryLevels()` counts the 1 x 1 level).
 - Passes (`npasses`) with an Output Resolution of Half halves the picture again on every pass (two passes made 320 x
   180 of 1280 x 720), since each pass's input is the last pass's output. Paint's passes are separate TOPs behind a
   Switch.
