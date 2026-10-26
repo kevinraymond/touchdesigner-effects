@@ -16,8 +16,11 @@ it fails when:
     box open, reviews an older version, or lacks an item the checklist has gained since,
   - a bundle embeds an older build of a component than the one checked in, or, built to embed
     every effect (embeds_all in its manifest, like the showreel), leaves one out.
+With --release <tag> (run before tagging, and by the release workflow) it also fails when the
+README doesn't name that release yet.
 tests/test_guards.py breaks each of these on purpose and checks that it fails.
 
+    uv run tests/check_tox.py --release v0.4.0             # before git tag v0.4.0
     uv run tests/check_tox.py --review-template <name>    # print a blank review.md to start from
 """
 
@@ -158,6 +161,15 @@ def check(root=ROOT):
     return errors, len(found)
 
 
+def check_release(root, tag):
+    """The README's Status paragraph links the release it is about to be part of."""
+    readme = os.path.join(root, 'README.md')
+    if os.path.isfile(readme) and '/releases/tag/{})'.format(tag) in open(readme).read():
+        return []
+    return ['README.md does not name {}: point its Status paragraph at it before the tag '
+            '(docs/BUILDING.md, Releasing)'.format(tag)]
+
+
 def main():
     if sys.argv[1:2] == ['--review-template']:
         name = sys.argv[2]
@@ -166,6 +178,8 @@ def main():
         sys.stdout.write(review_template(ROOT, name, re.search(r"^VERSION = '([^']+)'", builder, re.M).group(1)))
         return 0
     errors, n = check(ROOT)
+    if sys.argv[1:2] == ['--release']:
+        errors += check_release(ROOT, sys.argv[2])
     for e in errors:
         print('FAIL', e)
     print('{} component(s) checked, {} problem(s)'.format(n, len(errors)))

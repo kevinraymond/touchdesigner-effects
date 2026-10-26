@@ -24,8 +24,8 @@ jobs:
         with:
           fetch-depth: 0   # the whole history and every tag, for the notes
 
-      - name: Every .tox in step with its sources
-        run: python3 tests/test_guards.py && python3 tests/check_tox.py
+      - name: Every .tox in step with its sources, and the README names this release
+        run: python3 tests/test_guards.py && python3 tests/check_tox.py --release "$GITHUB_REF_NAME"
 
       # check_tox.py already refuses two components with one name, so file names are unique.
       - name: Stage the .tox files and SHA256SUMS

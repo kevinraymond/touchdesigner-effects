@@ -48,6 +48,8 @@ def fixture(root):
     lib = check_tox.load_lib(root)
     os.makedirs(os.path.join(root, 'docs'))
     shutil.copy(IDIOMS, os.path.join(root, 'docs', 'TD_IDIOMS.md'))
+    write(root, 'README.md', '## Status\n\nEverything is in the latest release, '
+          '[v0.1.0](https://github.com/o/r/releases/tag/v0.1.0).\n')
     demo = add_effect(root, 'demo')
     pages(root, 'bundles', 'reel')
     build(root, 'bundles', 'reel', b'reel tox v1', embeds={'demo': demo['tox_sha256']})
@@ -143,7 +145,14 @@ def main():
         errors, n = check_tox.check(intact)
         assert errors == [] and n == 2, ('the intact fixture must pass', errors, n)
         print('ok    intact fixture passes ({} components)'.format(n))
+        assert check_tox.check_release(intact, 'v0.1.0') == [], 'the intact README names v0.1.0'
         failed = 0
+        errors = check_tox.check_release(intact, 'v0.2.0')
+        if any('does not name v0.2.0' in e for e in errors):
+            print('ok    a release the README does not name: {}'.format(errors[0]))
+        else:
+            failed += 1
+            print('MISS  a release the README does not name: got {}'.format(errors))
         for i, (what, breaker, expect) in enumerate(BREAKS):
             root = os.path.join(base, 'b{}'.format(i))
             shutil.copytree(intact, root)
