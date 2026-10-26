@@ -58,9 +58,9 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 Twelve effects are done (ASCII 0.2.1, Bent Cam, Fluid and Glitch 0.1.2, Datamosh and VHS + CRT 0.2.2,
 Blob Track and Point Cloud 0.1.4, Particles 0.3.3, Paint, Pixel Sort and Slit-Scan 0.1.1), and the Showreel
-holds them all. All but Paint are in the first release,
-[v0.1.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.1.0); Paint and every
-network laid out in titled boxes come in the next.
+holds them all. All of them are in the latest release,
+[v0.2.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.2.0), which adds Paint
+and lays out every network in titled boxes.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.
