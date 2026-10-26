@@ -468,12 +468,18 @@ gh pr merge --squash
 ```
 
 To release, bump `VERSION` in the builders that changed, rebuild them (and any bundle embedding
-them) and merge that, then tag `main` and push the tag:
+them) and merge that. The README's Status paragraph names the latest release and what it adds, so
+the last pull request before the tag points it at the new one ("README names the v0.4.0 release"),
+and the release ships with a README that already describes it. Then tag `main` and push the tag:
 
 ```sh
 git switch main && git pull
-git tag v0.2.0 && git push origin v0.2.0
+uv run tests/check_tox.py --release v0.4.0
+git tag v0.4.0 && git push origin v0.4.0
 ```
+
+`check_tox.py --release` fails while the README doesn't link the release it names, and the release
+workflow runs it too, so a tag the README doesn't name is not released.
 
 `.github/workflows/release.yml` reruns both tests and attaches every `.tox` as its own
 release asset with `SHA256SUMS` and build provenance, so
