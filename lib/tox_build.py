@@ -264,18 +264,19 @@ def structure_tensor(comp, root, source, sigma=2.0, ease=None):
     return ops
 
 
-def pyramid(comp, root, source, levels, fmt='rgba32float'):
-    """The picture's Gaussian pyramid, shared by the effects that work on its octaves of detail (Video Vocoder; Detail
-    to come): source, then levels more (g1, g2...), each half the size of the one before and smoothed before it was
+def pyramid(comp, root, source, levels, fmt='rgba32float', prefix='g', what='The picture'):
+    """The picture's Gaussian pyramid, shared by the effects that work on its octaves of detail (Video Vocoder,
+    Detail): source, then levels more (g1, g2...), each half the size of the one before and smoothed before it was
     halved (lib/glsl pyramid_down.glsl), after Burt and Adelson's Laplacian pyramid (1983). A Laplacian band k is
     level k minus level k + 1 read through pyramid.glsl's expand(), and summing the bands back up through the same
     expand() gives the picture back exactly, so an effect changes the bands and collapses them in its own shader.
-    Every size follows source through the resolution menu, in 32-bit float by default; edges hold. Returns the levels,
+    Every size follows source through the resolution menu, in 32-bit float by default; edges hold. An effect with
+    several pyramids names each one's levels by its own prefix, and says what it halves in what. Returns the levels,
     [source, g1, ...]."""
     out = [source]
     for k in range(1, levels + 1):
-        g = glsl(comp, 'g{}'.format(k), [out[-1]], lib_glsl(root, 'pyramid_down.glsl'),
-                 'The picture at 1/{} of its size, smoothed before it was halved (pyramid level {}).'.format(2 ** k, k),
+        g = glsl(comp, '{}{}'.format(prefix, k), [out[-1]], lib_glsl(root, 'pyramid_down.glsl'),
+                 '{} at 1/{} of its size, smoothed before it was halved (pyramid level {}).'.format(what, 2 ** k, k),
                  fmt=fmt)
         setpars(g, outputresolution='half', inputextenduv='hold')
         out.append(g)

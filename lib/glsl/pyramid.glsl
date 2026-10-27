@@ -1,5 +1,5 @@
 // touchdesigner-effects (MIT), shared by the effects that work on the picture's octaves of detail (lib/glsl,
-// pyramid(): Video Vocoder; Detail to come), pasted in front of the shaders that call expand().
+// pyramid(): Video Vocoder, Detail), pasted in front of the shaders that call expand().
 // expand(level, uv): a pyramid level read at the next larger level's pixel, smoothly, by the cubic B-spline, which
 // stands in for Burt and Adelson's EXPAND (1983). A Laplacian band is a level minus the next level expanded, and the
 // bands summed back up with the same expand() give the picture back exactly, whatever expand() is. The B-spline's 4 x 4

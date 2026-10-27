@@ -1,5 +1,5 @@
 // touchdesigner-effects (MIT), shared by the effects that work on the picture's octaves of detail (lib/glsl,
-// pyramid(): Video Vocoder; Detail to come): one level of the Gaussian pyramid, after P. J. Burt and E. H. Adelson,
+// pyramid(): Video Vocoder, Detail): one level of the Gaussian pyramid, after P. J. Burt and E. H. Adelson,
 // "The Laplacian Pyramid as a Compact Image Code" (IEEE Trans. Communications 31(4), 1983). This pass is half the size
 // of its input, and each of its pixels is the input smoothed around it by the binomial filter [1 5 10 10 5 1] / 32 in
 // each direction, Burt and Adelson's generating kernel in its even-length form, since a half-size pixel's center
