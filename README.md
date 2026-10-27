@@ -64,10 +64,9 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 
 Eighteen effects are done (ASCII 0.2.1, Bent Cam, Fluid and Glitch 0.1.2, Datamosh and VHS + CRT 0.2.2,
 Blob Track and Point Cloud 0.1.4, Particles 0.3.3, Paint, Pixel Sort and Slit-Scan 0.1.1, Chladni Sand, Detail, Motion
-Magnify, Pencil, Reaction-Diffusion and Video Vocoder 0.1.0), and the Showreel holds them all. All but Chladni Sand,
-Detail, Motion Magnify and Video Vocoder are in the latest release,
-[v0.3.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.3.0), which adds Reaction-Diffusion and
-Pencil.
+Magnify, Pencil, Reaction-Diffusion and Video Vocoder 0.1.0), and the Showreel holds them all. All of them are in the
+latest release, [v0.4.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.4.0), which adds Motion
+Magnify, Video Vocoder, Detail and Chladni Sand.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.
