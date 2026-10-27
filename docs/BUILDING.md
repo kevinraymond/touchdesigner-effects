@@ -16,7 +16,8 @@ lib/glsl/                     shaders several effects share: depth_near.glsl (in
                               speed: flow_speed()); common.glsl (Catmull-Rom resampling, a hash);
                               red_guard.glsl (keeps reds short of WCAG's red flash line); tensor, tensor_blur,
                               tensor_ease and tensor_flow (the direction of the picture's edges: structure_tensor());
-                              paper.glsl (gradient noise and a paper's grain, drawn rather than loaded: Paint, Pencil)
+                              paper.glsl (gradient noise and a paper's grain, drawn rather than loaded: Paint, Pencil);
+                              pyramid_down.glsl and pyramid.glsl (the picture's octaves of detail: pyramid())
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -96,6 +97,10 @@ flow into a speed, held between the input's frames, as Fluid and VHS + CRT's pla
 and how clear it is (the smoothed structure tensor's minor eigenvector and anisotropy, as Paint,
 Reaction-Diffusion and Pencil use it), and with `ease=` seconds eases the tensor over time
 first, so the direction turns smoothly instead of jittering with the picture's noise (Reaction-Diffusion);
+`pyramid(comp, _ROOT, source, levels)` gives the picture's Gaussian pyramid, `[source, g1, g2, ...]`, each level half
+the size of the one before (Video Vocoder): a shader that pastes `lib_glsl(_ROOT, 'pyramid.glsl')` in front reads a
+Laplacian band as a level minus `expand()` of the next, and summing the bands back up through the same `expand()` gives
+the picture back exactly (within a fraction of an 8-bit step at 32-bit float);
 `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as the bitmap font (`glsl_font()` gives
 the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and `lib_glsl(_ROOT, 'depth_near.glsl')` a
 shared shader.
@@ -329,6 +334,16 @@ things go, not how often, but a red near WCAG's saturated-red line that sways fu
 flowers measured 2 red flashes a second with no beat, the clip alone 1. Its warp runs the red guard on every pixel, as
 Slit-Scan's does, and shows none.
 
+Two more from Video Vocoder, whose picture follows the music's levels rather than its beats. A level that jumps up on
+each hit and falls between them pumps the picture at the hits' rate, and pumping detail counts as flashing, even detail
+finer than the test's cells: its octaves pumped on every eighth note at 140 BPM flashed red flowers 4 times a second,
+the fine octaves alone 2.5. The stress beat hid it, since easing a level's fall smooths 8 hits a second more than 4,
+so `beat=music` now pulses the bands as drums would. A level may jump up at once only through `flash_gate()`, all the
+bands together, and between jumps it follows the level smoothed over a second. Rising slowly but falling fast instead,
+it rippled at every hit, and the ripple flipped reds near WCAG's line 3 times a second. And a red guard added before
+that gate turned every red flower orange. With the gate in, the effect kept its Flashing promises without the guard, so the guard went: it is for what
+a gate can't reach.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -345,6 +360,7 @@ which turns whatever is wired there into the same channels on the CHOP `audio`:
 | `drop_count` | drop-like moments so far: Fosfora's `drop_count` (experimental there), else 0 |
 | `section_count` | section changes so far: Fosfora's `boundary_count`, else 0 |
 | `source` | 0 nothing, 1 raw audio, 2 analysis channels, 3 Fosfora's signal |
+| `sub_bass`, `bass`, `low_mid`, `mid`, `upper_mid`, `presence`, `brilliance` | 0 to 1, how much is in each band of the sound now, lowest to highest: Fosfora's seven-way split (20, 60, 250, 500, 2000, 4000, 6000 Hz and up) |
 
 Input 2 may carry:
 
@@ -352,18 +368,25 @@ Input 2 may carry:
   channel comes from it, so an effect can follow bars, builds, drops and sections as well as beats.
   `level` comes from its `bass`, not its `energy`: over a song `energy` sits between 0.7 and 0.9 and
   moves about 0.01 in two seconds, so nothing that follows it moves, while `bass` swells with each
-  beat and between passages (median 0.67, like raw audio's level);
+  beat and between passages (median 0.67, like raw audio's level). The bands come from its feature
+  bus (`fosfora --signal --feat-bus`: `feat_sub_bass` to `feat_brilliance`), else from its `bass`,
+  `melody` and `drums` (bass for the lowest two, melody for the middle, drums for the top);
 - raw audio (Audio File In, Audio Device In): the low band's loudness (30 to 150 Hz, from an FFT
   of the last 40 ms) gives `level`, and a jump above its recent average is a kick. Once the kicks
   keep to a tempo, a beat clock locks to their grid: beats come on it, so a missed kick is filled in
   and a kick between beats is left out, and a bar is every 4 of its beats (which beat is the one is a
   guess). It stops 8 beats after the last kick on its grid (a breakdown goes quiet), and while it is
   unlocked every kick is a beat. On the library's songs it finds every beat of the drop the previews
-  use, where the kicks alone found three in four (`dev/beat_bench.py`);
+  use, where the kicks alone found three in four (`dev/beat_bench.py`). Each band is the loudness
+  of its FFT bins over its own running peak (falling by half in 4 s), so every band uses the whole
+  range whatever the mix's balance: the lowest three from the last 4096 samples (about 90 ms), the
+  rest from the last 1024, which follow a hi-hat closely. They add about 0.1 ms of CPU a cook;
 - other analysis channels, by name: beats from `beat_count`, or the rising edge of `beat`, `kick`
   or `onset` (TouchDesigner's audioAnalysis and Essentia rhythm CHOPs); level from `energy`,
-  `level`, `low`, `bass` or `rms`;
-- nothing: no beats, level 0, and the effect still works.
+  `level`, `low`, `bass` or `rms`; the bands by their own names, else from `low`, `mid` and `high`
+  (audioAnalysis: low for the lowest two, mid for the middle three, high for the top), else all
+  from the level;
+- nothing: no beats, level 0, the bands 0, and the effect still works.
 
 It is one Script CHOP that cooks only when something uses it, so the audio front end does
 nothing while the effect's output is unused (TD_IDIOMS C5). An earlier version measured raw
@@ -373,8 +396,10 @@ An effect works with any of them and is at its best on Fosfora's signal: `build`
 `section_count` stay at 0 without it, so use them for extra moments, never for the effect's
 basic behavior. `lib/audio_callbacks.py` holds the logic. `dev/selftest.py` feeds it each kind
 of input for 3 s: nothing gives 0 beats; `beat_count` and `kick` at 2 a second give 6 (and 1 or 2
-bars); a Fosfora-shaped input passes its bars, build and beat phase through, and its level follows
-`bass` rather than `energy`; TouchDesigner's sample MP3 gives 6 (about 120 BPM). The beat clock is
+bars); a Fosfora-shaped input passes its bars, build and beat phase through, its level follows
+`bass` rather than `energy`, and its bands come from the feature bus where it sends them and from
+the stand-ins where it doesn't; TouchDesigner's sample MP3 gives 6 (about 120 BPM) and bands between
+0 and 1. The beat clock is
 checked outside TouchDesigner (`uv run --with numpy dev/beat_bench.py --selftest`). Beats that make
 the picture flash still go through `flash_gate()`.
 
@@ -442,7 +467,7 @@ The other dev tools, each run through `dev/td.sh` (their headers say more):
 | `dev/tile.py` | tile `dev/record.py`'s takes into one labeled grid, rows centered, in the library's font: the README's hero and the Showreel's preview (`TD_ARGS='input depth ascii ... seconds=8' dev/td.sh dev/record.py`, then `uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth\|ascii,...' --titles 'input=INPUT,...' --out dev/out/record/hero --still 6.5`) |
 | `dev/social.py` | the repository's social preview (GitHub, Settings, Social preview) from the same takes: the name, a line, input + depth map (optional) = every effect in two centered rows, each frame at one moment and named at a size that reads (`uv run --with pillow dev/social.py dev/out/record docs/social-preview.png --at 6.5`): `docs/social-preview.png`, uploaded by hand |
 | `dev/idle.py` | checks an effect does nothing while its output is unused, input 2 unwired and wired (TD_IDIOMS C5) |
-| `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect |
+| `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect; the stress beat swings all seven bands fully 8 times a second too, and `beat=song` plays a track as raw audio instead (`song=<name>` for another than `m1x_ease_from_drop`) |
 | `dev/assets.py` | normalize test footage in `private/assets/` (see `PROMPTS.md` there) |
 | `dev/realsense_record.py` | record a RealSense camera on the Linux box as test footage: color, its depth (brighter nearer) and the same depth as the RealSense TOP gives it (distance 0-1, black for no reading) |
 

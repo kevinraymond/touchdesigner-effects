@@ -344,7 +344,9 @@ def _check_flash_gate(host):
 def _check_audio_in(host):
     """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; beat_count and
     energy; kick pulses as audioAnalysis gives them and low; Fosfora's signal (beat and bar counts, build,
-    beat_phase, bar_phase, and bass beside energy: level follows bass); raw audio (the sample MP3)."""
+    beat_phase, bar_phase, and bass beside energy: level follows bass; two bands from its feature bus, drums for
+    presence, bass for the rest); raw audio (the sample MP3). The seven bands: 0 with nothing, the level with
+    neither bands nor their stand-ins, and between 0 and 1 from raw audio, some of them high."""
     cases = {}
 
     def effect(kind):
@@ -373,10 +375,11 @@ def _check_audio_in(host):
         made += [lfo, count, mk(host, renameCHOP, 'selftest_named_' + name, [count], comment='x',
                                 renamefrom='*', renameto=name, at=(-500, y))]
     const = mk(host, constantCHOP, 'selftest_fosfora_levels', comment='x', at=(-500, -1900))
-    const.seq.const.numBlocks = 5
+    const.seq.const.numBlocks = 8
     made.append(setpars(const, const0name='energy', const0value=0.6, const1name='build', const1value=0.7,
                         const2name='beat_phase', const2value=0.25, const3name='bar_phase', const3value=0.5,
-                        const4name='bass', const4value=0.45) or const)
+                        const4name='bass', const4value=0.45, const5name='feat_mid', const5value=0.3,
+                        const6name='feat_brilliance', const6value=0.9, const7name='drums', const7value=0.2) or const)
     made.append(mk(host, mergeCHOP, 'selftest_in_fosfora', [made[2], made[5], made[6]], comment='x', at=(-300, -1800)))
     comp.inputConnectors[1].connect(made[-1])
     cases['fosfora'] = (comp, script, made)
@@ -402,20 +405,28 @@ def _check_audio_in(host):
         want = {'none': (0, (0, 0), (0, 0), 0, 0, 0), 'counted': (2, (5, 7), (1, 2), 0.6, 0, None),
                 'pulses': (2, (5, 7), (1, 2), 0.4, 0, None), 'fosfora': (3, (5, 7), (1, 2), 0.45, 0.7, 0.25),
                 'raw': (1, (2, 30), (0, 8), None, 0, None)}
+        # the seven bands, lowest first (None: raw audio's, each in 0..1 and the highest above 0.3)
+        want_bands = {'none': (0,) * 7, 'counted': (0.6,) * 7, 'pulses': (0.4,) * 7,
+                      'fosfora': (0.45, 0.45, 0.45, 0.3, 0.45, 0.2, 0.9), 'raw': None}
         for k, (comp, script, extra) in cases.items():
             src, n_beats, n_bars, level, build, phase = (script[c].eval() for c in (
                 'source', 'beat_count', 'bar_count', 'level', 'build', 'beat_phase'))
+            bands = [script[c].eval() for c in ('sub_bass', 'bass', 'low_mid', 'mid', 'upper_mid', 'presence',
+                                                'brilliance')]
+            w_bands = want_bands[k]
+            good_bands = (all(0 <= b <= 1 for b in bands) and max(bands) > 0.3 if w_bands is None else
+                          all(abs(b - w) < 0.05 for b, w in zip(bands, w_bands)))
             n_beats -= start[k][0]
             n_bars -= start[k][1]
             w_src, beats, bars, w_level, w_build, w_phase = want[k]
             good_level = (level > 0.05) if w_level is None else abs(level - w_level) < 0.05
             good_phase = (0 <= phase < 1) if w_phase is None else abs(phase - w_phase) < 0.01
             ok = (src == w_src and beats[0] <= n_beats <= beats[1] and bars[0] <= n_bars <= bars[1]
-                  and good_level and abs(build - w_build) < 0.01 and good_phase)
+                  and good_level and abs(build - w_build) < 0.01 and good_phase and good_bands)
             lines.append('{} audio {}: source {:.0f}, {:.0f} beats and {:.0f} bars in 3 s (want {}-{}, {}-{}), '
-                         'level {:.2f}, build {:.2f}, beat_phase {:.2f}'.format(
+                         'level {:.2f}, build {:.2f}, beat_phase {:.2f}, bands {}'.format(
                              'ok   ' if ok else 'MISS ', k, src, n_beats, n_bars, beats[0], beats[1], bars[0],
-                             bars[1], level, build, phase))
+                             bars[1], level, build, phase, ' '.join('{:.2f}'.format(b) for b in bands)))
             for o in extra:
                 o.destroy()
             comp.destroy()

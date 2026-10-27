@@ -11,18 +11,27 @@
 #   drop_count     drop-like moments so far: Fosfora only (experimental there), else 0
 #   section_count  section changes so far: Fosfora only, else 0
 #   source         0 nothing, 1 raw audio, 2 analysis channels, 3 Fosfora's signal
+#   sub_bass, bass, low_mid, mid, upper_mid, presence, brilliance
+#                  0..1, how much is in each band of the sound right now, lowest to highest: Fosfora's
+#                  seven-way split (BANDS), each over its own recent peak, so each band uses the whole range
 #
 # Input 2 may carry:
 #   Fosfora's signal (fosfora_signal.tox, github.com/kevinraymond/fosfora): every channel above
-#     comes from it, by name, and level from its bass (its energy barely moves with the music);
+#     comes from it, by name, and level from its bass (its energy barely moves with the music); the
+#     bands from its feature bus (fosfora --signal --feat-bus: feat_sub_bass ... feat_brilliance), else
+#     from its bass, melody and drums (bass for the lowest two, melody for the middle, drums for the top);
 #   raw audio (an Audio File In or Audio Device In CHOP, at an audio rate): the loudness of the
 #     low band (LOW_HZ, the kick and bass) over the last WINDOW seconds, from an FFT, drives level,
 #     and a kick is a jump in it above its recent average. Once the kicks keep to a tempo, a beat
 #     clock locks to their grid: beats come on the grid (a missed kick is filled in, a kick between
-#     beats is left out) and a bar is every 4 of them; while unlocked, every kick is a beat;
+#     beats is left out) and a bar is every 4 of them; while unlocked, every kick is a beat; the bands
+#     from FFTs of the last BAND_WINDOWS samples (the long one for the lowest three bands, the short one,
+#     which follows a hi-hat closely, for the rest);
 #   other analysis channels, found by name, first match wins: beats from beat_count or the
 #     rising edge of beat, kick or onset (TouchDesigner's audioAnalysis and Essentia rhythm
-#     CHOPs); level from energy, level, low, bass or rms;
+#     CHOPs); level from energy, level, low, bass or rms; the bands by their own names, else from low,
+#     mid and high (audioAnalysis: low for the lowest two, mid for the middle three, high for the top),
+#     else all from the level;
 #   nothing: level 0 and no beats, and the effect still works.
 # Timing is judged in seconds, so dropped frames don't change it. State lives in _state, by
 # operator id: not in storage, so nothing of a run is saved into the .tox.
@@ -44,6 +53,14 @@ JUMP = 1.5             # a kick: the low band at least this many times its recen
 PEAK_FALL = 4.0        # seconds for the raw level's running peak to fall by half
 LOW_HZ = (30.0, 150.0) # the band raw audio's beats and level come from
 WINDOW = 0.04          # seconds of raw audio each measure of the low band looks at
+# The bands, Fosfora's seven-way split (its AUDIO-FEATURES.md): each one's lowest frequency, the last band up to
+# BAND_EDGES[-1]. Raw audio measures the lowest three over the long window (BAND_WINDOWS[0] samples, about 90 ms)
+# and the rest over the short one.
+BANDS = ('sub_bass', 'bass', 'low_mid', 'mid', 'upper_mid', 'presence', 'brilliance')
+BAND_EDGES = (20.0, 60.0, 250.0, 500.0, 2000.0, 4000.0, 6000.0, 16000.0)
+BAND_WINDOWS = (4096, 1024)
+FOSFORA_BANDS = ('bass', 'bass', 'bass melody', 'melody', 'melody', 'drums', 'drums')
+ANALYSIS_BANDS = ('low', 'low', 'mid', 'mid', 'mid', 'high', 'high')
 RAW_SAMPLES = 32       # samples a cook at or above which input 2 is raw audio
 PHASE_BEATS = 4        # beat_phase keeps cycling this many beats past the last one, then rests at 0
 # Raw audio's beat clock: once the kicks found keep to a tempo, beats come from a clock on their grid,
@@ -72,6 +89,23 @@ def _low_band(rate, samples, s):
     freqs = np.fft.rfftfreq(n, 1.0 / rate)
     band = spectrum[(freqs >= LOW_HZ[0]) & (freqs <= LOW_HZ[1])]
     return float(np.sqrt(np.mean(band ** 2))) if band.size else 0.0
+
+
+def _bands(rate, samples, s):
+    """Raw audio's bands: the RMS magnitude of each band's FFT bins, the lowest three over the last
+    BAND_WINDOWS[0] samples and the rest over the last BAND_WINDOWS[1], kept across cooks."""
+    import numpy as np
+    mono = samples.mean(axis=0) if samples.ndim == 2 and samples.shape[1] else np.zeros(0)
+    buf = np.concatenate([s.get('bbuf', np.zeros(BAND_WINDOWS[0])), mono])[-BAND_WINDOWS[0]:]
+    s['bbuf'] = buf
+    out = []
+    for n, bands in ((BAND_WINDOWS[0], range(0, 3)), (BAND_WINDOWS[1], range(3, 7))):
+        spectrum = np.abs(np.fft.rfft(buf[-n:] * np.hanning(n))) / n
+        freqs = np.fft.rfftfreq(n, 1.0 / rate)
+        for b in bands:
+            bins = spectrum[(freqs >= BAND_EDGES[b]) & (freqs < BAND_EDGES[b + 1])]
+            out.append(float(np.sqrt(np.mean(bins ** 2))) if bins.size else 0.0)
+    return out
 
 
 def _period(kicks, prev):
@@ -188,7 +222,8 @@ def onCook(scriptOp):
         s = _state[scriptOp.id] = dict(
             counts={out: 0 for out, _, _ in COUNTS}, prev={out: None for out, _, _ in COUNTS},
             pulse={out: 0.0 for out, _, _ in COUNTS}, last=None, avg=0.0, peak=1e-4, level=0.0,
-            last_beat=-1e9, interval=0.5, kicks=[], clock=None, grid=None, last_kick=-1e9)
+            last_beat=-1e9, interval=0.5, kicks=[], clock=None, grid=None, last_kick=-1e9,
+            bands=[0.0] * len(BANDS), band_peaks=[1e-4] * len(BANDS))
     dt = 0.0 if s['last'] is None else min(max(now - s['last'], 0.0), 0.5)
     s['last'] = now
     steps = {out: 0 for out, _, _ in COUNTS}
@@ -211,6 +246,10 @@ def onCook(scriptOp):
             has_bars = True
             s['avg'] += (x - s['avg']) * min(dt / 0.4, 1.0)
             target = x / s['peak']
+            band_targets = []
+            for b, e in enumerate(_bands(inp.rate, samples, s)):
+                s['band_peaks'][b] = max(e, s['band_peaks'][b] * 0.5 ** (dt / PEAK_FALL), 1e-4)
+                band_targets.append(e / s['band_peaks'][b])
         else:
             names = [c.name for c in inp.chans()]
             source = 3 if FOSFORA in names else 2
@@ -230,9 +269,19 @@ def onCook(scriptOp):
             phase = _value(inp, _first(names, ('beat_phase',)), None)
             build = _value(inp, _first(names, ('build',)))
             target = _value(inp, _first(names, FOSFORA_LEVEL if source == 3 else LEVEL))
+            band_targets = []
+            for b, band in enumerate(BANDS):
+                own = _first(names, ('feat_' + band, band))
+                proxy = (FOSFORA_BANDS if source == 3 else ANALYSIS_BANDS)[b].split()
+                found = [n for n in proxy if n in names]
+                band_targets.append(_value(inp, own) if own else
+                                    sum(_value(inp, n) for n in found) / len(found) if found else target)
         s['level'] += (target - s['level']) * min(dt / 0.08, 1.0)
+        for b, t in enumerate(band_targets):
+            s['bands'][b] += (t - s['bands'][b]) * min(dt / 0.08, 1.0)
     else:
         s['level'] = 0.0
+        s['bands'] = [0.0] * len(BANDS)
 
     beat = steps['beat_count']
     if beat:
@@ -257,7 +306,7 @@ def onCook(scriptOp):
     values = [('beat', beat), ('beat_count', s['counts']['beat_count']), ('bar_count', s['counts']['bar_count']),
               ('beat_phase', phase), ('level', s['level']), ('build', build),
               ('drop_count', s['counts']['drop_count']), ('section_count', s['counts']['section_count']),
-              ('source', source)]
+              ('source', source)] + list(zip(BANDS, s['bands']))
     for name, value in values:
         scriptOp.appendChan(name)[0] = value
     return
