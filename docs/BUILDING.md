@@ -98,9 +98,10 @@ and how clear it is (the smoothed structure tensor's minor eigenvector and aniso
 Reaction-Diffusion and Pencil use it), and with `ease=` seconds eases the tensor over time
 first, so the direction turns smoothly instead of jittering with the picture's noise (Reaction-Diffusion);
 `pyramid(comp, _ROOT, source, levels)` gives the picture's Gaussian pyramid, `[source, g1, g2, ...]`, each level half
-the size of the one before (Video Vocoder): a shader that pastes `lib_glsl(_ROOT, 'pyramid.glsl')` in front reads a
+the size of the one before (Video Vocoder, Detail): a shader that pastes `lib_glsl(_ROOT, 'pyramid.glsl')` in front reads a
 Laplacian band as a level minus `expand()` of the next, and summing the bands back up through the same `expand()` gives
-the picture back exactly (within a fraction of an 8-bit step at 32-bit float);
+the picture back exactly (within a fraction of an 8-bit step at 32-bit float). An effect with several pyramids names each
+one's levels with `prefix=` (Detail's `l1`..., `a1`..., `b1`...) and says what it halves with `what=`;
 `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as the bitmap font (`glsl_font()` gives
 the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and `lib_glsl(_ROOT, 'depth_near.glsl')` a
 shared shader.
