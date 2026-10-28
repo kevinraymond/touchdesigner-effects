@@ -354,6 +354,15 @@ pixel it covered between saturated red and not at once, though nothing visible c
 bursts of 2.5 to 3 red flashes a second with Flashing Off). Each palette color keeps to one side of the line with
 hysteresis, at most 0.77 or at least 0.83. The red guard would do it too, but it turned the red flowers orange.
 
+Two more from Lens Flare, whose ghosts sit far from their lights at multiples of where the lights are. Whatever moves a
+light moves its ghosts further, and they are big and bright where the light was a few pixels. Lights found by gathering
+tiles around the brightest one jumped whenever another tile became the brightest and a tile changed lights, and the
+headlights flashed 1.5 times a second more than the clip with Flashing Off: a tile's share in a light now fades with
+distance instead of stopping at an edge, and the flare is eased over a tenth of a second. And walkers carrying lanterns
+bob them twice a second, which swept each lantern's ghosts back and forth over the dark field (a flash a second with
+Flashing Off, where the clip has none): the lights are eased over a fifth of a second, so their ghosts trail a little
+behind a light that moves fast.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -600,6 +609,15 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   As a compute shader, one workgroup a superpixel whose 64 invocations share the window and add their sums up in shared
   memory, it took 0.8 ms (2025.33230). A compute GLSL TOP writes several outputs with Number of Color Buffers
   (`mTDComputeOutputs[1]`...).
+- A GLSL MAT's vertex shader can place every instance itself: a Geometry COMP with Instance Count Mode Manual
+  (`instancecountmode`, `numinstances`) and no instance TOPs, the shader reading a data texture by
+  `texelFetch(sTable, ivec2(TDInstanceID(), row), 0)` and writing `gl_Position` in clip space, added up by the
+  material's blending (2025.33230, `dev/probes/flare_instancing.py`). A new GLSL MAT docks `_vertex`, `_pixel` and
+  `_info`; its samplers are the `sampler` sequence (`sampler0name`, `sampler0top`). Lens Flare draws each ghost of each
+  light so, from a Table DAT turned into a texture (DAT to CHOP with one channel a column, CHOP to TOP at 32-bit float).
+- A DAT to CHOP's row and column filters (`rowexpr`, `colexpr`) default to expressions of `me.inputCell`, which exists
+  only while it cooks, so evaluating them anywhere else fails and `assert_loads_clean` refuses the effect (it passed on
+  some builds and not others). Set them constant when the whole table goes through.
 - `TOP.save()` of a 1280 x 720 PNG stalls TouchDesigner for a frame or more, so `dev/capture.py` shots scheduled under
   about 0.15 s apart land on the same frame (Paint's beat measurements saw identical frames until they were spread
   out).

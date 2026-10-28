@@ -29,7 +29,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.19'
+VERSION = '0.1.20'
 # Shown while nothing is wired: the dancer, the library's own footage (CC BY 4.0, 5 s, 1.3 MB), and
 # her depth map (Depth Anything 3 Mono-Large, held steady across frames, 0.5 MB) for the effects that
 # take input 3, carried in the component's Virtual File System and read by a path relative to it, so
