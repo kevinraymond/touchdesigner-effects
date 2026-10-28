@@ -7,10 +7,11 @@ to the camera, so the heights are each row's nearness above its own far baseline
 and whatever stands in front of them stands up. The heights and the colors ease toward the picture's together with a
 leak, a low sun lights the hills, and the music lifts them (the bass), dips the camera (each beat, through the flash
 gate) and sets the pace (the tempo). Seen in perspective the near ground is the picture enlarged, so the land eases
-over a quarter of a second, cliff faces take their tops' colors and the camera flies slowly: each of those was a flash
-a second more than the clip (board #4746). Brightness standing in for depth is softened first, or its fine detail
+over a quarter of a second, cliff faces take their tops' colors and the camera flies slowly, slower still zoomed in:
+each of those was a flash a second more than the clip (board #4746). Brightness standing in for depth is softened first, or its fine detail
 bristled into spikes that shimmered in flight, and every pixel goes through the red guard, since the land sweeps reds
-back and forth.
+back and forth. Position, Altitude, Yaw, Pitch, Roll and Zoom move and turn each flight's camera, eased; Pitch and Roll
+move and slant the horizon, as Comanche's did, since a view drawn in columns keeps upright things upright.
 
 dev/protos/voxel_space/offline.py tried it first on the clips with a song.
 
@@ -19,7 +20,8 @@ The network, left to right:
            y-buffer a running minimum) -> out
   terrain  near -> rows (each row's baseline and reach) -> span (the tallest row's, eased) -> relief (the heights,
            0-1) -> smooth -> ease (ease_fb) -> terrain (height, light)
-  flight   flight_size -> flight (the camera, flight_fb; mean is the picture's mean color, for the sky)
+  flight   flight_size -> flight (the camera, the camera's settings eased, flight_fb; mean is the picture's mean
+           color, for the sky)
   audio    audio_in() -> lows -> lows_mean -> lows_now -> lows_usual (the low end over a second, its usual level);
            counts -> steps -> flash_gate() -> dip_env (a beat's dip); steps -> tempo -> pace_ask -> pace; drive (the
            lift and the dip)
@@ -49,12 +51,13 @@ Z_A, Z_B = 1.0 + Z_C, math.log(1.0 + STEP_GROW)
 FAR = Z_A * math.exp(Z_B * 511) - Z_C
 ROWS = 256            # rows.glsl's bands of rows
 EASE = 0.25           # s the heights and the colors take to follow the picture (most of the way)
+CAMERA = 0.3          # s Position, Altitude, Yaw, Pitch, Roll and Zoom take to follow their settings (most of the way)
 SETTLE = 0.1          # s the view eases over, a quarter of that at a dip's deepest (it smeared each dip into a blur)
 SOFT = 6              # the brightness standing in for depth, blurred at a quarter size (about 24 pixels at 1280)
 SLOW, USUAL = 1.0, 4.0     # the bass smoothed over SLOW s, its usual level over USUAL s
 DIP = (0.25, 0.5)     # a beat's dip: down in DIP[0] s, back up over DIP[1] s
 TEMPO = 6.0           # s of beats the tempo is counted over
-PERF = '2.2'          # GPU ms a frame at 1280 x 720 on the M2 Pro (dev/perf.py, median of three runs)
+PERF = '1.7'          # GPU ms a frame at 1280 x 720 on the M2 Pro (dev/perf.py, median of three runs)
 
 
 def src(name):
@@ -71,6 +74,17 @@ def menu(page, name, label, items, default, help_text):
     p.menuLabels = [i[1] for i in items]
     p.default = p.val = default
     return p
+
+
+def pair(page, name, label, help_text, lo, hi):
+    """An XY parameter, both halves 0 by default, between lo and hi; returns its first half."""
+    pars = page.appendXY(name, label=label)
+    for p in pars:
+        p.default = p.val = 0.0
+        p.normMin, p.min, p.clampMin = lo, lo, True
+        p.normMax, p.max, p.clampMax = hi, hi, True
+        p.help = help_text
+    return pars[0]
 
 
 README = src('readme.txt').format(v=VERSION, perf=PERF)
@@ -101,6 +115,25 @@ custom(page, 'Float', 'Light', 'Light', 0.7,
        True)
 custom(page, 'Float', 'Fog', 'Fog', 0.5,
        'How soon the distance fades into the sky, 0-1. 0 fades only the farthest ground.', 0, 1, True)
+pair(page, 'Position', 'Position',
+     'Where the camera is, moved across the land from where the flight puts it: x across the picture and y up it, in '
+     'its widths and heights, -1 to 1. With Speed at 0 it places a still camera.', -1, 1).startSection = True
+custom(page, 'Float', 'Altitude', 'Altitude', 1.0,
+       'How high the camera is above the ground, 0-3: 1 where the flight puts it, 2 twice as high, 0 just above the '
+       'ground (in Fly, the hills ahead).', 0, 3, True)
+custom(page, 'Float', 'Yaw', 'Yaw', 0.0,
+       'Which way the camera looks, turned from where the flight points it, in degrees: positive to the right, 180 '
+       'behind.', -180, 180, True)
+custom(page, 'Float', 'Pitch', 'Pitch', 0.0,
+       "How far the camera looks up (positive) or down from the flight's own view, in degrees. As in Comanche it "
+       'moves the horizon rather than tilting the view, so upright things stay upright.', -45, 45, True)
+custom(page, 'Float', 'Roll', 'Roll', 0.0,
+       "How far the view banks, in degrees, on top of Fly's banking into its turns: positive banks to the right. As "
+       'in Comanche it slants the horizon and keeps upright things upright.', -30, 30, True)
+custom(page, 'Float', 'Zoom', 'Zoom', 1.0,
+       "How near the lens brings the land, 0.5-4: 1 is Comanche's view, about 92 degrees wide, 2 shows half as much "
+       'and 0.5 twice as much. Above 1 the flight slows to match, so the land crosses the view at the same pace.',
+       0.5, 4, True)
 p = custom(page, 'Float', 'Basslift', 'Bass Lift', 0.5,
            "How much the bass on input 2 lifts the hills, 0-1, smoothed over a second and more while it's above its "
            'usual level.', 0, 1, True)
@@ -193,16 +226,18 @@ terrain = glsl(comp, 'terrain', [ease], src('terrain.glsl'),
 section('flight', 'The flight: where the camera is, where it looks and the sky behind the hills', lane='flight')
 mean = mk(comp, analyzeTOP, 'mean', [source], "The picture's mean color, for the sky.", op='average',
           analyzechannel='independent', format='rgba32float')
-flight_size = mk(comp, constantTOP, 'flight_size', comment='Three pixels: the size of flight.',
-                 outputresolution='custom', resolutionw=3, resolutionh=1, format='rgba32float', colorr=0, colorg=0,
+flight_size = mk(comp, constantTOP, 'flight_size', comment='Five pixels: the size of flight.',
+                 outputresolution='custom', resolutionw=5, resolutionh=1, format='rgba32float', colorr=0, colorg=0,
                  colorb=0, alpha=0)
 flight_fb = mk(comp, feedbackTOP, 'flight_fb', [flight_size], "flight's last frame.", top='flight')
 flight = glsl(comp, 'flight', [flight_size, flight_fb, source, terrain, mean], src('flight.glsl'),
-              'The camera: where it is, its heading, height, horizon and roll, and the sky\'s color.',
-              fmt='rgba32float',
+              "The camera: where it is, its heading, height, horizon and roll, the sky's color, and Position to "
+              'Zoom eased over {:g} s.'.format(CAMERA), fmt='rgba32float',
               uF=(Expr('parent().par.Flight.menuIndex'), Expr("parent().par.Speed * op('pace')[0]"),
                   DT, clock_seconds()),
-              uH=(HEIGHT, Expr("op('drive')['dip']"), TAN_HALF, 0))
+              uH=(HEIGHT, Expr("op('drive')['dip']"), TAN_HALF, CAMERA),
+              uC=(par('Yaw'), par('Pitch'), par('Roll'), par('Zoom')),
+              uP=(par('Positionx'), par('Positiony'), par('Altitude')))
 
 # ---- The view -------------------------------------------------------------------------------------
 section('view', 'The view: the land eased, then drawn a column at a time, front to back, over a y-buffer',

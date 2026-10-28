@@ -19,7 +19,7 @@
 // camera). Out: the view, at the picture's size.
 layout (local_size_x = 512) in;
 uniform vec4 uV;   // x the terrain's height at 1 (world units), y Fog, z Flight (0 Fly, 1 Orbit, 2 Hover), w tan of
-                   // half the view's width
+                   // half the view's width at Zoom 1
 uniform vec4 uZ;   // step k's distance is uZ.x * exp(uZ.y * k) - uZ.z, out to uZ.w
 
 #define STEPS 512
@@ -52,9 +52,10 @@ void main() {
     vec4 cam = texelFetch(sTD2DInputs[2], ivec2(0, 0), 0);
     vec4 aux = texelFetch(sTD2DInputs[2], ivec2(1, 0), 0);
     vec4 sky = texelFetch(sTD2DInputs[2], ivec2(2, 0), 0);
+    float zoom = texelFetch(sTD2DInputs[2], ivec2(3, 0), 0).w;
     float w = float(size.x), h = float(size.y);
     vec2 world = vec2(WORLD, WORLD * h / w);
-    float tanHalf = uV.w;
+    float tanHalf = uV.w / zoom;
     float focal = 0.5 * w / tanHalf;
     vec2 fwd = vec2(sin(cam.w), cos(cam.w)), right = vec2(fwd.y, -fwd.x);
     vec2 dir = fwd + ((float(col) + 0.5) / w * 2.0 - 1.0) * tanHalf * right;

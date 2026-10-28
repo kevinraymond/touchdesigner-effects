@@ -44,7 +44,8 @@ doesn't reach it on its own. You can also point the COMP's External .tox at a do
 
 ## Parameters
 
-The Voxel Space page holds, top to bottom, the flight and the land, the music, the depth, Flashing and the window.
+The Voxel Space page holds, top to bottom, the flight and the land, the camera, the music, the depth, Flashing and the
+window.
 
 | Parameter | Default | What it does |
 |---|---|---|
@@ -54,6 +55,12 @@ The Voxel Space page holds, top to bottom, the flight and the land, the music, t
 | Smooth | 0.4 | How rounded the hills are, 0 to 1. At 0 every edge of the depth stands as a cliff or a spire, and at 1 the hills roll gently. |
 | Light | 0.7 | How much a low sun from the left shades the hills, 0 to 1. Flat ground keeps the picture's own colors. |
 | Fog | 0.5 | How soon the distance fades into the sky, 0 to 1. At 0 only the farthest ground fades. |
+| Position | 0, 0 | Where the camera is, moved across the land from where the flight puts it, x across the picture and y up it, in its widths and heights, -1 to 1. With Speed at 0 it places a still camera. See [The camera](#the-camera). |
+| Altitude | 1 | How high the camera is above the ground, 0 to 3. At 1 it's where the flight puts it, at 2 twice as high, and at 0 just above the ground (in Fly, the highest ground ahead). |
+| Yaw | 0 | Which way the camera looks, turned from where the flight points it, in degrees. Positive turns it to the right, and 180 looks behind. |
+| Pitch | 0 | How far the camera looks up (positive) or down from the flight's own view, -45 to 45 degrees. As in Comanche it moves the horizon rather than tilting the view, so upright things stay upright. |
+| Roll | 0 | How far the view banks, -30 to 30 degrees, on top of Fly's banking into its turns. Positive banks to the right. As in Comanche it slants the horizon and keeps upright things upright. |
+| Zoom | 1 | How near the lens brings the land, 0.5 to 4. At 1 the view is about 92 degrees wide, as Comanche's was about 90. At 2 it shows half as much and at 0.5 twice as much. Above 1 the flight slows to match, so the land crosses the view at the same pace. |
 | Bass Lift | 0.5 | How much the bass on input 2 lifts the hills, 0 to 1. The bass is smoothed over a second and lifts them further while it's above its usual level. |
 | Beat Kick | 0.5 | How far each beat on input 2 dips the camera, 0 to 1. It drops over a quarter of a second and rises again over half a second, as often as Flashing allows. |
 | Depth Type | Brighter Is Nearer | What input 3 holds. Brighter Is Nearer suits depth estimators (Depth Anything) and masks. Distance 0-1 suits the RealSense and Kinect TOPs, 0 near to 1 far, black where the camera got no reading. Distance in Meters suits the Kinect Azure TOP, scaled by Max Distance. |
@@ -117,6 +124,25 @@ them, and each pixel finds its step by a binary search, since that highest point
 - **Hover.** The camera stands just off the picture's near edge and looks across it, swaying from side to side over
   about 20 seconds. What stands at the front of the picture stands closest, often filling half the view.
 
+## The camera
+
+Position, Altitude, Yaw, Pitch, Roll and Zoom move and turn the camera from wherever the flight puts it, so each
+flight keeps its path and the settings ride on top of it. Each eases toward its setting over about a third of a second,
+so a knob or a MIDI fader moves the camera smoothly rather than in steps. With Speed at 0 the flight holds still and
+they place the camera by hand.
+
+Position moves the camera across the land, in the picture's widths and heights. Fly's land repeats mirrored, so every
+position is somewhere, and an x of 0.5 flies down the middle of the picture instead of along its seam. In Orbit it
+moves the circle, and in Hover the place the camera hovers at. Orbit and Hover never go lower than just above the
+ground under them. Altitude scales the camera's height above the ground. Fly measures that from the highest ground up to
+650 units ahead, so even at 0 it passes over the hilltops.
+
+Yaw turns the camera to look away from where it's going, and Zoom narrows the view about its middle, as a lens does.
+Zooming in slows the flight to match, so the land crosses the view at the same pace (see Accessibility).
+Pitch and Roll work as they did in Comanche. The view is drawn a column at a time, each screen column an upright slice
+of the land, so looking up or down moves the horizon instead of tilting the view, and banking slants the horizon across
+the columns. Upright things stay upright, and toward the ends of their ranges the land looks sheared rather than tilted.
+
 ## Audio input
 
 **[Fosfora](https://github.com/kevinraymond/fosfora)** sends the seven bands from its feature bus. Run `fosfora
@@ -136,10 +162,10 @@ seconds.
 ## Performance
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6, TouchDesigner
-2025.33230), with default parameters and the dancer's depth map on input 3. Each frame took 2.2 ms on the GPU (95th
-percentile 2.4 ms) and 0.49 ms on the CPU, the median of three runs with the Mac otherwise idle. Drawing the view takes
-about 0.4 ms, for 1280 columns of 512 steps each. The rest goes to the land at half size (rounding it 0.34 ms, lighting
-it 0.3 ms, its heights 0.23 ms and each row's baseline) and to easing the picture's colors (0.3 ms) and the view.
+2025.33230), with default parameters and the dancer's depth map on input 3. Each frame took 1.7 ms on the GPU (95th
+percentile 2.4 ms) and 0.51 ms on the CPU, the median of three runs with the Mac otherwise idle. Drawing the view takes
+about 0.3 ms, for 1280 columns of 512 steps each. The rest goes to the land at half size (rounding it 0.28 ms, lighting
+it 0.22 ms, each row's baseline 0.18 ms, and its heights) and to easing the picture's colors (0.27 ms) and the view.
 GPU times on this Mac wander from run to run as its GPU changes speed. Nothing inside cooks while the output is
 unused.
 
@@ -155,8 +181,9 @@ unused.
   land's heights and colors ease over a quarter of a second, cliff faces take the color of their tops, brightness
   standing in for depth is softened, the view itself eases over a tenth of a second (less while a beat dips the camera,
   which the gate already rations, since eased as much each dip smeared into a blur), the pace stays between 0.75 and
-  1.3 of Speed, and Fly glides at 28 units a second (at 70, then 45, a plaza seen from above streamed past fast enough
-  to add a flash a second). Faster settings were spot-checked (below).
+  1.3 of Speed, Fly glides at 28 units a second (at 70, then 45, a plaza seen from above streamed past fast enough to
+  add a flash a second), and Zoom slows the flight as it narrows the view. Faster settings and the camera's were
+  spot-checked (below).
 - **The red guard.** Flown over, the land sweeps its reds back and forth, and red flowers that cross WCAG's
   saturated-red line once a second in the clip crossed it 3.5 times. Every pixel the effect shows goes through the
   library's red guard, which keeps reds just short of the line.
@@ -193,6 +220,28 @@ Calm adds at most one a second, and nothing passes WCAG's 3. The red guard took 
 included. The plaza with Flashing Off, and the dancer with no music (where every setting is the same, since nothing
 dips), sit at that margin. Rows that name no flight are Fly, the default. The last three rows are the far corners of
 the ranges, measured with Flashing Off, since a corner moves the camera and the land, not the beat.
+
+The camera's settings move the camera, not the beat, so they were measured with Flashing Off, in Fly unless a row
+names another flight, on the dancer (1.0 alone, so Off allows 1.5) and the plaza (0.5 alone, so Off allows 1.0):
+
+| Camera setting | Dancer | Plaza |
+|---|---|---|
+| Pitch -20 | 1.0 | 1.0 |
+| Yaw 90 | 1.5 | 1.0 |
+| Zoom 2 | 1.5 | 1.0 |
+| Altitude 0.3 | 1.0 | 1.0 |
+| Position x 0.5 | 1.0 | |
+| Roll 20 | | 1.0 |
+| Orbit, Zoom 2 | | 1.0 |
+| Zoom 4 | 1.0 | 1.0 |
+| Pitch -45 | | 1.5 |
+| Orbit, Altitude 0 | 0.5 | |
+| Hover, Position y 0.5 | 1.5 | |
+
+At Zoom 2, Calm measured 1.5 on both and Up to 3 per second 2.0 on the dancer and 1.5 on the plaza. Zoom magnifies how
+fast the land crosses the view, and before it slowed the flight to match, the plaza measured 1.5 at Zoom 2 and 2.0 at
+Zoom 4. The last four rows are far corners. Looking 45 degrees down at the plaza fills most of the view with the near
+ground, which moves fastest, and it measured half a flash a second over Off's promise, far under WCAG's 3.
 
 ## Credits and license
 
