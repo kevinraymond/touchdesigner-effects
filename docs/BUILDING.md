@@ -382,6 +382,17 @@ brightest band wraps around to the darkest, the picture's noise flipped pixels b
 flowers flashed 6.5 times a second with Flashing Off. Blended toward gray of the same brightness instead of clipped, the
 brightness stays exact, and that cell measured 2.5, the clip's own.
 
+Three more from Voxel Space, which shows the picture as land seen in perspective. The near ground is the picture enlarged,
+so the picture's own changes cover more of the view than they do in the picture: the picture lying flat, the camera
+still and no light, measured 2 flashes a second where the clip has 1, and the dancer's figure standing up close by 3. A
+cliff face shows the few pixels between the cliff's foot and its top spread over hundreds of rows, and where a depth
+map's edge and the picture's don't quite meet, every move of the subject swung the face between the floor's dark and her
+clothes' light; faces now take the color of their tops. The land's heights and its colors ease together over a quarter of
+a second (easing the heights alone measured worse, since the colors ran ahead of the hills). And a moving camera streams
+the land through every part of the view: a bright, busy picture (a plaza from above) flown over at 70 world units a second
+measured 3 flashes a second over the clip's half, so the flight is slow (28) and the view eases over a tenth of a second,
+less while a beat dips the camera, since that move is already rationed by the gate and eased as much it smeared.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
