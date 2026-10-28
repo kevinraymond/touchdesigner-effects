@@ -1,6 +1,6 @@
 {
-  "version": "0.1.22",
-  "sources_sha256": "ea89a20bdce3d644afe7e4e077ea24663f99f5b374129fd3d7ad19e41b6637ba",
+  "version": "0.1.23",
+  "sources_sha256": "c809f2efb909567803cea19fb48cdeb22035fc40c23cd62fb9e2e127f7dec107",
   "embeds": {
     "ascii": "62676e643695c04ad37a127265502d40e9760900b7ab648cf270491744978598",
     "bent_cam": "73d875782e38503a85b0a3dc13f36fd7b9e7fba169679d490295bf4741b4916f",
@@ -23,10 +23,11 @@
     "slit_scan": "02d3d8d27a40ec1550fb145125a00d1dc37994f2a8396fbaef42e68ee8ebb47c",
     "vhs_crt": "5227c90e2ce24d0f6ce3ded8899dde2af218835a1dacd0544a8575be467144dd",
     "video_vocoder": "8ce20d0c6ac9103bb54f18fde68750cce9b8d4f16b4960e8f2a9c87cdcc080ac",
+    "voxel_space": "aa68d6d40d32650eb59c0ce406c7eb5caee8e7154bfae7ad815a1cefbefd5700",
     "words": "b5356fce9aa68114891eae21fb5895fb9247ebeb74dad6cd638c44f53a85fc7b"
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "f04ff8643600ae0213480eb7cccb66732a436b74db88fa599e36fce024c67276",
-  "tox_bytes": 2919302
+  "tox_sha256": "cabdf763ef6ad59ccd1ddacaa844eeb404ce37eae83117ad8cbaf3a022dca5ca",
+  "tox_bytes": 2962632
 }
