@@ -90,7 +90,8 @@ in one call (docked shader filled, any number of inputs: past the third they go 
 parameter, the only way that works), and `uniforms()` sets its vector uniforms; `flash_gate()` is
 the one way an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's
 motion as Datamosh and Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or
-a cut, and Lucas-Kanade optical flow, each size following the input), and `flow_speed()` turns that
+a cut, and Lucas-Kanade optical flow, each size following the input; `levels=(8,)` stops at 1/8, as Words, whose cells
+are 8 pixels, needs no finer), and `flow_speed()` turns that
 flow into a speed, held between the input's frames, as Fluid and VHS + CRT's plasma use it (Pencil passes a smaller
 `dead` zone, so a slow pan carries its strokes too);
 `structure_tensor(comp, _ROOT, source)` gives the direction of the picture's edges at every pixel
@@ -363,6 +364,17 @@ bob them twice a second, which swept each lantern's ghosts back and forth over t
 Flashing Off, where the clip has none): the lights are eased over a fifth of a second, so their ghosts trail a little
 behind a light that moves fast.
 
+Three more from Words, whose picture is small text. Text that moves flashes: each stroke passing a spot is light, each
+gap dark, so lines of text about as far apart as the test's cells (Lines' rings, a line every 21 pixels) swing every
+cell they sweep through between text and gap, a flash for each line that passes. Rings following a dancer at once
+measured 2 flashes a second with Flashing Off where the clip has 1, and white words riding her through Portrait's
+packed page did the same. Lines' rings now move at most a line's spacing a second, and Portrait's words stay put while
+the picture moves under them. A word pushed out of all of its overlap with an older one each frame, when it sits
+between two older ones, is pushed past the middle to the mirror position and back the next frame, a shake every other
+frame that flashed every cell it covered in white (19 a second in one cell): pushed out of half, it settles between
+them. And fading every word out at a cut, to lay the new shot out afresh, took the whole picture to black and back at
+each of the dancer clip's loops; the words now stay through a cut and only those that no longer fit go.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -486,7 +498,7 @@ The other dev tools, each run through `dev/td.sh` (their headers say more):
 | `dev/tile.py` | tile `dev/record.py`'s takes into one labeled grid, rows centered, in the library's font: the README's hero and the Showreel's preview, the clip and its depth map alone on the top row as the inputs, the effects in rows of three (two where they don't fill a row) below (`TD_ARGS='input depth ascii ... seconds=8' dev/td.sh dev/record.py`, then `uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth\|ascii,...' --titles 'input=INPUT,...' --out dev/out/record/hero --still 6.5`) |
 | `dev/social.py` | the repository's social preview (GitHub, Settings, Social preview) from the same takes: the name, a line, input + depth map (optional) = every effect in two centered rows, each frame at one moment and named at a size that reads (`uv run --with pillow dev/social.py dev/out/record docs/social-preview.png --at 6.5`): `docs/social-preview.png`, uploaded by hand |
 | `dev/idle.py` | checks an effect does nothing while its output is unused, input 2 unwired and wired (TD_IDIOMS C5) |
-| `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect; the stress beat swings all seven bands fully 8 times a second too, and `beat=song` plays a track as raw audio instead (`song=<name>` for another than `m1x_ease_from_drop`) |
+| `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect; the stress beat swings all seven bands fully 8 times a second too, and `beat=song` plays a track as raw audio instead (`song=<name>` for another than `m1x_ease_from_drop`). It finds the clips from the path of the script that runs it, so a probe in `dev/probes/` that exec()s it sets `READY` itself, or it quietly gets TouchDesigner's sample movie |
 | `dev/assets.py` | normalize test footage in `private/assets/` (see `PROMPTS.md` there) |
 | `dev/realsense_record.py` | record a RealSense camera on the Linux box as test footage: color, its depth (brighter nearer) and the same depth as the RealSense TOP gives it (distance 0-1, black for no reading) |
 
@@ -621,3 +633,18 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - `TOP.save()` of a 1280 x 720 PNG stalls TouchDesigner for a frame or more, so `dev/capture.py` shots scheduled under
   about 0.15 s apart land on the same frame (Paint's beat measurements saw identical frames until they were spread
   out).
+- A COMP's own operator parameter (a custom DAT parameter, Words' Text) resolves a plain name among the COMP's siblings,
+  as a Geometry COMP's `material` does: `text` finds nothing inside it, and `./text` finds its child, whatever the COMP
+  is renamed to (2025.33230, `dev/probes/words_datpar.py`). Its `eval()` is the operator, so `assert_idiomatic`'s P3
+  compares such a parameter's path with its default.
+- A Select DAT's `extractcols` at `byname` takes the columns from `colnamestart` to `colnameend`; a list of names in
+  `colnames` is `bynames`. Its `rowexpr` and `colexpr` default to expressions of `me.inputCell`, as a DAT to CHOP's do,
+  and fail the same way outside a cook: set them constant.
+- A Text TOP measures text without drawing it: `evalTextSize(text)` gives a word's width and height at its font
+  settings, and `ascender` and `descender` the font's. With a Specification DAT of `text`, `x` and `y` columns it
+  draws every row in one cook, `x` the left edge and `y` the baseline counted from the bottom (69 words in 0.35 ms of
+  CPU), so one Text TOP can draw a whole atlas of words (`dev/probes/words_text.py`). A Script DAT whose callback reads
+  a parameter cooks again when that parameter changes, which is how Words' word list follows Font and Case.
+- Shared-memory atomics (`atomicOr`, `atomicMax`, `atomicMin`, `atomicAdd`) work in a compute shader on the Mac, and
+  28 KB of shared memory compiles (2025.33230, `dev/probes/words_text.py`). Words keeps its grid of free cells as bits
+  and picks the best spot for a word with one `atomicMax` on a key.

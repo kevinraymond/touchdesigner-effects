@@ -33,6 +33,8 @@ SAMPLE_MOVIE = "app.samplesFolder + '/Map/Nature/Movie.1.mp4'"
 WINDOW_W, WINDOW_H = 1280, 720
 # The standard Flashing parameter (docs/TD_IDIOMS.md A1) and the shortest time each setting
 # allows between two flashes. Never under 1/3 s: WCAG 2.3.1 allows three flashes a second.
+# Custom parameter styles that name an operator: their val is a path, their eval() the operator.
+OP_STYLES = ('OP', 'COMP', 'OBJ', 'PanelCOMP', 'TOP', 'CHOP', 'SOP', 'MAT', 'DAT', 'POP')
 FLASHING = (('off', 'Off'), ('calm', 'Calm'), ('wcag', 'Up to 3 per second'))
 FLASH_INTERVAL = {'off': None, 'calm': 1.0, 'wcag': 1 / 3}
 # The clock a shader gets (clock_seconds()): absTime.seconds wrapped every CLOCK seconds (about 4.6 h).
@@ -193,10 +195,10 @@ def audio_in(comp, root):
 
 def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4.0, 0.25)):
     """The input's motion, shared by Datamosh and Fluid: its luma at 1/8 and 1/4 (lum8, lum4; lum2 too
-    when levels has 2), each beside the previous input frame's (lum8p...); whether this frame brings a
-    new input frame and whether it is a cut (change, change_avg, clock: r new frame, g cut); and
-    Lucas-Kanade optical flow at 1/8, then 1/4 starting from it (lk8, lk4: rg the displacement in UV
-    units since the last input frame, b its confidence). new_frame is the mean luma change at 1/8 that
+    when levels has 2; levels=(8,) stops at 1/8, as Words, whose cells are 8 pixels, needs no finer), each beside
+    the previous input frame's (lum8p...); whether this frame brings a new input frame and whether it is a cut
+    (change, change_avg, clock: r new frame, g cut); and Lucas-Kanade optical flow at 1/8, then 1/4 starting from
+    it (lk8, lk4: rg the displacement in UV units since the last input frame, b its confidence). new_frame is the mean luma change at 1/8 that
     makes a new frame; cut is (least change that is a cut, how many times the running mean of the
     changes it must be, seconds between cuts). Every size follows source through the resolution menu:
     an expression reading another operator's size kept an unwired sample movie cooking while nothing
@@ -210,7 +212,7 @@ def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4
         setpars(ops['lum{}'.format(k)], outputresolution={8: 'eighth', 4: 'quarter', 2: 'half'}[k])
         ops['lum{}p'.format(k)] = mk(comp, cacheTOP, 'lum{}p'.format(k), [ops['lum{}'.format(k)]],
                                      'lum{} of the previous input frame.'.format(k), cachesize=2, outputindex=-1)
-    lum8, lum4 = ops['lum8'], ops['lum4']
+    lum8 = ops['lum8']
     seen = ops['seen'] = mk(comp, feedbackTOP, 'seen', [lum8],
                             'What change saw last frame: its g is the luma then.', top='change')
     ops['change'] = glsl(comp, 'change', [lum8, seen], lib_glsl(root, 'change.glsl'),
@@ -226,8 +228,9 @@ def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4
                         uS=(new_frame, cut[0], cut[1], 0.1), uC=(clock_seconds(), cut[2]))
     ops['lk8'] = glsl(comp, 'lk8', [lum8, ops['lum8p'], lum8], lib_glsl(root, 'lk.glsl'),
                       'Optical flow at 1/8.', fmt='rgba32float', uP=(0, 1e-4, 4))
-    ops['lk4'] = glsl(comp, 'lk4', [lum4, ops['lum4p'], ops['lk8']], lib_glsl(root, 'lk.glsl'),
-                      'Optical flow at 1/4, starting from lk8.', fmt='rgba32float', uP=(1, 1e-4, 8))
+    if 4 in levels:
+        ops['lk4'] = glsl(comp, 'lk4', [ops['lum4'], ops['lum4p'], ops['lk8']], lib_glsl(root, 'lk.glsl'),
+                          'Optical flow at 1/4, starting from lk8.', fmt='rgba32float', uP=(1, 1e-4, 8))
     return ops
 
 
@@ -292,18 +295,21 @@ def clock_seconds():
 
 def flow_speed(comp, root, mo, start, dead=0.25, hold=0.3):
     """The input's motion as a speed, shared by Fluid and VHS + CRT, from optical_flow()'s ops (mo): pace (one
-    pixel: when the last new input frame came, and the gap between frames) and motion (lk4 smoothed over 5 x 5
-    and divided by that gap: rg cells per second at a quarter of the input's size, b confidence), held between
-    the input's frames, so a slow clip moves like a live camera, dying away hold seconds after the last new frame,
-    and nothing across a cut; dead is a dead zone in cells per frame. start is a 1 x 1 32-bit TOP both Feedback
-    TOPs (pace_fb, motion_fb) start from. The shaders are lib/glsl's pace and speed. Returns (pace, motion)."""
+    pixel: when the last new input frame came, and the gap between frames) and motion (lk4, or lk8 when the flow
+    stops at 1/8, smoothed over 5 x 5 and divided by that gap: rg cells per second at that flow's size, b
+    confidence), held between the input's frames, so a slow clip moves like a live camera, dying away hold seconds
+    after the last new frame, and nothing across a cut; dead is a dead zone in cells per frame. start is a 1 x 1
+    32-bit TOP both Feedback TOPs (pace_fb, motion_fb) start from. The shaders are lib/glsl's pace and speed.
+    Returns (pace, motion)."""
     pace_fb = mk(comp, feedbackTOP, 'pace_fb', [start], "pace's last frame.", top='pace')
     pace = glsl(comp, 'pace', [mo['clock'], pace_fb], lib_glsl(root, 'pace.glsl'),
                 'One pixel: when the last new input frame came, and the gap between frames.', fmt='rgba32float',
                 uP=(clock_seconds(), 0.25))
     motion_fb = mk(comp, feedbackTOP, 'motion_fb', [start], "motion's last frame.", top='motion')
-    motion = glsl(comp, 'motion', [mo['lk4'], motion_fb, pace], lib_glsl(root, 'speed.glsl'),
-                  "The input's motion at a quarter of its size, as a speed, held between the input's frames.",
+    flow = mo['lk4'] if 'lk4' in mo else mo['lk8']
+    motion = glsl(comp, 'motion', [flow, motion_fb, pace], lib_glsl(root, 'speed.glsl'),
+                  "The input's motion at {} of its size, as a speed, held between the input's frames.".format(
+                      'a quarter' if flow is mo.get('lk4') else 'an eighth'),
                   fmt='rgba32float', uM=(clock_seconds(), Expr('min(absTime.stepSeconds, 0.05)'), dead, hold))
     return pace, motion
 
@@ -953,7 +959,8 @@ def assert_idiomatic(comp):
                 p.tupletName, len(p.tupletName)))
         if p.readOnly or p.mode != ParMode.CONSTANT or p.style in ('Pulse', 'Momentary', 'Header'):
             continue
-        value, default = p.eval(), p.default
+        # An operator parameter (Words' Text, a DAT) evaluates to the operator; its default is the path.
+        value, default = (p.val if p.style in OP_STYLES else p.eval()), p.default
         same = abs(value - default) < 1e-6 if isinstance(value, float) else value == default
         if not same:
             problems.append('P3: {} is {!r}, not its default {!r}; save at the defaults so Reset returns '

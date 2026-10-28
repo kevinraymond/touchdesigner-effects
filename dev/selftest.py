@@ -130,6 +130,13 @@ def _no_help(comp):
     custom(comp.customPages[0], 'Float', 'Bare', 'Bare', 0.5, '')
 
 
+def _op_par_moved(comp):
+    """An operator parameter (a DAT, as Words' Text) pointed away from its default path: eval() gives an operator either
+    way, so P3 compares the path."""
+    p = custom(comp.customPages[0], 'DAT', 'Words', 'Words', './README', 'A DAT.')
+    p.val = './glsl_pixel'
+
+
 def _long_name(comp):
     custom(comp.customPages[0], 'Float', 'Toolongname', 'Too Long Name', 0.5, 'A name of 11 characters.')
 
@@ -138,6 +145,7 @@ BREAKS = [
     ('About not the last page', _about_not_last, 'About last'),
     ('Version editable', _editable_version, 'read-only'),
     ('a parameter off its default', _set('', Amount=0.25), 'not its default'),
+    ('an operator parameter off its default', _op_par_moved, "Words is './glsl_pixel', not its default"),
     ('a parameter name over 10 characters', _long_name, 'keep names to 10 or fewer'),
     ('node shows nothing', _attr('', viewer=False), 'does not show out_top'),
     ('extension without Init on Start', _extension_lazy, 'Init Extensions on Start'),
