@@ -375,6 +375,13 @@ frame that flashed every cell it covered in white (19 a second in one cell): pus
 them. And fading every word out at a cut, to lay the new shot out afresh, took the whole picture to black and back at
 each of the dancer clip's loops; the words now stay through a cut and only those that no longer fit go.
 
+One more from Scan Processor, whose Colorizer gives each band of brightness a hue and keeps the pixel's brightness, so
+that a band changing changes only the hue, which WCAG doesn't count unless it is red. A dark hue such as its dark blue,
+scaled up to a bright pixel's brightness, runs past 1, and clipped it lost a quarter of that brightness. Where the
+brightest band wraps around to the darkest, the picture's noise flipped pixels between the two, and one cell of the
+flowers flashed 6.5 times a second with Flashing Off. Blended toward gray of the same brightness instead of clipped, the
+brightness stays exact, and that cell measured 2.5, the clip's own.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
