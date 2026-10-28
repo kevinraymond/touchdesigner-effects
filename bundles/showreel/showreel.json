@@ -1,6 +1,6 @@
 {
-  "version": "0.1.18",
-  "sources_sha256": "3792cbcd7e65e0e4400cc506c2fe44f534f502e244f439f7a708a6e4a8f1532a",
+  "version": "0.1.19",
+  "sources_sha256": "4a3e1317c082891c37616a51ac2e71ca3e6db78d1d2b704d77083606f1405c33",
   "embeds": {
     "ascii": "54cefb78087905315324f92545b82b4d4c465ad4a1fea53f744772d698d72c8a",
     "bent_cam": "c2c02c3e88c22c4eaf077a1a44c32f8e50c153dc7cfa135587912dca80b78bdb",
@@ -14,6 +14,7 @@
     "paint": "216ac82a91e5e04e684ceda9085dcc4f8e49d89ac18856669b4e57999cd85459",
     "particles": "0470b724dd5f8070c04e573379ce192367f01ddc06962818d0384678a37b5a7c",
     "pencil": "306b9eba4d731d49daf339ffa07e249e003e77ad59309b48d980470382cc0843",
+    "pixel_art": "b996f49246327432d462a76cc89a1a1da5ba1814eb07b1c9cc1142b9380b31de",
     "pixel_sort": "31378161b92a883fc5d37f0fcb98f729c11bcd00d66a1e8e4652ad0ba3f0c94f",
     "point_cloud": "b3a14f1d0133aa5517be0867f35fe5b7bdf674567d5edbc6023fc73bd94078ce",
     "reaction_diffusion": "078990f6f370317154fa41762b17ae480327d33d28d03ec73088faf3af5cd4b1",
@@ -23,6 +24,6 @@
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "5ecd68cca28d06b3b4f1d990ffd980b124e302ace877172dae968a576161eb75",
-  "tox_bytes": 2706278
+  "tox_sha256": "2d933e5fffa38b9e8613d4d42877c05ee2e4be80f560987630d17bd8d60af7b9",
+  "tox_bytes": 2756406
 }

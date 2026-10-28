@@ -345,6 +345,15 @@ it rippled at every hit, and the ripple flipped reds near WCAG's line 3 times a 
 that gate turned every red flower orange. With the gate in, the effect kept its Flashing promises without the guard, so the guard went: it is for what
 a gate can't reach.
 
+Two more from Pixel Art, whose few flat colors turn small changes into whole art pixels changing. A palette that takes
+shape by splitting changes large areas a few frames apart, each split a transition, so it flashed while it formed, and
+`dev/flash.py` caught that every time, since an effect first cooks when the recording starts. The art shows its
+superpixels' own colors until the palette is whole, then fades into it. And WCAG's red test is all or nothing at 80%, so a
+palette color whose share sat near the line and drifted across it as the palette followed the picture flipped every
+pixel it covered between saturated red and not at once, though nothing visible changed (the flowers' dark red-brown,
+bursts of 2.5 to 3 red flashes a second with Flashing Off). Each palette color keeps to one side of the line with
+hysteresis, at most 0.77 or at least 0.83. The red guard would do it too, but it turned the red flowers orange.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -586,6 +595,11 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - A GLSL TOP's Passes can follow the frame (`npasses` an expression of `absTime.stepSeconds`): Reaction-Diffusion runs as
   many steps of its model as the time since the last frame asks for, up to 48, so a dropped frame doesn't slow it.
   One step of a 9-tap pass on 32-bit float RGBA cost 0.055 ms at 640 x 360 and 0.19 ms at 1280 x 720 on the M2 Pro.
+- A shader whose every invocation walks a few hundred texels one after another is slow even when the total is small:
+  Pixel Art's update of 14,400 superpixels, each summing its 17 x 17 window, took 2.2 ms as a pixel shader on the M2 Pro.
+  As a compute shader, one workgroup a superpixel whose 64 invocations share the window and add their sums up in shared
+  memory, it took 0.8 ms (2025.33230). A compute GLSL TOP writes several outputs with Number of Color Buffers
+  (`mTDComputeOutputs[1]`...).
 - `TOP.save()` of a 1280 x 720 PNG stalls TouchDesigner for a frame or more, so `dev/capture.py` shots scheduled under
   about 0.15 s apart land on the same frame (Paint's beat measurements saw identical frames until they were spread
   out).
