@@ -1,13 +1,13 @@
-// Frost (touchdesigner-effects, MIT): the Fog style drawn over the picture (fog_atlas.glsl says how the droplets are
+// Frost (touchdesigner-effects, MIT): the Dew style drawn over the picture (dew_atlas.glsl says how the droplets are
 // kept). Each droplet is a small lens: through it the picture behind shows shrunk and turned over, its rim dark where
 // the light behind is bent away, with a glint of the room's light. Droplets too small to see one by one (under
-// TINY pixels) fog the glass between the big ones as a milky haze that scatters the light, the picture's spread wide
-// and a little of the room's, so the fog glows where a lamp is behind it. The haze follows how much of the glass the
+// TINY pixels) dew the glass between the big ones as a milky haze that scatters the light, the picture's spread wide
+// and a little of the room's, so the dew glows where a lamp is behind it. The haze follows how much of the glass the
 // small droplets cover.
-// Inputs: 0 the picture (mipmapped), 1 the droplets (fog_level.glsl's).
+// Inputs: 0 the picture (mipmapped), 1 the droplets (dew_level.glsl's).
 uniform vec4 uL;   // x Ice (how thick the haze is, 0-1), y Glow (how much the light behind shows through, 0-1),
-                   // z the room's light the fog scatters
-uniform vec4 uTint;   // rgb the fog's color
+                   // z the room's light the dew scatters
+uniform vec4 uTint;   // rgb the dew's color
 uniform vec4 uB;   // x a beat's glint now: how much brighter the droplets' glints
 out vec4 fragColor;
 

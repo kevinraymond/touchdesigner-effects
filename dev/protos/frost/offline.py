@@ -42,7 +42,7 @@ chladni = load('chladni', os.path.join(ROOT, 'dev', 'protos', 'chladni', 'offlin
 chladni.SIZE, chladni.FPS = SIZE, FPS
 caustics = load('caustics', os.path.join(ROOT, 'dev', 'protos', 'caustics', 'offline.py'))
 flashcount = load('flashcount', os.path.join(ROOT, 'dev', 'flashcount.py'))
-fogmod = load('fog', os.path.join(ROOT, 'dev', 'protos', 'frost', 'fog.py'))
+dewmod = load('dew', os.path.join(ROOT, 'dev', 'protos', 'frost', 'dew.py'))
 
 DEFAULTS = dict(
     # Kobayashi's constants (his Figure 4 set), the grid step and model step
@@ -64,9 +64,9 @@ DEFAULTS = dict(
     push=0.45,       # how far warmth tips the interface toward melting (added to -m)
     body=0.7, blur=4.0, refr=2.0, thick=1.5, scatter=0.8, ambient=0.3, edge=0.3, spine=0.8, spine_w=2.0,
     spine_k=40.0, sparkle=0.4, inner=1.0,
-    style=0.0,       # 0 Fern (Kobayashi), 1 Stars (Reiter), 2 Fog (breath figures)
+    style=0.0,       # 0 Fern (Kobayashi), 1 Stars (Reiter), 2 Dew (breath figures)
     rbeta=0.4, rgamma=0.0001, supply=0.002, rmelt=0.02,   # Stars: Reiter's vapor, addition, the pane's supply, melting
-    fgrow=3.0, fnuc=3.0, fmax=8.0,                     # Fog: radius px/s, nucleation a second a free cell, largest radius px
+    fgrow=3.0, fnuc=3.0, fmax=8.0,                     # Dew: radius px/s, nucleation a second a free cell, largest radius px
 )
 
 
@@ -190,8 +190,8 @@ class Frost:
         if beat:
             self.nucleate(v['kick'] * 8, e / 8)
         if v['style'] == 2:
-            self.fog_frame(cold, warm, level, beat, e)
-            return fogmod.render(self.drops, pic)
+            self.dew_frame(cold, warm, level, beat, e)
+            return dewmod.render(self.drops, pic)
         self.acc += v['rate'] * (0.6 + 0.8 * level) / FPS
         while self.acc >= 1:
             self.acc -= 1
@@ -257,11 +257,11 @@ class Frost:
         r = np.clip(np.round(ys / 0.8660254).astype(int), 0, self.HR - 1)
         self.s[r, np.clip(xs, 0, self.W - 1)] = 1.0
 
-    # ---- Fog: breath figures ----
-    def fog_frame(self, cold, warm, level, beat, edge):
+    # ---- Dew: breath figures ----
+    def dew_frame(self, cold, warm, level, beat, edge):
         v = self.v
         if not hasattr(self, 'drops'):
-            self.drops = fogmod.Droplets(self.W, self.H)
+            self.drops = dewmod.Droplets(self.W, self.H)
         g = v['fgrow'] * (0.6 + 0.8 * level)
         c0 = cv2.resize(cold, self.drops.lv[0]['r'].shape[::-1], interpolation=cv2.INTER_AREA)
         w0 = cv2.resize(warm, self.drops.lv[0]['r'].shape[::-1], interpolation=cv2.INTER_AREA)

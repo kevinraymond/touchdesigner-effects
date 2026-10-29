@@ -1,5 +1,5 @@
-// Frost (touchdesigner-effects, MIT): the Fog style's droplets, pasted in front of each fog shader. Breath figures,
-// the droplets that fog a cold pane, as D. Beysens and C. M. Knobler watched them form ("Growth of Breath Figures",
+// Frost (touchdesigner-effects, MIT): the Dew style's droplets, pasted in front of each dew shader. Breath figures,
+// the droplets that bead a cold pane, as D. Beysens and C. M. Knobler watched them form ("Growth of Breath Figures",
 // Phys. Rev. Lett. 57, 1986) and D. Fritter, C. M. Knobler and D. Beysens simulated them (Phys. Rev. A 43, 1991):
 // droplets start on the free glass, grow as it condenses water, and two that touch become
 // one, its volume theirs, at their center of volume, which frees glass for new small droplets between the big ones.

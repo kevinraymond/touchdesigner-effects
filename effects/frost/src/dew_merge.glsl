@@ -1,12 +1,12 @@
-// Frost (touchdesigner-effects, MIT): the Fog style's second pass a frame (fog_atlas.glsl says how the droplets are
-// kept). Droplets that touch become one: a droplet that picked another (fog_grow.glsl) goes, and one that was picked
+// Frost (touchdesigner-effects, MIT): the Dew style's second pass a frame (dew_atlas.glsl says how the droplets are
+// kept). Droplets that touch become one: a droplet that picked another (dew_grow.glsl) goes, and one that was picked
 // takes the volumes of all that picked it (a radius cubed each), at their center of volume. A droplet grown to half
 // its cell or more is marked to move up a level, where the next pass takes it.
-// Inputs: 0 fog_grow's droplets (a: 1 + which of the 8 cells around holds the droplet each goes into).
+// Inputs: 0 dew_grow's droplets (a: 1 + which of the 8 cells around holds the droplet each goes into).
 // Out: r, g, b the droplet; a 1 if it moves up a level.
 out vec4 fragColor;
 
-// The offset of the cell a pick (1-8) names, in fog_grow.glsl's order: the row below first, left to right.
+// The offset of the cell a pick (1-8) names, in dew_grow.glsl's order: the row below first, left to right.
 ivec2 offset(int j) {
     int i = j < 5 ? j - 1 : j;   // skip the middle
     return ivec2(i % 3 - 1, i / 3 - 1);

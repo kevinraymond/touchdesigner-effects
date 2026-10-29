@@ -1,9 +1,9 @@
-// Frost (touchdesigner-effects, MIT): the Fog style's third pass a frame (fog_atlas.glsl says how the droplets are
-// kept). Droplets marked to move up a level (fog_merge.glsl) leave their cell, and the cell above that holds their
+// Frost (touchdesigner-effects, MIT): the Dew style's third pass a frame (dew_atlas.glsl says how the droplets are
+// kept). Droplets marked to move up a level (dew_merge.glsl) leave their cell, and the cell above that holds their
 // place takes them, merged with what it holds; a droplet that a bigger one a level or more above touches goes into
 // it, which takes its volume; and free glass starts new droplets: a cell of the smallest level that no droplet covers
 // starts one with a chance a second, where the glass is cold and not warm, at a random place in it.
-// Inputs: 0 fog_merge's droplets (a: 1 if moving up), 1 the pane (pane.glsl: r cold, g warm).
+// Inputs: 0 dew_merge's droplets (a: 1 if moving up), 1 the pane (pane.glsl: r cold, g warm).
 // Out: r, g, b the droplet, a 0.
 uniform vec4 uN;   // x the chance a second a free cell starts a droplet where coldest, y a new droplet's radius,
                    // z this frame's step (s), w the clock

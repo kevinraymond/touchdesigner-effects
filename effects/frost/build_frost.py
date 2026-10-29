@@ -3,23 +3,23 @@
 Ice grown over the live picture, as frost grows on a window: from the picture's edges and the frame's rims, where
 the room behind is far or dark, thawing where something stands out or moves. Fern grows it as R. Kobayashi's phase
 field (Physica D 1993), steered as T. Kim and M. C. Lin steered it (SCA 2003), its arms along the picture's edges;
-Stars as C. A. Reiter's hexagonal cellular model (2005); Fog as breath figures, droplets that grow and merge (Beysens
+Stars as C. A. Reiter's hexagonal cellular model (2005); Dew as breath figures, droplets that grow and merge (Beysens
 and Knobler 1986). The glass draws Fern's heat out toward a temperature the picture sets, and what stands out in front
 or moves (lib warmth()) melts the ice. Fern's and Stars' ice is drawn as frost looks, a translucent body that blurs
-and lights the picture behind it, edges and arms that catch the light; Fog's droplets as small lenses over a haze.
+and lights the picture behind it, edges and arms that catch the light; Dew's droplets as small lenses over a haze.
 
-dev/protos/frost/offline.py and fog.py tried it first on the clips (board #4846): drawn out fast, the heat let the ice
+dev/protos/frost/offline.py and dew.py tried it first on the clips (board #4846): drawn out fast, the heat let the ice
 grow in compact sheets that swallowed the frame; many crystals crowded into coral; a flat white fill read as paper
 cut-outs. In TouchDesigner, warming the ice's temperature through the glass kept a thawed patch unfreezable for 10 s,
 so warmth melts the ice instead, and a faint warmth (drifting haze) wore Stars down to specks until it was cut off.
 
 The network, left to right:
   picture  source -> grid (the picture at the grid's size) -> structure_tensor() (tensor, tensor_h, tensor_v,
-           tensor_fb, tensor_ease -> flow); edges (the flow, or nothing in Fog) -> pane (+ pane_fb: cold, warm,
+           tensor_fb, tensor_ease -> flow); edges (the flow, or nothing in Dew) -> pane (+ pane_fb: cold, warm,
            where crystals start) -> seed (+ ice_fb: last frame's ice, new crystals, how long frozen) -> fern
            (Kobayashi's steps) or stars (Reiter's half-steps) -> ice (Switch: only the Style's cooks) -> look (the
            ice drawn over the picture) -> show (Switch: the Style's look)
-  fog      fog_grow (+ fog_fb: the droplets last frame) -> fog_merge -> fog_level -> fog_look (the droplets drawn)
+  dew      dew_grow (+ dew_fb: the droplets last frame) -> dew_merge -> dew_level -> dew_look (the droplets drawn)
   motion   optical_flow() (no flow: lum8, seen, change, change_avg, clock) -> warmth() (+ warmth_fb: what stands out
            and what moves, quick to warm, slow to cool); clear is where every Feedback TOP starts
   audio    audio_in() -> counts -> steps (a beat or a drop this frame) -> glint (a beat's glint); level_pick ->
@@ -37,7 +37,7 @@ _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
 VERSION = '0.1.0'
-STYLES = (('fern', 'Fern'), ('stars', 'Stars'), ('fog', 'Fog'))
+STYLES = (('fern', 'Fern'), ('stars', 'Stars'), ('dew', 'Dew'))
 SIZES = (('fine', 'Fine'), ('medium', 'Medium'), ('coarse', 'Coarse'))
 SIZE_RES = ('useinput', 'half', 'quarter')
 INPUT3 = (('depth', 'Depth Map'), ('mask', 'Mask'))
@@ -75,15 +75,15 @@ LOOK = (0.35, 0.35, 0.7, 0.2)
 # over RISE s and falls over FALL s, so a hand that moved leaves the glass to cool behind it. Bass Thaw 1 makes what
 # stands out warm 1 + BASS_THAW times as much at full bass.
 MOVE_FULL, RISE, FALL, BASS_THAW = 0.04, 0.15, 1.5, 1.0
-# Fog: the droplets' atlas is FOG_N cells of the smallest level across the picture's longer side at Size Fine, Medium
-# and Coarse (4 pixels a cell at Medium on 1280 x 720), stacked 1.875 times as tall (fog_atlas.glsl). Sizes are in
+# Dew: the droplets' atlas is DEW_N cells of the smallest level across the picture's longer side at Size Fine, Medium
+# and Coarse (4 pixels a cell at Medium on 1280 x 720), stacked 1.875 times as tall (dew_atlas.glsl). Sizes are in
 # pixels of a 1280-wide picture at Medium, scaled with Size: a new droplet's radius, the smallest kept, the largest;
-# growth and drying are radius a second; FOG_NUC is the chance a second that a free cell starts a droplet at Crystals 1,
-# FOG_KICK how many times more on a beat at Beat Crystals 1.
-FOG_N = (640, 320, 160)
-FOG_NEW, FOG_MIN, FOG_MAX = 0.5, 0.25, 10.0
-FOG_GROW, FOG_DRY = 2.0, 8.0
-FOG_NUC, FOG_KICK = 8.0, 3.0
+# growth and drying are radius a second; DEW_NUC is the chance a second that a free cell starts a droplet at Crystals 1,
+# DEW_KICK how many times more on a beat at Beat Crystals 1.
+DEW_N = (640, 320, 160)
+DEW_NEW, DEW_MIN, DEW_MAX = 0.5, 0.25, 10.0
+DEW_GROW, DEW_DRY = 2.0, 8.0
+DEW_NUC, DEW_KICK = 8.0, 3.0
 # Depth: what stands out (lib depth_find.glsl) by STAND_OUT of the depth range from what lies left and right, nearer
 # than a Far Limit that Sensitivity sets: FAR[0] at 0 to FAR[1] at 1 (on a log scale), as in Fluid.
 STAND_OUT, FAR = 0.1, (0.5, 0.05)
@@ -122,7 +122,7 @@ comp, page, source = new_effect(
 # ---- Parameters -------------------------------------------------------------------------------
 menu(page, 'Style', 'Style', STYLES, 'fern',
      'Fern grows soft, branching ferns whose arms follow the picture\'s edges. Stars grows crisp six-armed stars of '
-     'fine needles, all on one lattice, as snow crystals grow. Fog mists the glass with droplets that grow and merge, '
+     'fine needles, all on one lattice, as snow crystals grow. Dew beads the glass with droplets that grow and merge, '
      'each a small lens.').startSection = True
 menu(page, 'Size', 'Size', SIZES, 'medium',
      "How big the crystals are, Fine, Medium or Coarse, each twice the last. The ice grows on a grid the picture's "
@@ -130,10 +130,10 @@ menu(page, 'Size', 'Size', SIZES, 'medium',
 custom(page, 'Float', 'Growth', 'Growth', 1.0,
        'How fast the ice grows and thaws, 0.25-2.', 0.25, 2, True)
 custom(page, 'Float', 'Crystals', 'Crystals', 0.5,
-       "How many new crystals start each second on the picture's edges where it is cold, 0-1. In Fog, how quickly new "
-       'droplets mist clear glass.', 0, 1, True)
+       "How many new crystals start each second on the picture's edges where it is cold, 0-1. In Dew, how quickly new "
+       'droplets bead clear glass.', 0, 1, True)
 custom(page, 'Float', 'Rims', 'From the Rims', 0.5,
-       "How much frost creeps in from the frame's edges, 0-1.", 0, 1, True).enableExpr = "me.par.Style != 'fog'"
+       "How much frost creeps in from the frame's edges, 0-1.", 0, 1, True).enableExpr = "me.par.Style != 'dew'"
 
 custom(page, 'Float', 'Follow', 'Follow Edges', 1.0,
        "How much the ferns' arms turn to run along the picture's edges, 0-1. At 0 they all point one way.",
@@ -173,8 +173,8 @@ for p, v in zip(tint, (0.93, 0.97, 1.0)):
     p.help = "The frost's color: a cold white."
 
 custom(page, 'Float', 'Beatseeds', 'Beat Crystals', 0.5,
-       "How many new crystals each beat of input 2 starts along the picture's cold edges, 0-1. In Fog, how many new "
-       'droplets mist the clear glass on a beat.', 0, 1, True).startSection = True
+       "How many new crystals each beat of input 2 starts along the picture's cold edges, 0-1. In Dew, how many new "
+       'droplets bead the clear glass on a beat.', 0, 1, True).startSection = True
 custom(page, 'Float', 'Loudness', 'Loudness', 0.5,
        'How much louder music on input 2 makes the frost grow faster (and quiet passages slower), 0-1.', 0, 1, True)
 custom(page, 'Float', 'Bassthaw', 'Bass Thaw', 0.5,
@@ -239,8 +239,8 @@ flow = st['flow']
 # ---- The pane ---------------------------------------------------------------------------------------
 section('pane', 'The pane: cold where the room is far or dark, warm where something stands out or moves')
 pane_fb = mk(comp, feedbackTOP, 'pane_fb', [clear], "pane's last frame.", top='pane')
-edges = mk(comp, switchTOP, 'edges', [flow, clear], "The edges for where crystals start; Fog starts its droplets "
-           'anywhere, so its tensor doesn\'t cook.', index=Expr("1 if parent().par.Style == 'fog' else 0"))
+edges = mk(comp, switchTOP, 'edges', [flow, clear], "The edges for where crystals start; Dew starts its droplets "
+           'anywhere, so its tensor doesn\'t cook.', index=Expr("1 if parent().par.Style == 'dew' else 0"))
 pane = glsl(comp, 'pane', [grid, edges, near, warm, pane_fb], src('pane.glsl'),
             'The glass: how cold (far or dark, eased), how warm, and where crystals may start (cold edges).',
             fmt='rgba16float', uC=(DTF, COLD_EASE, par('Even')), uE=EDGE)
@@ -280,12 +280,12 @@ reset = mk(comp, parameterexecuteDAT, 'reset', comment='Reset, or a new Style: t
 reset.text = ('def onPulse(par):\n'
               "    if par.name == 'Reset':\n"
               "        op('ice_fb').par.resetpulse.pulse()\n"
-              "        op('fog_fb').par.resetpulse.pulse()\n"
+              "        op('dew_fb').par.resetpulse.pulse()\n"
               '\n'
               'def onValueChange(par, prev):\n'
               "    if par.name == 'Style':\n"
               "        op('ice_fb').par.resetpulse.pulse()\n"
-              "        op('fog_fb').par.resetpulse.pulse()\n")
+              "        op('dew_fb').par.resetpulse.pulse()\n")
 setpars(reset, op='..', pars='Reset Style', onpulse=True, valuechange=True)
 
 # ---- The look -------------------------------------------------------------------------------------
@@ -299,42 +299,42 @@ look = glsl(comp, 'look', [source, ice], lib_glsl(_ROOT, 'common.glsl') + src('l
                 Expr("{} * parent().par.Beatseeds * op('glint')[0] if {} else 0".format(GLINT_SPARK, WIRED))))
 setpars(look, inputfiltertype='mipmap')
 
-# ---- Fog ------------------------------------------------------------------------------------------
-section('fog', 'Fog: breath figures, droplets that start on the clear glass, grow and merge, a level a size',
-        lane='fog')
-FOGI = 'parent().par.Size.menuIndex'
-SCALE = '{}[{}]'.format([0.5, 1, 2], FOGI)      # sizes scale with Size
-def fogpx(v):
+# ---- Dew ------------------------------------------------------------------------------------------
+section('dew', 'Dew: breath figures, droplets that start on the clear glass, grow and merge, a level a size',
+        lane='dew')
+DEWI = 'parent().par.Size.menuIndex'
+SCALE = '{}[{}]'.format([0.5, 1, 2], DEWI)      # sizes scale with Size
+def dewpx(v):
     return Expr('{} / 1280 * {}'.format(v, SCALE))
-fog_fb = mk(comp, feedbackTOP, 'fog_fb', [clear], 'The droplets last frame.', top='fog_level')
-fog_grow = glsl(comp, 'fog_grow', [fog_fb, pane], lib_glsl(_ROOT, 'common.glsl') + src('fog_atlas.glsl') +
-                src('fog_grow.glsl'),
+dew_fb = mk(comp, feedbackTOP, 'dew_fb', [clear], 'The droplets last frame.', top='dew_level')
+dew_grow = glsl(comp, 'dew_grow', [dew_fb, pane], lib_glsl(_ROOT, 'common.glsl') + src('dew_atlas.glsl') +
+                src('dew_grow.glsl'),
                 'The droplets grown where the glass is cold, dried where it is warm, each picking the one it goes into '
                 'if it touches a bigger one.', fmt='rgba32float',
-                uG=(DTF, Expr('{} * {}'.format(fogpx(FOG_GROW).text, GROW)), fogpx(FOG_DRY), fogpx(FOG_MAX)),
-                uA=(fogpx(FOG_MIN),))
-setpars(fog_grow, outputresolution='custom', resolutionw=Expr('{}[{}]'.format(list(FOG_N), FOGI)),
-        resolutionh=Expr('int({}[{}] * 1.875)'.format(list(FOG_N), FOGI)))
-fog_merge = glsl(comp, 'fog_merge', [fog_grow], src('fog_atlas.glsl') + src('fog_merge.glsl'),
+                uG=(DTF, Expr('{} * {}'.format(dewpx(DEW_GROW).text, GROW)), dewpx(DEW_DRY), dewpx(DEW_MAX)),
+                uA=(dewpx(DEW_MIN),))
+setpars(dew_grow, outputresolution='custom', resolutionw=Expr('{}[{}]'.format(list(DEW_N), DEWI)),
+        resolutionh=Expr('int({}[{}] * 1.875)'.format(list(DEW_N), DEWI)))
+dew_merge = glsl(comp, 'dew_merge', [dew_grow], src('dew_atlas.glsl') + src('dew_merge.glsl'),
                  'Droplets that touch become one, at their center of volume; one grown to half its cell moves up a '
                  'level.', fmt='rgba32float')
-fog_level = glsl(comp, 'fog_level', [fog_merge, pane], lib_glsl(_ROOT, 'common.glsl') + src('fog_atlas.glsl') +
-                 src('fog_level.glsl'),
+dew_level = glsl(comp, 'dew_level', [dew_merge, pane], lib_glsl(_ROOT, 'common.glsl') + src('dew_atlas.glsl') +
+                 src('dew_level.glsl'),
                  'Droplets moving up a level, small ones going into the big ones they touch, and new ones on the clear '
                  'glass.', fmt='rgba32float',
                  uN=(Expr("{} * parent().par.Crystals * (1 + {} * parent().par.Beatseeds * ({} + {} * {}) / "
                           "max(absTime.stepSeconds, 0.001) / 60 if {} else 1)".format(
-                              FOG_NUC, FOG_KICK, BEAT_NOW, DROP_KICK, DROP_NOW, WIRED)),
-                     fogpx(FOG_NEW), DTF, clock_seconds()))
-fog_look = glsl(comp, 'fog_look', [source, fog_level], lib_glsl(_ROOT, 'common.glsl') + src('fog_atlas.glsl') +
-                src('fog_look.glsl'),
-                'The fog over the picture: droplets as small lenses, a milky haze where they are too small to see.',
+                              DEW_NUC, DEW_KICK, BEAT_NOW, DROP_KICK, DROP_NOW, WIRED)),
+                     dewpx(DEW_NEW), DTF, clock_seconds()))
+dew_look = glsl(comp, 'dew_look', [source, dew_level], lib_glsl(_ROOT, 'common.glsl') + src('dew_atlas.glsl') +
+                src('dew_look.glsl'),
+                'The dew over the picture: droplets as small lenses, a milky haze where they are too small to see.',
                 uL=(par('Ice'), par('Glow'), LOOK[0]), uTint=(par('Tintr'), par('Tintg'), par('Tintb')),
                 uB=(Expr("{} * parent().par.Beatseeds * op('glint')[0] if {} else 0".format(GLINT_EDGE, WIRED)),))
-setpars(fog_look, inputfiltertype='mipmap')
+setpars(dew_look, inputfiltertype='mipmap')
 section('look')
-show = mk(comp, switchTOP, 'show', [look, fog_look], "The Style's look: only that one cooks.",
-          index=Expr("1 if parent().par.Style == 'fog' else 0"))
+show = mk(comp, switchTOP, 'show', [look, dew_look], "The Style's look: only that one cooks.",
+          index=Expr("1 if parent().par.Style == 'dew' else 0"))
 
 finish_effect(comp, show, VERSION, page)
 save_effect(comp, _HERE, _ROOT)

@@ -1,4 +1,4 @@
-// Frost (touchdesigner-effects, MIT): the Fog style's first pass a frame (fog_atlas.glsl, pasted in front, says how
+// Frost (touchdesigner-effects, MIT): the Dew style's first pass a frame (dew_atlas.glsl, pasted in front, says how
 // the droplets are kept). Each droplet grows as the glass condenses water where it is cold (its radius at a steady
 // rate, as when the water on a unit of glass grows steadily, slowing near the largest size), dries where it is warm
 // (small ones faster, as they do), and then picks the droplet it will go into if it touches any: the biggest it

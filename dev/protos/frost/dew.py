@@ -1,13 +1,13 @@
-"""DEV ONLY. Frost's Fog style outside TouchDesigner (board #4846): breath figures, the droplets that fog a cold pane,
+"""DEV ONLY. Frost's Dew style outside TouchDesigner (board #4846): breath figures, the droplets that bead a cold pane,
 simulated as droplets that nucleate, grow, touch and merge, as Beysens and Knobler watched them form ("Growth of breath
 figures", PRL 57, 1986) and Fritter, Knobler and Beysens simulated them (PRA 43, 1991): each droplet grows (the pane
 condenses water at a steady rate a unit area, so a droplet's radius grows at a steady rate), two that touch become one
-with their volume at their center of volume, and the pane they free fogs again with new small droplets between the big
+with their volume at their center of volume, and the pane they free beads again with new small droplets between the big
 ones. The droplets live on grids of cells, one droplet a cell, a level a size: level k's cells are C0 2^k pixels and
 its droplets up to half that across, so a droplet can only touch those in the 3 x 3 cells around it on its own level
 (and bigger ones above). A GPU can step that in one atlas of all the levels, a few passes a frame.
 
-    uv run --with numpy --with opencv-python-headless dev/protos/frost/fog.py --out dev/out/frost/fog
+    uv run --with numpy --with opencv-python-headless dev/protos/frost/dew.py --out dev/out/frost/dew
 
 This first version runs on a blank pane (no picture) to see the pattern form, then over a clip.
 """
@@ -201,7 +201,7 @@ def render(d, pic):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--out', default='dev/out/frost/fog')
+    ap.add_argument('--out', default='dev/out/frost/dew')
     ap.add_argument('--seconds', type=float, default=8)
     ap.add_argument('--grow', type=float, default=3.0)
     ap.add_argument('--nuc', type=float, default=3.0)

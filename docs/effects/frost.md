@@ -1,15 +1,15 @@
 # Frost
 
-![Four views of a dancer in a hazy warehouse lit by a stage light, each named in the library's pixel font. INPUT is the clip. FERN covers the glass in front of her with gray-white fern frost, darker veins running between its fronds, glowing white where the stage light shines through, thawed in a ragged hole around her. STARS covers the dark room with crisp six-armed crystals of fine needles, larger on the right, a speckle of small ones in the light. FOG covers it with droplets of condensation, big ones with small ones between, bright where the light is behind them, clear around her](frost.webp)
+![Four views of a dancer in a hazy warehouse lit by a stage light, each named in the library's pixel font. INPUT is the clip. FERN covers the glass in front of her with gray-white fern frost, darker veins running between its fronds, glowing white where the stage light shines through, thawed in a ragged hole around her. STARS covers the dark room with crisp six-armed crystals of fine needles, larger on the right, a speckle of small ones in the light. DEW covers it with droplets of condensation, big ones with small ones between, bright where the light is behind them, clear around her](frost.webp)
 
-*Frost on the dancer, the clip top left, with her depth map on input 3 and a song on input 2: Fern (the default), Stars and Fog. The frost grows in from the frame and the edges of the room, and thaws around her and wherever she moves.*
+*Frost on the dancer, the clip top left, with her depth map on input 3 and a song on input 2: Fern (the default), Stars and Dew. The frost grows in from the frame and the edges of the room, and thaws around her and wherever she moves.*
 
 **New to frost?** Frost on a cold window grows the way snow crystals grow in the air. Water freezing gives off heat.
 An arm of ice that reaches a little ahead of its neighbors sheds that heat into colder air, so it grows faster still
 and leaves them behind, and arms branch into ferns and six-armed stars. Physicists grow such crystals on a computer with
 a phase field, a smooth map from air to ice whose edge moves wherever it is cold enough (Ryo Kobayashi's 1993 model is
 the classic one), or with simple rules on a hexagonal grid (Clifford Reiter's, 2005). Glass that isn't cold enough for
-ice fogs instead, with droplets that grow and merge, which physicists call breath figures.
+ice gathers dew instead, droplets that grow and merge, which physicists call breath figures.
 
 This effect grows that frost over your picture. Crystals start on the picture's edges and creep in from the frame
 where the room behind is far or dark, and a fern's arms run along the edges they grow over. Whatever moves warms the
@@ -45,11 +45,11 @@ The Frost page holds, top to bottom, the frost, where it is cold and warm, the l
 
 | Parameter | Default | What it does |
 |---|---|---|
-| Style | Fern | Fern grows soft, branching ferns whose arms follow the picture's edges. Stars grows crisp six-armed stars of fine needles. Fog mists the glass with droplets that grow and merge. A new Style clears the glass. |
+| Style | Fern | Fern grows soft, branching ferns whose arms follow the picture's edges. Stars grows crisp six-armed stars of fine needles. Dew beads the glass with droplets that grow and merge. A new Style clears the glass. |
 | Size | Medium | How big the crystals are, Fine, Medium or Coarse, each twice the last. The ice grows on a grid the picture's size, half or a quarter of it, so Fine draws the finest crystals and costs about four times Medium. |
 | Growth | 1 | How fast the frost grows and thaws, 0.25 to 2. |
-| Crystals | 0.5 | How many new crystals start each second on the picture's edges where it is cold, 0 to 1. In Fog, how quickly new droplets mist clear glass. |
-| From the Rims | 0.5 | How much frost creeps in from the frame's edges, 0 to 1. Not used in Fog. |
+| Crystals | 0.5 | How many new crystals start each second on the picture's edges where it is cold, 0 to 1. In Dew, how quickly new droplets bead clear glass. |
+| From the Rims | 0.5 | How much frost creeps in from the frame's edges, 0 to 1. Not used in Dew. |
 | Follow Edges | 1 | How much a fern's arms turn to run along the picture's edges, 0 to 1. At 0 they all point one way. Fern only. |
 | Reset | | Clears the glass. The frost grows back. |
 | Freeze Evenly | 0.3 | At 0 only the far or dark parts of the picture freeze (the depth on input 3, else the picture's brightness), at 1 all of it alike. |
@@ -59,10 +59,10 @@ The Frost page holds, top to bottom, the frost, where it is cold and warm, the l
 | Sensitivity | 0.5 | How easily something in the depth map counts as standing out (farther counts as well), or how gray a mask counts as inside. |
 | Depth Type | Brighter Is Nearer | What input 3 holds. Brighter Is Nearer is for depth estimators (Depth Anything) and masks. Distance 0-1 is for the RealSense and Kinect TOPs, 0 near to 1 far, black where the camera got no reading. Distance in Meters is for the Kinect Azure TOP, scaled by Max Distance. |
 | Max Distance | 4 | For Distance in Meters, how far away in meters counts as the far end of the depth, 0.5 to 15. |
-| Ice | 0.75 | How much the frost hides the picture behind it, 0 to 1. In Fog, how thick the haze is. |
+| Ice | 0.75 | How much the frost hides the picture behind it, 0 to 1. In Dew, how thick the haze is. |
 | Glow | 0.6 | How much the light behind shows through the frost, 0 to 1, so it glows where a lamp is behind it. |
 | Tint | 0.93, 0.97, 1 | The frost's color, a cold white. |
-| Beat Crystals | 0.5 | How much each beat of input 2 adds, 0 to 1: new crystals along the picture's cold edges (in Fog, new droplets on the clear glass), a spurt of growth, and a glint on the frost's edges and sparkles. |
+| Beat Crystals | 0.5 | How much each beat of input 2 adds, 0 to 1: new crystals along the picture's cold edges (in Dew, new droplets on the clear glass), a spurt of growth, and a glint on the frost's edges and sparkles. |
 | Loudness | 0.5 | How much faster louder music on input 2 grows the frost (and quiet passages slower), 0 to 1. |
 | Bass Thaw | 0.5 | How much the bass of input 2 warms what stands out in front, 0 to 1, so the frost backs away from it on the bass. Needs a depth map or mask on input 3. |
 | Song Moments | On | With Fosfora's signal on input 2, a drop starts crystals all along the picture's edges at once (Fosfora's drop detection is experimental). |
@@ -92,7 +92,7 @@ glass also condenses new vapor where it is cold. The stars all lie on the one la
 ice would, and a new star starts only where the air is still moist: one started in the dry air around a grown star
 stayed a lone speck.
 
-**Fog** mists the glass with breath figures, as Daniel Beysens and Charles Knobler watched them form on cold glass
+**Dew** beads the glass with breath figures, as Daniel Beysens and Charles Knobler watched them form on cold glass
 (1986). Droplets start on the clear glass, grow as it condenses water, and two that touch become one, with their volume
 at their center of volume, which frees glass for new small droplets between the big ones. The effect keeps the
 droplets in grids of cells, a grid for each size from 4 to 32 pixels, one droplet a cell, so a droplet only has to
@@ -103,7 +103,7 @@ and turned over, its rim dark and a glint at its top.
 **Cold and warm.** The glass is coldest where the room behind it is far, or with nothing on input 3, where the picture
 is dark, so the room freezes first and bright or near things last. Whatever moves warms the glass at once and leaves it
 to cool over a second and a half, and with a depth map or mask, what stands out in front (or is inside the mask) warms
-it too. Warm glass melts the frost, starts no new crystals and dries Fog's droplets, and as soon as the warmth has gone
+it too. Warm glass melts the frost, starts no new crystals and dries Dew's droplets, and as soon as the warmth has gone
 the frost grows back in from the ice around it. A faint warmth doesn't count: haze drifting through a dark room changes
 the picture a little everywhere, and counted, it wore Stars' needles down to specks.
 
@@ -114,7 +114,7 @@ the picture a little everywhere, and counted, it wore Stars' needles down to spe
 audio** (an Audio File In or Audio Device In CHOP) gives the beats, the loudness and the bass from the sound itself.
 **TouchDesigner's audioAnalysis** gives beats from its kick or onset channels and the loudness from its levels.
 
-Each beat starts new crystals along the picture's cold edges (in Fog, new droplets on the clear glass), makes the frost
+Each beat starts new crystals along the picture's cold edges (in Dew, new droplets on the clear glass), makes the frost
 grow in a spurt that frame, and makes its edges and sparkles glint for a fifth of a second. The frost grows faster when
 the music is loud and slower when it is quiet, and the bass warms what stands out in front, so the frost backs away
 from a dancer on the bass. With Fosfora's signal, a drop starts crystals all along the picture's edges at once. Frost
@@ -127,10 +127,10 @@ again as much of the picture frosted over (dev/reaction.py).
 
 60 fps at 1280 x 720 on the reference machine (MacBook Pro, Apple M2 Pro, 16 GB, macOS 15.6, TouchDesigner
 2025.33230), with default parameters, the dancer's depth on input 3 and a beat far busier than music on input 2. Each
-frame took 2.5 ms on the GPU in Fern (95th percentile 4.6 ms), 2.8 ms in Stars (5.9 ms) and 2.6 ms in Fog (3.4 ms),
+frame took 2.5 ms on the GPU in Fern (95th percentile 4.6 ms), 2.8 ms in Stars (5.9 ms) and 2.6 ms in Dew (3.4 ms),
 and 0.75, 0.73 and 0.51 ms on the CPU, the median of three runs each with the Mac otherwise idle. Fern's phase field
 takes about 1.1 to 1.6 ms of it (ten steps of 13 reads a cell), Stars' lattice about 0.9 to 1.1 ms (twenty half-steps),
-and Fog's lenses and droplets about 1.8 ms. Size Fine runs the ice on a grid four times as large and costs about four times as much. GPU times on this
+and Dew's lenses and droplets about 1.8 ms. Size Fine runs the ice on a grid four times as large and costs about four times as much. GPU times on this
 Mac wander from run to run as its GPU changes speed. Nothing inside cooks while the output is unused.
 
 ## Accessibility
@@ -145,7 +145,7 @@ The flash rates were measured, not assumed. The test recorded the output under a
 2 bars and 1 drop a second), or a dance beat at 140 BPM, and counted the flashes in the worst second by WCAG's area
 rule, and WCAG's red flashes separately. The clips with a depth map had it on input 3:
 
-| Clip and settings | Fern | Stars | Fog | The clip alone |
+| Clip and settings | Fern | Stars | Dew | The clip alone |
 |---|---|---|---|---|
 | Dancer in a hazy warehouse | 1.0 | 1.0 | 1.0 | 1.0 |
 | Dancer, a dance beat (140 BPM) | 1.0 | 1.0 | 1.0 | 1.0 |
@@ -177,7 +177,7 @@ crystals, spurts and glints.
   Growth"](https://diglib.eg.org/handle/10.2312/SCA.SCA03.086-097) (SCA 2003): the arms' direction set over the picture.
 - **The Stars style:** C. A. Reiter, "A local cellular model for snow crystal growth" (Chaos, Solitons and Fractals 23,
   2005), with his beta and gamma for needle-like arms.
-- **The Fog style:** breath figures as D. Beysens and C. M. Knobler watched them form, "Growth of Breath Figures"
+- **The Dew style:** breath figures as D. Beysens and C. M. Knobler watched them form, "Growth of Breath Figures"
   (Physical Review Letters 57, 1986), and as D. Fritter, C. M. Knobler and D. Beysens simulated them, "Experiments and
   simulation of the growth of droplets on a surface (breath figures)" (Physical Review A 43, 1991): droplets that grow,
   merge into one at their center of volume when they touch, and leave clear glass for new ones.
@@ -196,7 +196,7 @@ crystals, spurts and glints.
   effect follows none of them.
 
 **Patents.** A search of US patents (October 2026) found none on growing frost or ice crystals over a picture, and the
-methods it follows were published from 1986 to 2005. Two active patents clear frost or fog from a screen by touch:
+methods it follows were published from 1986 to 2005. Two active patents clear frost or dew from a screen by touch:
 Clipo's US 10,216,945 (a finger's trace clears a concealing image, which is redrawn after a set time) and Samsung's
 US 11,150,775 (a frost or vapor layer over a picture, cleared where it is touched). This effect takes no touch or
 pointer input, and cleared glass refreezes as the ice grows back from around it, never redrawn after a time. A pending
