@@ -18,22 +18,33 @@
 // stream: particles it covers are hidden and wait, so it leaves no gap when it moves on. A particle
 // that leaves the frame comes back on the far side, so a beat doesn't kick them outward (they would
 // gather at the frame's edges): the whole field pulses out from the subject's middle and back.
+// Ribbons: a ribbon is a row of the buffers, RIBBON_LONG particles along it by RIBBON_WIDE across, born
+// all at once off a random pixel of the subject (one dice for the whole row) and dying together. It winds
+// round the subject's middle line (the middle of the subject nearby, input 10), rising, spreading out
+// and turning round it, its width twisting along it, so as it turns it shows its face, then its edge.
+// Behind the middle line it is dimmer, and hidden where the subject covers it; above the subject the
+// wind carries its middle line. A beat spins it faster, a drop's shockwave flings it out for a moment.
 // Positions are in frame heights from the middle of the frame (x across, y up), which is how the
 // Geometry COMP draws them; sizes are in frame heights too.
 // Inputs: 0, 1, 2, 3 this TOP's four buffers last frame; 4 where particles may be born (emit.glsl);
 // 5 the subject, blurred (its edge, and which way is out); 6 the picture (their colors); 7 the average
 // of buffer 1 last frame (a: how many are alive); 8 the average of input 4 (how much of the frame the
-// subject and its outline cover, and the subject's middle); 9 the air (air.glsl, Push and Flow).
+// subject and its outline cover, and the subject's middle); 9 the air (air.glsl, Push and Flow);
+// 10 emit blurred widely, the middle of the subject nearby (Ribbons).
 // Out: buffer 0 x, y, x speed, y speed (in Push and Flow its speed on top of the air's); buffer 1 age
 // (s), life (s), size (as drawn), 1 alive or 0 free; buffer 2 color r, g, b, and a: how visible it is
 // now; buffer 3 r how hard it was shoved lately (0-1), g its size at rest, b how much of a spark it
 // still is (a beat's burst is born as sparks: drawn bigger, shrinking to its size at rest).
+// In Ribbons buffer 0's z and w hold the x of the ribbon's middle line and the height of its middle, and
+// buffer 3 r how far round the middle line it has turned (radians), g its size at rest, b how far out
+// from the line it winds (frame heights), a the seed of its dice (1 or more; below 0 if born a spark;
+// 0 for any other particle).
 uniform vec4 uClock;  // x seconds since the last frame, y seconds, z frame number (the dice), w aspect (width / height)
 uniform vec4 uEmit;   // x births asked for this frame, y Life (s), z Speed, w 1 born on the outline only
 uniform vec4 uMove;   // x Drift, y Turbulence, z Size (frame heights), w beat kick 0-1
 uniform vec4 uWave;   // x shockwave radius (frame heights), y strength 0-1, z the wind's direction from
                       // straight up (radians), w a beat's burst: births this frame on top of x
-uniform vec4 uLook;   // x Color (0 picture, 1 orange, 2 blue, 3 white), y Behavior (0 Emit, 1 Push, 2 Flow),
+uniform vec4 uLook;   // x Color (0 picture, 1 orange, 2 blue, 3 white), y Behavior (0 Emit, 1 Push, 2 Flow, 3 Ribbons),
                       // z the beat's pulse this frame (Push, Flow): how far the field moves out from the
                       // subject's middle (or back, below 0), as a share of its distance from it; w 1 while
                       // a burst's births are sparks (a beat the flash gate let through)
@@ -50,6 +61,13 @@ layout(location = 0) out vec4 fragColor[TD_NUM_COLOR_BUFFERS];
 #define SHOVE_LIT 0.5     // a shove this fast (frame heights per second) lights a particle fully in Push
 #define SHOVE_FADE 0.8    // seconds a shoved particle takes to settle
 #define SHOVE_MAX 1.5     // the most speed one frame's shove gives (frame heights per second)
+#define RIBBON_LONG 64    // a ribbon's particles along it...
+#define RIBBON_WIDE 4     // ...and across it: one row of the buffers (256 wide)
+#define START 0.02        // the nearest a ribbon starts to its middle line (frame heights)
+#define SPREAD 0.8        // seconds a ribbon takes to wind out to its reach
+#define FOLLOW 0.15       // seconds a ribbon's middle line takes to follow the subject's
+#define SPIN_KICK 6.0     // a beat spins a ribbon 1 + SPIN_KICK times as fast at its peak
+#define BEND 0.008        // how far Turbulence 1 bends a ribbon, in frame heights per unit of swirl
 
 uint hash(uint v) {                    // PCG: a well-mixed 32-bit hash
     uint s = v * 747796405u + 2891336453u;
@@ -101,6 +119,44 @@ vec3 subject(vec2 w) {
     return vec3(b, dx / (2.0 * px.x * uClock.w), dy / (2.0 * px.y));
 }
 
+// A ribbon's shape and motion, the same for all its particles: thrown from its dice.
+struct Ribbon { float rise, spin, reach, tall, arc, width, twist, turn, tilt; };
+
+Ribbon ribbon(float seed) {
+    uint d = hash(uint(abs(seed)));
+    Ribbon r;
+    r.rise = uEmit.z * (0.6 + 0.8 * roll(d));     // up, frame heights per second (Speed)
+    r.spin = 0.8 + 1.0 * roll(d);                 // round the middle line, radians per second
+    r.reach = 0.08 + 0.17 * roll(d);              // how far out from it it winds, frame heights
+    r.tall = 0.04 + 0.12 * roll(d);               // how tall it is, end to end
+    r.arc = 0.8 + 1.6 * roll(d);                  // how far round the middle line it reaches, radians
+    r.width = 0.015 + 0.03 * roll(d);             // frame heights
+    r.twist = 3.1415927 * (1.0 + 2.0 * roll(d));  // how far its width turns from end to end, radians
+    r.turn = 6.0 * (roll(d) - 0.5);               // how fast that twist rolls along, radians per second
+    r.tilt = 6.2831853 * roll(d);                 // where the twist starts
+    return r;
+}
+
+// Where a ribbon's particle is, s along it and c across it (each -0.5 to 0.5): the ribbon winds round
+// its middle line (x = line) at radius R, its middle phi round it and at height base. Out: x, y (frame
+// heights), and how far it faces the viewer (1 in front of the middle line, -1 behind it).
+vec3 ribbon_at(Ribbon rb, float line, float base, float phi, float R, float age, float s, float c) {
+    float round_by = phi + s * rb.arc;
+    vec3 out_dir = vec3(sin(round_by), 0.0, cos(round_by));
+    float th = rb.tilt + rb.twist * s + rb.turn * age;
+    vec3 at = R * out_dir + vec3(0.0, base + s * rb.tall, 0.0)
+            + c * rb.width * (cos(th) * out_dir + vec3(0.0, sin(th), 0.0));
+    return vec3(line + at.x, at.y, at.z / max(R + 0.5 * rb.width, 1e-4));
+}
+
+// The x of the middle of the subject near w (input 10), or line where there is no subject near, and how
+// much subject there is to follow (0-1).
+vec2 middle_line(vec2 w, float line) {
+    vec4 around = texture(sTD2DInputs[10], to_uv(w));
+    float x = around.r > 1e-4 ? to_world(vec2(around.b / around.r, 0.5)).x : line;
+    return vec2(x, smoothstep(0.01, 0.06, around.r));
+}
+
 void free_slot() {
     fragColor[0] = vec4(0.0);
     fragColor[1] = vec4(0.0);
@@ -136,6 +192,50 @@ void main() {
     vec4 s3 = texelFetch(sTD2DInputs[3], p, 0);
     vec4 cover = texelFetch(sTD2DInputs[8], ivec2(0), 0);
     uint dice = hash(uint(p.x) + 4096u * uint(p.y) + hash(uint(uClock.z)));
+
+    if (s1.a < 0.5 && mode == 3) {
+        // Free, in Ribbons: is a ribbon born on this row? One dice for the whole row, so all its
+        // particles agree; none while the row's first particle still flies (a row's particles live and
+        // die together, but another behavior's particles leave a row's slots free at different times).
+        uint row = hash(uint(p.y) * 2654435761u + hash(uint(uClock.z) + 977u));
+        vec2 slots = vec2(textureSize(sTD2DInputs[0], 0));
+        float free_slots = slots.x * slots.y * (1.0 - texelFetch(sTD2DInputs[7], ivec2(0), 0).a);
+        // A beat's burst only on the beats the flash gate let through, all sparks: a burst of ribbons
+        // brightens an area at once.
+        float burst = uWave.w * step(0.5, uLook.w);
+        float births = uEmit.x + burst;
+        bool flying = texelFetch(sTD2DInputs[1], ivec2(0, p.y), 0).a > 0.5;
+        if (flying || roll(row) >= births / max(free_slots * cover.r, 1.0)) {
+            free_slot();
+            return;
+        }
+        vec2 esize = vec2(textureSize(sTD2DInputs[4], 0));
+        vec2 uv = (floor(vec2(roll(row), roll(row)) * esize) + vec2(roll(row), roll(row))) / esize;
+        if (texture(sTD2DInputs[4], uv).r < 0.5) {
+            free_slot();
+            return;
+        }
+        // Its middle at the picked pixel, round the subject's middle line there: in front of it or behind.
+        vec2 w = to_world(uv);
+        float line = middle_line(w, w.x).x;
+        float R = max(abs(w.x - line), START);
+        float phi = asin(clamp((w.x - line) / R, -1.0, 1.0));
+        if (roll(row) < 0.5)
+            phi = 3.1415927 - phi;
+        float seed = float(hash(row) >> 9) + 1.0;
+        float spark = roll(row) * births < burst ? 1.0 : 0.0;
+        Ribbon rb = ribbon(seed);
+        float s = (float(p.x / RIBBON_WIDE) + 0.5) / float(RIBBON_LONG) - 0.5;
+        float c = (float(p.x % RIBBON_WIDE) + 0.5) / float(RIBBON_WIDE) - 0.5;
+        vec3 at = ribbon_at(rb, line, w.y, phi, R, 0.0, s, c);
+        float life = uEmit.y * (0.5 + roll(row));
+        float size = uMove.z * (0.6 + 0.8 * roll(row));
+        fragColor[0] = vec4(at.xy, line, w.y);
+        fragColor[1] = vec4(0.0, life, size * (1.0 + SPARK * spark), 1.0);
+        fragColor[2] = vec4(color_at(clamp(to_uv(at.xy), 0.0, 1.0)), 0.0);
+        fragColor[3] = vec4(phi, size, R, spark > 0.5 ? -seed : seed);
+        return;
+    }
 
     if (s1.a < 0.5) {
         // Free: born this frame? Births asked for / free slots whose random pick would take. In Emit
@@ -183,7 +283,8 @@ void main() {
     // Alive: age, move, fade.
     float age = s1.x + dt, life = s1.y;
     vec2 w = s0.xy, v = s0.zw;
-    if (age >= life) {
+    // A ribbon's particles only in Ribbons, and only they: switching Behavior clears the frame.
+    if (age >= life || (mode == 3) != (s3.a != 0.0)) {
         free_slot();
         return;
     }
@@ -194,6 +295,35 @@ void main() {
     float d = length(r);
     float band = exp(-pow((d - uWave.x) / 0.08, 2.0));
     vec2 outward = (d > 1e-4 ? r / d : vec2(0.0)) * (band * uWave.y * 6.0 + (mode == 0 ? uMove.w * KICK : 0.0));
+    if (mode == 3) {
+        // A ribbon: its middle line follows the subject's middle nearby and, where there is none, the
+        // wind; it rises, turns round the line (faster on a beat) and winds out to its reach.
+        Ribbon rb = ribbon(s3.a);
+        float line = s0.z, base = s0.w, phi = s3.r, R = s3.b;
+        vec2 wind = uMove.x * vec2(sin(uWave.z), cos(uWave.z));
+        vec2 follow = middle_line(vec2(line, base), line);
+        line += wind.x * dt + (follow.x - line) * follow.y * (1.0 - exp(-dt / FOLLOW));
+        base += (rb.rise + wind.y) * dt;
+        phi += rb.spin * (1.0 + SPIN_KICK * uMove.w) * dt;
+        R += max(rb.reach - R, 0.0) * (1.0 - exp(-dt / SPREAD));
+        float s = (float(p.x / RIBBON_WIDE) + 0.5) / float(RIBBON_LONG) - 0.5;
+        float c = (float(p.x % RIBBON_WIDE) + 0.5) / float(RIBBON_WIDE) - 0.5;
+        // A drop's shockwave flings it out as it passes.
+        float flung = 1.0 + 0.6 * uWave.y * exp(-pow((length(vec2(line, base) - mid) - uWave.x) / 0.08, 2.0));
+        vec3 at = ribbon_at(rb, line, base, phi, R * flung, age, s, c);
+        // The turbulence bends it: each particle moved by the swirl where it is.
+        vec2 where = at.xy + swirl(at.xy, uClock.y) * uMove.y * BEND * min(age / SPREAD, 1.0);
+        float front = 0.5 + 0.5 * at.z;
+        float spark = s3.a < 0.0 ? exp(-age / SPARK_FADE) : 0.0;
+        float seen = smoothstep(0.0, FADE_IN, age) * (1.0 - smoothstep(0.5, 1.0, age / life))
+                   * smoothstep(0.5, 0.35, abs(s)) * (0.45 + 0.55 * front)
+                   * (1.0 - smoothstep(0.4, 0.6, subject(where).x) * smoothstep(0.5, 0.35, front));
+        fragColor[0] = vec4(where, line, base);
+        fragColor[1] = vec4(age, life, s3.g * (1.0 + SPARK * spark) * (0.8 + 0.2 * front), 1.0);
+        fragColor[2] = vec4(s2.rgb, seen);
+        fragColor[3] = vec4(phi, s3.g, R, s3.a);
+        return;
+    }
     float shove = s3.r * exp(-dt / SHOVE_FADE);
     float behind = 0.0;   // Flow: how far the subject covers it
     if (mode == 0) {
