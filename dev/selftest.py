@@ -8,6 +8,7 @@ it refuses. A check that has never refused anything guards nothing.
 Saves only under dev/out/ (gitignored). Builds land in TDLIB_PARENT (dev/td.sh sets it).
 """
 
+import math
 import os
 
 try:
@@ -308,8 +309,11 @@ def _check_depth_in(host):
 
 
 def _check_flash_gate(host):
-    """A 4 Hz pulse train through flash_gate() at each Flashing setting, counted over 6 s on later
-    frames: Off passes none, Calm at most one a second, Up to 3 per second at most three."""
+    """A 4 Hz pulse train through flash_gate() at each Flashing setting, counted over 360 later frames
+    (about 6 s): Off passes none, Calm at most one a second, Up to 3 per second at most three. The limit
+    is what the gate allows in the seconds the frames took, timed by the clock: frames run slow while
+    the audio check plays beside this one, and 360 of them once took 6.25 s, in which Calm rightly
+    passed 7."""
     gates = {}
     for setting in ('off', 'calm', 'wcag'):
         comp = good('selftest_flash_' + setting, flashing=True)
@@ -330,15 +334,18 @@ def _check_flash_gate(host):
         pull()
         if n == 60:
             start.update({k: (c[0].eval(), r[0].eval()) for k, (_, c, r) in gates.items()})
+            start['t'] = absTime.seconds
         if n < 420:
             run('args[0](args[1])', tick, n + 1, delayFrames=1)
             return
         lines = []
+        seconds = absTime.seconds - start['t']
         for k, (comp, c, r) in gates.items():
             flashes, pulses = c[0].eval() - start[k][0], r[0].eval() - start[k][1]
-            limit = {'off': 0, 'calm': 6, 'wcag': 18}[k]
-            lines.append('{} Flashing {}: {} flashes from {} pulses in 6 s (at most {})'.format(
-                'ok   ' if flashes <= limit and (k == 'off' or flashes > 0) else 'MISS ', k, flashes, pulses, limit))
+            limit = 0 if k == 'off' else math.ceil(seconds / FLASH_INTERVAL[k] - 1e-6)
+            lines.append('{} Flashing {}: {} flashes from {} pulses in {:.2f} s (at most {})'.format(
+                'ok   ' if flashes <= limit and (k == 'off' or flashes > 0) else 'MISS ', k, flashes, pulses, seconds,
+                limit))
             comp.destroy()
         with open(os.path.join(OUT, 'flash.txt'), 'w') as f:
             f.write('\n'.join(lines) + '\n')
@@ -353,8 +360,9 @@ def _check_audio_in(host):
     """audio_in() on each kind of input 2, read over 3 s of later frames: nothing; beat_count and
     energy; kick pulses as audioAnalysis gives them and low; Fosfora's signal (beat and bar counts, build,
     beat_phase, bar_phase, and bass beside energy: level follows bass; two bands from its feature bus, drums for
-    presence, bass for the rest); raw audio (the sample MP3). The seven bands: 0 with nothing, the level with
-    neither bands nor their stand-ins, and between 0 and 1 from raw audio, some of them high."""
+    presence, bass for the rest; bpm 100, so beat_period 0.6); raw audio (the sample MP3). The seven bands: 0 with
+    nothing, the level with neither bands nor their stand-ins, and between 0 and 1 from raw audio, some of them high.
+    beat_period: 0.5 with nothing and at 2 beats a second, between 0.35 and 0.75 from the MP3 (about 120 BPM)."""
     cases = {}
 
     def effect(kind):
@@ -383,11 +391,12 @@ def _check_audio_in(host):
         made += [lfo, count, mk(host, renameCHOP, 'selftest_named_' + name, [count], comment='x',
                                 renamefrom='*', renameto=name, at=(-500, y))]
     const = mk(host, constantCHOP, 'selftest_fosfora_levels', comment='x', at=(-500, -1900))
-    const.seq.const.numBlocks = 8
+    const.seq.const.numBlocks = 9
     made.append(setpars(const, const0name='energy', const0value=0.6, const1name='build', const1value=0.7,
                         const2name='beat_phase', const2value=0.25, const3name='bar_phase', const3value=0.5,
                         const4name='bass', const4value=0.45, const5name='feat_mid', const5value=0.3,
-                        const6name='feat_brilliance', const6value=0.9, const7name='drums', const7value=0.2) or const)
+                        const6name='feat_brilliance', const6value=0.9, const7name='drums', const7value=0.2,
+                        const8name='bpm', const8value=100) or const)
     made.append(mk(host, mergeCHOP, 'selftest_in_fosfora', [made[2], made[5], made[6]], comment='x', at=(-300, -1800)))
     comp.inputConnectors[1].connect(made[-1])
     cases['fosfora'] = (comp, script, made)
@@ -416,9 +425,12 @@ def _check_audio_in(host):
         # the seven bands, lowest first (None: raw audio's, each in 0..1 and the highest above 0.3)
         want_bands = {'none': (0,) * 7, 'counted': (0.6,) * 7, 'pulses': (0.4,) * 7,
                       'fosfora': (0.45, 0.45, 0.45, 0.3, 0.45, 0.2, 0.9), 'raw': None}
+        # beat_period, from its lowest to its highest
+        want_period = {'none': (0.49, 0.51), 'counted': (0.45, 0.55), 'pulses': (0.45, 0.55), 'fosfora': (0.59, 0.61),
+                       'raw': (0.35, 0.75)}
         for k, (comp, script, extra) in cases.items():
-            src, n_beats, n_bars, level, build, phase = (script[c].eval() for c in (
-                'source', 'beat_count', 'bar_count', 'level', 'build', 'beat_phase'))
+            src, n_beats, n_bars, level, build, phase, period = (script[c].eval() for c in (
+                'source', 'beat_count', 'bar_count', 'level', 'build', 'beat_phase', 'beat_period'))
             bands = [script[c].eval() for c in ('sub_bass', 'bass', 'low_mid', 'mid', 'upper_mid', 'presence',
                                                 'brilliance')]
             w_bands = want_bands[k]
@@ -430,11 +442,12 @@ def _check_audio_in(host):
             good_level = (level > 0.05) if w_level is None else abs(level - w_level) < 0.05
             good_phase = (0 <= phase < 1) if w_phase is None else abs(phase - w_phase) < 0.01
             ok = (src == w_src and beats[0] <= n_beats <= beats[1] and bars[0] <= n_bars <= bars[1]
-                  and good_level and abs(build - w_build) < 0.01 and good_phase and good_bands)
+                  and good_level and abs(build - w_build) < 0.01 and good_phase and good_bands
+                  and want_period[k][0] <= period <= want_period[k][1])
             lines.append('{} audio {}: source {:.0f}, {:.0f} beats and {:.0f} bars in 3 s (want {}-{}, {}-{}), '
-                         'level {:.2f}, build {:.2f}, beat_phase {:.2f}, bands {}'.format(
+                         'level {:.2f}, build {:.2f}, beat_phase {:.2f}, beat_period {:.2f}, bands {}'.format(
                              'ok   ' if ok else 'MISS ', k, src, n_beats, n_bars, beats[0], beats[1], bars[0],
-                             bars[1], level, build, phase, ' '.join('{:.2f}'.format(b) for b in bands)))
+                             bars[1], level, build, phase, period, ' '.join('{:.2f}'.format(b) for b in bands)))
             for o in extra:
                 o.destroy()
             comp.destroy()
