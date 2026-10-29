@@ -179,7 +179,8 @@ def glsl(host, name, inputs, pixel, comment, res=None, fmt=None, at=None, **valu
 def audio_in(comp, root):
     """The effect's audio front end. Whatever is wired into input 2 (Fosfora's signal, raw audio,
     TouchDesigner's audioAnalysis or Essentia rhythm CHOP, or nothing) becomes the channels beat,
-    beat_count, bar_count, beat_phase, level, build, drop_count, section_count and source;
+    beat_count, bar_count, beat_phase, level, build, drop_count, section_count, source, the seven bands and
+    beat_period;
     lib/audio_callbacks.py says how (build and the drop and section counts need Fosfora). One
     Script CHOP does it and cooks only when something uses it, so nothing in the audio front end
     runs while the effect's output is unused (TD_IDIOMS C5, dev/idle.py checks it); for raw audio

@@ -6,6 +6,8 @@
 #   beat_count     beats so far (for logic, watch the counts: a one-frame pulse can be missed)
 #   bar_count      bars so far: Fosfora's downbeats, else one every 4 beats (a guess at 4/4)
 #   beat_phase     0..1 through the current beat: Fosfora's, else timed from the last beats
+#   beat_period    seconds a beat lasts: Fosfora's bpm (or another input's bpm or tempo channel), else raw
+#                  audio's beat clock, else the gaps between the last beats; 0.5 (120 BPM) until there are beats
 #   level          0..1, how loud right now
 #   build          0..1, how far into a build (a riser): Fosfora only, else 0
 #   drop_count     drop-like moments so far: Fosfora only (experimental there), else 0
@@ -45,6 +47,7 @@ COUNTS = (
     ('section_count', ('boundary_count',), ('boundary',)),
 )
 LEVEL = ('energy', 'level', 'low', 'bass', 'rms')
+TEMPO = ('bpm', 'tempo')   # beats a minute, when the input carries it (Fosfora's signal does)
 FOSFORA = 'bar_phase'  # a channel only Fosfora's signal has
 FOSFORA_LEVEL = ('bass', 'energy')  # its energy sits near 0.9 through a song; bass swells with each beat
 BEATS_PER_BAR = 4      # for bar_count when the input has no bars
@@ -227,7 +230,7 @@ def onCook(scriptOp):
     dt = 0.0 if s['last'] is None else min(max(now - s['last'], 0.0), 0.5)
     s['last'] = now
     steps = {out: 0 for out, _, _ in COUNTS}
-    source, phase, build, has_bars, raw_bar = 0, None, 0.0, False, 0
+    source, phase, build, has_bars, raw_bar, bpm = 0, None, 0.0, False, 0, 0.0
     inp = scriptOp.inputs[0] if scriptOp.inputs else None
     if inp is not None and inp.numChans:
         samples = inp.numpyArray()
@@ -267,6 +270,8 @@ def onCook(scriptOp):
                 if out == 'bar_count':
                     has_bars = bool(counted or pulsed)
             phase = _value(inp, _first(names, ('beat_phase',)), None)
+            tempo = _first(names, TEMPO)
+            bpm = float(inp[tempo][-1]) if tempo else 0.0
             build = _value(inp, _first(names, ('build',)))
             target = _value(inp, _first(names, FOSFORA_LEVEL if source == 3 else LEVEL))
             band_targets = []
@@ -300,13 +305,14 @@ def onCook(scriptOp):
     if phase is None:
         since = (now - s['last_beat']) / s['interval']
         phase = since % 1.0 if since < PHASE_BEATS else 0.0
+    period = min(max(60.0 / bpm, 0.2), 2.0) if bpm > 0 else s['interval']
 
     scriptOp.clear()
     scriptOp.numSamples = 1
     values = [('beat', beat), ('beat_count', s['counts']['beat_count']), ('bar_count', s['counts']['bar_count']),
               ('beat_phase', phase), ('level', s['level']), ('build', build),
               ('drop_count', s['counts']['drop_count']), ('section_count', s['counts']['section_count']),
-              ('source', source)] + list(zip(BANDS, s['bands']))
+              ('source', source)] + list(zip(BANDS, s['bands'])) + [('beat_period', period)]
     for name, value in values:
         scriptOp.appendChan(name)[0] = value
     return

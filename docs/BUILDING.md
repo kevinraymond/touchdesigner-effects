@@ -393,6 +393,16 @@ the land through every part of the view: a bright, busy picture (a plaza from ab
 measured 3 flashes a second over the clip's half, so the flight is slow (28) and the view eases over a tenth of a second,
 less while a beat dips the camera, since that move is already rationed by the gate and eased as much it smeared.
 
+Three more from Temporal Resonator, whose echoes replay the picture's movement a beat later, and again. Each echo of an
+arm sweeping across the haze passes over the same spots as the arm did, so every echo strong enough to swing a spot by
+WCAG's step is another flash there. At 140 BPM the dancer measured 1.5 flashes a second against the clip's 1 while the
+first echo came back brighter than the arm, and 1 once each echo came back softer than the last. A beat-shaped pluck that
+fell to nothing between beats made the echoes of everything that moves pulse at the beat, and a picture that moves all
+over (red flowers in the wind) pulsed whole, 2 flashes a second against the clip's 1. A pluck that falls only to half
+measured the clip's own. And the red guard applied only where an echo showed switched on and off as echoes came and went,
+which flipped the flowers' reds across WCAG's line more often than no guard at all (2 red flashes a second against 1.5).
+Every pixel goes through it instead, as Slit-Scan's and Motion Magnify's do, which measured none.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -404,6 +414,7 @@ which turns whatever is wired there into the same channels on the CHOP `audio`:
 | `beat_count` | beats so far; for logic, watch the counts, since a one-frame pulse can be missed |
 | `bar_count` | bars so far: Fosfora's `bar_count` (or `downbeat` pulses), else one every 4 beats |
 | `beat_phase` | 0 to 1 through the current beat: Fosfora's, else timed from the last beats |
+| `beat_period` | seconds a beat lasts: Fosfora's `bpm` (or another input's `bpm` or `tempo`), else raw audio's beat clock, else the gaps between the last beats; 0.5 (120 BPM) until there are beats |
 | `level` | 0 to 1, how loud right now: raw audio's low band, Fosfora's `bass` |
 | `build` | 0 to 1, how far into a build: Fosfora only, else 0 |
 | `drop_count` | drop-like moments so far: Fosfora's `drop_count` (experimental there), else 0 |
@@ -666,3 +677,7 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - Shared-memory atomics (`atomicOr`, `atomicMax`, `atomicMin`, `atomicAdd`) work in a compute shader on the Mac, and
   28 KB of shared memory compiles (2025.33230, `dev/probes/words_text.py`). Words keeps its grid of free cells as bits
   and picks the best spot for a word with one `atomicMax` on a key.
+- A GLSL TOP can keep its own past outputs in a Texture 3D ring and read them back: a Render Select TOP picks the buffer,
+  a Feedback TOP targeting it hands the ring the last cook's output, and the GLSL TOP reads the ring as a 2D array, with
+  no cook loop (2025.33230). A stamp written the same way into a second ring beside it says which cook made each slot:
+  the newest slot holds the last cook's serial. Temporal Resonator's strings read their state from a beat back so.
