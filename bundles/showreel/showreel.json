@@ -1,6 +1,6 @@
 {
-  "version": "0.1.26",
-  "sources_sha256": "5a699272f4d96f99e658af85d211a2c4168bb0e8496a3a8daab7f7254e382f06",
+  "version": "0.1.27",
+  "sources_sha256": "fd002e6a1898428ea09d08a318c27c6f05f6331c6c878d82dba88cab04ee33b4",
   "embeds": {
     "ascii": "301ff3ad49c284f4dfc5fd9cce9312ae6d864860f1a0b580aa4858f51177d117",
     "bent_cam": "26f433b2d444873d7c428b4a6899a4ee01bb204b73032761058fa82b23c27998",
@@ -20,6 +20,7 @@
     "pixel_sort": "50d3845fb9d7b8c9f72470af1bdcafede16c1c8a6ef5f0db7f08f52b1f4ca4de",
     "point_cloud": "f152ec7d0670ffb22690aaa40b7f81b27aa2b5138de49aa7cf20b66a49edca5a",
     "reaction_diffusion": "f33f37525dd1a5189879563b1afb213bd07bb74794e23d5b4a5f3886c56abd5d",
+    "relight": "499c4c373315d3a6224dd30247ae2751b4fac5158c9aa3b0986087844de34039",
     "scan_processor": "2c82d8bba962051f12fd31a369bf0f77e439fc4e1b4b7d5dacba12d31eced5d1",
     "slit_scan": "e933057bdde9dc560d8e6038266e89a89f2856e5e73ecb760f7501ede87f0300",
     "temporal_resonator": "67ef0634916acdb9f29d76717ae15f698ccc09579ca2da116ba56dffe840e98f",
@@ -30,6 +31,6 @@
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "2bdf8be330b1e9d571efdd35a111f97cc6cb08c5b014ba1860454f93d30f6f7c",
-  "tox_bytes": 3032184
+  "tox_sha256": "ed43d19bab95fcae3fdb0eb87a5700dab612375853be42a24966cd30514b9112",
+  "tox_bytes": 3077616
 }
