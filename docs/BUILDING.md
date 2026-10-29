@@ -91,7 +91,8 @@ parameter, the only way that works), and `uniforms()` sets its vector uniforms; 
 the one way an effect may flash (below); `optical_flow(comp, _ROOT, source)` gives the input's
 motion as Datamosh and Fluid use it (luma at 1/8 and 1/4, whether this frame is a new input frame or
 a cut, and Lucas-Kanade optical flow, each size following the input; `levels=(8,)` stops at 1/8, as Words, whose cells
-are 8 pixels, needs no finer), and `flow_speed()` turns that
+are 8 pixels, needs no finer, and `flow=False` leaves the flow out, as Temporal Resonator and Caustics need only the luma
+and the clock), and `flow_speed()` turns that
 flow into a speed, held between the input's frames, as Fluid and VHS + CRT's plasma use it (Pencil passes a smaller
 `dead` zone, so a slow pan carries its strokes too);
 `structure_tensor(comp, _ROOT, source)` gives the direction of the picture's edges at every pixel

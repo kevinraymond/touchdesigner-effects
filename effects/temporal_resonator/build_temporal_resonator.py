@@ -13,8 +13,8 @@ the background left the subject in it, and its echoes came back as dark copies w
 The network, left to right:
   picture  source -> background (+ background_fb) -> string (the strings: buffer 0 their state, through state ->
            string_fb into the ring; buffer 1 the echo, through echo) -> show (the echoes behind the live picture) -> out
-  ring     optical_flow() (levels 8: only its clock, for cuts) -> stamp (+ stamp_fb); string_fb -> states, stamp_fb ->
-           stamps (rings a cook late, in step); stamp + stamps -> taps (where the delay line is read)
+  ring     optical_flow() (levels 8, no flow: only its clock, for cuts) -> stamp (+ stamp_fb); string_fb -> states,
+           stamp_fb -> stamps (rings a cook late, in step); stamp + stamps -> taps (where the delay line is read)
   depth    input 3 (depth_in(), else no_depth) -> near -> find (what stands in front), read by string
   audio    audio_in() -> beat (the beat's length) -> delay_to -> delay (gliding); phase (through the beat) and
            level_smooth -> pluck (how hard the string is plucked now)
@@ -28,7 +28,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 MODES = (('same', 'Same'), ('alternating', 'Alternating'))
 LENGTHS = (('half', '1/2 Beat', 0.5), ('beat', '1 Beat', 1.0), ('two', '2 Beats', 2.0))
 PLUCKS = (('beats', 'On Beats'), ('always', 'Always'))
@@ -145,7 +145,7 @@ pluck = mk(comp, constantCHOP, 'pluck', comment='How hard the strings are plucke
 
 # ---- The delay line ---------------------------------------------------------------------------------
 section('ring', "The delay line: the strings' state a cook at a time, kept in a ring with stamps", lane='ring')
-mo = optical_flow(comp, _ROOT, source, levels=(8,))
+mo = optical_flow(comp, _ROOT, source, levels=(8,), flow=False)
 start = mk(comp, constantTOP, 'start', comment='Nothing: where the stamp starts.', outputresolution='custom',
            resolutionw=2, resolutionh=1, format='rgba32float', colorr=0, colorg=0, colorb=0, alpha=0)
 stamp_fb = mk(comp, feedbackTOP, 'stamp_fb', [start], "stamp's last frame: the last cook's stamp.", top='stamp')
