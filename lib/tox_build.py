@@ -320,6 +320,45 @@ def flow_speed(comp, root, mo, start, dead=0.25, hold=0.3):
     return pace, motion
 
 
+def incompressible(comp, root, advected, passes=40, carries='the dye'):
+    """The velocity made incompressible, shared by the effects that run a fluid (Fluid): divergence (how much fluid each
+    cell gains or loses) -> pressure (+ pressure_fb: Jacobi iterations of its Poisson equation, passes of them in one
+    TOP, starting from last frame's) -> velocity (advected minus the pressure's gradient), the projection of stable
+    fluids (Stam 1999) as Harris laid it out for the GPU (GPU Gems ch. 38, 2004). advected is the velocity before
+    projection (rg cells per second; it sets the size), carries what the fluid carries, for the comments. Every pass
+    is 32-bit float; the divergence holds at the frame's edges, and the pressure reads 0 off them, so the fluid flows
+    out freely. The shaders are lib/glsl's divergence, pressure and project. Returns (divergence, pressure,
+    velocity)."""
+    divergence = glsl(comp, 'divergence', [advected], lib_glsl(root, 'divergence.glsl'),
+                      'How much fluid each cell gains or loses.', fmt='rgba32float')
+    pressure_fb = mk(comp, feedbackTOP, 'pressure_fb', [divergence], 'The pressure last frame.', top='pressure')
+    pressure = glsl(comp, 'pressure', [pressure_fb, divergence], lib_glsl(root, 'pressure.glsl'),
+                    'The pressure that cancels the divergence: {} Jacobi iterations.'.format(passes), fmt='rgba32float')
+    setpars(pressure, npasses=passes)
+    velocity = glsl(comp, 'velocity', [advected, pressure], lib_glsl(root, 'project.glsl'),
+                    'The velocity made incompressible: what {} moves with.'.format(carries), fmt='rgba32float')
+    setpars(divergence, inputextenduv='hold')
+    return divergence, pressure, velocity
+
+
+def warmth(comp, root, subject, mo, start, subject_warms=1.0, move_warms=1.0, full=0.04, dead=0.01, rise=0.15,
+           fall=1.5):
+    """Warmth, shared by the effects whose picture warms what it touches (Frost thaws by it): what stands out in
+    front or inside the mask (subject: r 0-1, which sets the size) times subject_warms, and what moves (optical_flow()'s
+    ops, mo: change and clock; a change of full in luma a frame warms fully, one below dead not at all) times
+    move_warms, each spread over 3 x 3 texels, as one
+    field that rises over rise seconds and falls over fall seconds. Movement is held from the last new input frame,
+    so a clip slower than the project doesn't read as still between its frames. start is a 1 x 1 TOP, black with alpha
+    0, the Feedback TOP (warmth_fb) starts from. Any of the weights and times may be an Expr. The shader is lib/glsl's
+    warmth. Returns the warmth TOP (r the warmth 0-1)."""
+    fb = mk(comp, feedbackTOP, 'warmth_fb', [start], "warmth's last frame.", top='warmth')
+    w = glsl(comp, 'warmth', [subject, mo['change'], mo['clock'], fb], lib_glsl(root, 'warmth.glsl'),
+             'What the picture warms: what stands out or is inside the mask, and what moves; quick to rise, slow to '
+             'fall.', fmt='rgba16float',
+             uW=(subject_warms, move_warms, full, dead), uR=(Expr('min(absTime.stepSeconds, 0.1)'), rise, fall))
+    return w
+
+
 def flash_gate(comp, trigger, name='flash'):
     """Every flash an effect makes goes through here (docs/TD_IDIOMS.md A1). A Trigger CHOP turns
     trigger's channels into one-frame-wide pulses no closer together than the Flashing parameter

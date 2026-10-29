@@ -1,6 +1,6 @@
-// Fluid (touchdesigner-effects, MIT): how much fluid each cell gains or loses (the divergence of the
-// velocity), which the pressure solve then cancels so the fluid neither piles up nor thins out
-// (Harris 2004, GPU Gems ch. 38).
+// touchdesigner-effects (MIT), shared by the effects that run a fluid (lib/glsl, incompressible()): Fluid. How much
+// fluid each cell gains or loses (the divergence of the velocity), which the pressure solve then cancels so the fluid
+// neither piles up nor thins out (Harris 2004, GPU Gems ch. 38).
 // Inputs: 0 the velocity before projection (cells per second). Out: r the divergence (per second).
 out vec4 fragColor;
 vec2 vel(vec2 p) { return texture(sTD2DInputs[0], p).rg; }
