@@ -13,8 +13,8 @@ The network, left to right:
            frame came, the gap between frames) -> motion (the flow as a speed, held between the input's frames)
   emit     where the input pours into the fluid: motion, the picture, or input 3 (depth -> near -> find, or
            near alone for a mask; subject passes them only for Depth and Mask, so they cook only then)
-  fluid    advect (the velocity carried by itself, swirled, risen and dragged by the motion) -> divergence
-           -> pressure (Jacobi, PASSES iterations in one TOP) -> velocity (made incompressible), read back
+  fluid    advect (the velocity carried by itself, swirled, risen and dragged by the motion) -> lib incompressible():
+           divergence -> pressure (Jacobi, PASSES iterations in one TOP) -> velocity (made incompressible), read back
            through velocity_fb; dye (what it carries, carried by velocity), read back through dye_fb; still
            is where every Feedback TOP starts, and Reset starts them again
   look     the dye drawn over the picture as ink, smoke or flames
@@ -240,18 +240,10 @@ advect = glsl(comp, 'advect', [motion, velocity_fb, dye_fb], src('velocity.glsl'
                        "{})".format(SWIRL_K, per_look(SWIRL), CHURN, BEAT)),
                   Expr('{} + parent().par.Rise + {} * {}'.format(per_look(RISE), LEAP, BEAT)),
                   Expr(per_look(FLOW_HALF))))
-divergence = glsl(comp, 'divergence', [advect], src('divergence.glsl'),
-                  'How much fluid each cell gains or loses.', fmt='rgba32float')
-pressure_fb = mk(comp, feedbackTOP, 'pressure_fb', [divergence], 'The pressure last frame.', top='pressure')
-pressure = glsl(comp, 'pressure', [pressure_fb, divergence], src('pressure.glsl'),
-                'The pressure that cancels the divergence: {} Jacobi iterations.'.format(PASSES), fmt='rgba32float')
-setpars(pressure, npasses=PASSES)
-velocity = glsl(comp, 'velocity', [advect, pressure], src('project.glsl'),
-                'The velocity made incompressible: what the dye moves with.', fmt='rgba32float')
+divergence, pressure, velocity = incompressible(comp, _ROOT, advect, PASSES)
 # Hold: a cell off the edge reads as the edge, so the velocity's differences don't jump there (the default,
-# Zero, would). The pressure keeps Zero: the fluid flows out of the frame freely.
-for g in (advect, divergence):
-    setpars(g, inputextenduv='hold')
+# Zero, would; incompressible() holds the divergence's). The pressure keeps Zero: the fluid flows out freely.
+setpars(advect, inputextenduv='hold')
 dye = glsl(comp, 'dye', [source, dye_fb, velocity, emit], lib_glsl(_ROOT, 'common.glsl') + src('dye.glsl'),
            'What the fluid carries: ink, smoke or heat, carried by the velocity, poured in where the picture emits.',
            fmt='rgba16float',

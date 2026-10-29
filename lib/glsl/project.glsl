@@ -1,6 +1,6 @@
-// Fluid (touchdesigner-effects, MIT): the velocity made incompressible: minus the pressure's gradient
-// (the projection of Stam 1999; Harris 2004, GPU Gems ch. 38). This is the velocity the dye moves with
-// and the next frame starts from.
+// touchdesigner-effects (MIT), shared by the effects that run a fluid (lib/glsl, incompressible()): Fluid. The
+// velocity made incompressible: minus the pressure's gradient (the projection of Stam 1999; Harris 2004, GPU Gems
+// ch. 38). This is the velocity what the fluid carries moves with, and the next frame starts from.
 // Inputs: 0 the velocity before projection, 1 the pressure. Out: rg the velocity (cells per second).
 out vec4 fragColor;
 float p(vec2 q) { return texture(sTD2DInputs[1], q).r; }

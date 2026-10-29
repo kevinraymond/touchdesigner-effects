@@ -17,7 +17,10 @@ lib/glsl/                     shaders several effects share: depth_near.glsl (in
                               red_guard.glsl (keeps reds short of WCAG's red flash line); tensor, tensor_blur,
                               tensor_ease and tensor_flow (the direction of the picture's edges: structure_tensor());
                               paper.glsl (gradient noise and a paper's grain, drawn rather than loaded: Paint, Pencil);
-                              pyramid_down.glsl and pyramid.glsl (the picture's octaves of detail: pyramid())
+                              pyramid_down.glsl and pyramid.glsl (the picture's octaves of detail: pyramid());
+                              divergence, pressure and project (a fluid's velocity made incompressible:
+                              incompressible()); warmth.glsl (what the picture warms: what stands out and what
+                              moves, warmth()); spectrum.glsl (the CIE color matching functions: Lens Flare)
 effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
@@ -104,6 +107,11 @@ the size of the one before (Video Vocoder, Detail): a shader that pastes `lib_gl
 Laplacian band as a level minus `expand()` of the next, and summing the bands back up through the same `expand()` gives
 the picture back exactly (within a fraction of an 8-bit step at 32-bit float). An effect with several pyramids names each
 one's levels with `prefix=` (Detail's `l1`..., `a1`..., `b1`...) and says what it halves with `what=`;
+`incompressible(comp, _ROOT, advected, passes)` makes a fluid's velocity incompressible, the pressure solve of stable
+fluids (divergence, then `passes` Jacobi iterations of the pressure in one TOP, then the projection), as Fluid runs it;
+`warmth(comp, _ROOT, subject, mo, start)` blends what stands out or is inside the mask (subject) and what moves
+(`optical_flow()`'s change and clock, held between the input's frames, past a dead zone) into one field that rises
+quickly and falls slowly, which Frost thaws by;
 `lib_module(_ROOT, 'font5x7')` loads another `lib/` file, such as the bitmap font (`glsl_font()` gives
 the shader `glyph(g, p)`; `ramp()` orders glyphs by ink), and `lib_glsl(_ROOT, 'depth_near.glsl')` a
 shared shader.

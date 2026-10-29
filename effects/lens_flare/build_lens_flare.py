@@ -227,7 +227,7 @@ dft_rows = glsl(comp, 'dft_rows', [aperture], src('dft_rows.glsl'), "The iris's 
 dft = glsl(comp, 'dft', [dft_rows], src('dft.glsl'),
            "The transform along the columns, squared: the iris's diffraction at one wavelength.", res=(N, N),
            fmt='r32float')
-burst = glsl(comp, 'burst', [dft], shader('burst.glsl'),
+burst = glsl(comp, 'burst', [dft], src('common.glsl') + lib_glsl(_ROOT, 'spectrum.glsl') + src('burst.glsl'),
              'The starburst: the diffraction summed over 24 wavelengths, each scaled by its length.', res=(N, N),
              fmt='rgba16float', uBurst=(ZOOM, TONE))
 setpars(burst, inputfiltertype='linear')
