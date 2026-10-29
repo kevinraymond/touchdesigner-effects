@@ -1,6 +1,6 @@
 {
-  "version": "0.1.27",
-  "sources_sha256": "fd002e6a1898428ea09d08a318c27c6f05f6331c6c878d82dba88cab04ee33b4",
+  "version": "0.1.28",
+  "sources_sha256": "28e08e9e0a870b44ef63a5753b795d2347b8f669064b19eec73645e420356acd",
   "embeds": {
     "ascii": "301ff3ad49c284f4dfc5fd9cce9312ae6d864860f1a0b580aa4858f51177d117",
     "bent_cam": "26f433b2d444873d7c428b4a6899a4ee01bb204b73032761058fa82b23c27998",
@@ -9,6 +9,7 @@
     "chladni_sand": "b45d5ee105959897b754533ab3404b6242232665335b3fa48f33ef29488b99bf",
     "datamosh": "c6acd82a9ebb9389c3c72da22dc5338c3e8fddadebf4ca97532f6250673fbc75",
     "detail": "04720c8d523e2440d939f0f5fa2c35eea3fd31fe05c4b456d70c8961055285bf",
+    "film_stock": "519de6e07a3c6dadf3e4abb14e3b54dda97288a6bc785d989317078b22fb9674",
     "fluid": "ff31a838695606d16f7e879ddab684c0e79bee9286b748acea38d2b3c98b8a92",
     "glitch": "2fbc8aae2f4cd41408459655de7f8c6922a276b542476b898adeddac10c9e714",
     "lens_flare": "4aa730780afc53ed4b736a16ff1be92e5793cb9f522aaf1e4346d59942958996",
@@ -31,6 +32,6 @@
   },
   "embeds_all": true,
   "touchdesigner_build": "2025.33230",
-  "tox_sha256": "ed43d19bab95fcae3fdb0eb87a5700dab612375853be42a24966cd30514b9112",
-  "tox_bytes": 3077616
+  "tox_sha256": "5adbec792b1e7c8d900fcf2505f0c4b34ab8a59b6ef19ee180b8d9880474c87d",
+  "tox_bytes": 3144680
 }
