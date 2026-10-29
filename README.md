@@ -72,10 +72,9 @@ measured against WCAG 2.3.1, and an effect that can flash has a setting to turn 
 Twenty-five effects are done (ASCII 0.2.1, Bent Cam, Fluid and Glitch 0.1.2, Datamosh and VHS + CRT 0.2.2,
 Blob Track and Point Cloud 0.1.4, Particles 0.3.3, Paint, Pixel Sort and Slit-Scan 0.1.1, Caustics, Chladni Sand,
 Detail, Lens Flare, Motion Magnify, Pencil, Pixel Art, Reaction-Diffusion, Scan Processor, Temporal Resonator, Video
-Vocoder, Voxel Space and Words 0.1.0), and the Showreel holds them all. All but Caustics, Scan Processor, Temporal
-Resonator and Voxel Space are in the latest release,
-[v0.5.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.5.0), which adds Pixel Art, Lens Flare
-and Words.
+Vocoder, Voxel Space and Words 0.1.0), and the Showreel holds them all. All of them are in the latest release,
+[v0.6.0](https://github.com/kevinraymond/touchdesigner-effects/releases/tag/v0.6.0), which adds Scan Processor, Voxel
+Space, Temporal Resonator and Caustics.
 
 - [docs/BRIEF.md](docs/BRIEF.md): what the library is for and what every effect promises.
 - [docs/BUILDING.md](docs/BUILDING.md): how the `.tox` files are generated, checked and released.
