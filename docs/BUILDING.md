@@ -403,6 +403,15 @@ measured the clip's own. And the red guard applied only where an echo showed swi
 which flipped the flowers' reds across WCAG's line more often than no guard at all (2 red flashes a second against 1.5).
 Every pixel goes through it instead, as Slit-Scan's and Motion Magnify's do, which measured none.
 
+Three more from Caustics, whose light is the water's waves focused into bright lines. How hard a wave focuses light goes
+with how sharply it curves, so short, steep ripples make the brightest, busiest lines for the least water. Raindrops
+three pixels wide and the picture's change pushed into the water as it came made a fine grain of light that flashed 3 to
+5 times a second where the clip has 1. Slow swells a tenth of the picture wide and wakes spread over ten of the water's
+pixels (a quarter of the picture's size) kept to the clip's own. A beat's drop with a radius a fifteenth of the picture's
+height added half a flash a second on the dancer, and one with a radius a ninth of it added none. Wakes spread over six pixels did the same
+on flowers in the wind, where everything moves and the wakes cover the whole pool, and over ten they added none. And the
+caustics' own contrast mattered less than how they move: halving it changed nothing the counter saw.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -681,3 +690,7 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   a Feedback TOP targeting it hands the ring the last cook's output, and the GLSL TOP reads the ring as a 2D array, with
   no cook loop (2025.33230). A stamp written the same way into a second ring beside it says which cook made each slot:
   the newest slot holds the last cook's serial. Temporal Resonator's strings read their state from a beat back so.
+- A compute GLSL TOP can tally into shared memory with `atomicAdd` on `uint`: three `uint` arrays of 48 x 48 (27.6 KB)
+  compile and run on the Mac, and Auto Dispatch Size tiles the output with workgroups of the shader's local size
+  (2025.33230). Caustics gathers its light so, each 16 x 16 workgroup tallying in 256ths every surface sample's square
+  that lands in its patch from within 16 pixels, in about 0.9 ms for 640 x 360 on the M2 Pro.
