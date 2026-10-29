@@ -695,3 +695,10 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   compile and run on the Mac, and Auto Dispatch Size tiles the output with workgroups of the shader's local size
   (2025.33230). Caustics gathers its light so, each 16 x 16 workgroup tallying in 256ths every surface sample's square
   that lands in its patch from within 16 pixels, in about 0.9 ms for 640 x 360 on the M2 Pro.
+- A TOP's GPU cook time (`gpuCookTime`, and so `dev/perf.py`'s list of the costliest operators) can carry another
+  operator's work: of a dozen Blur TOPs on one Noise TOP, whichever cooked first read about 3 ms at any size and the rest
+  0.003 ms (2025.33230, `dev/probes/blur_cost.py`). Relight's two smallest blurs read 0.7 and 1.0 ms that way. Read the
+  per-operator times as a guide to where the cost is, and the effect's total as its cost.
+- The Blur TOP's Type (`type`) offers `catmull`, `gaussian`, `box`, `bartlette` (a triangle), `sinc`, `hanning` and
+  `blackman` (2025.33230, `dev/probes/blur_pars.py`). Relight's broad smoothings are triangles, since it never adds two
+  Gaussian blurs together (its docs page, Credits and license).
