@@ -15,7 +15,7 @@ The network, left to right:
   picture  source -> surface (the surface at half size: height, slope, depth) -> caustics (a compute shader: the
            light on the floor) -> light (softened a pixel) -> show (the floor seen through the water, lit, absorbed,
            glinting) -> out
-  water    optical_flow() (levels 8 and 4: lum4, lum4p, clock) -> push (the change since the last input frame) ->
+  water    optical_flow() (no flow: lum4, lum4p, clock) -> push (the change since the last input frame) ->
            push_blur (broad wakes) -> water (+ water_fb: the wave equation)
   depth    input 3 (depth_in(), else flat) -> near (nearness at a quarter size) -> near_soft
   audio    audio_in() -> counts -> steps -> drop_env (a drop pours for a tenth of a second), drops (their count, for
@@ -32,7 +32,7 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.1.0'
+VERSION = '0.1.1'
 IOR = 1.333                  # water
 SUN = (0.25, -0.15, -1.0)    # the sun's direction, a little off overhead
 GLINT = 0.6                  # the sun's glint on the surface
@@ -169,7 +169,7 @@ near_soft = mk(comp, blurTOP, 'near_soft', [near], "The nearness softened, so a 
 
 # ---- The water ----------------------------------------------------------------------------------
 section('water', 'The water: the wave equation, pushed by what moves and by the drops', lane='water')
-mo = optical_flow(comp, _ROOT, source)
+mo = optical_flow(comp, _ROOT, source, flow=False)
 push = glsl(comp, 'push', [mo['lum4'], mo['lum4p'], mo['clock']], src('push.glsl'),
             'How the picture changed since its last frame, a quarter of its size: what moves pushes the water.',
             fmt='rgba16float')

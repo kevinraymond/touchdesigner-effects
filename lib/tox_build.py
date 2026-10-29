@@ -194,16 +194,18 @@ def audio_in(comp, root):
     return script
 
 
-def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4.0, 0.25)):
+def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4.0, 0.25), flow=True):
     """The input's motion, shared by Datamosh and Fluid: its luma at 1/8 and 1/4 (lum8, lum4; lum2 too
     when levels has 2; levels=(8,) stops at 1/8, as Words, whose cells are 8 pixels, needs no finer), each beside
     the previous input frame's (lum8p...); whether this frame brings a new input frame and whether it is a cut
     (change, change_avg, clock: r new frame, g cut); and Lucas-Kanade optical flow at 1/8, then 1/4 starting from
     it (lk8, lk4: rg the displacement in UV units since the last input frame, b its confidence). new_frame is the mean luma change at 1/8 that
     makes a new frame; cut is (least change that is a cut, how many times the running mean of the
-    changes it must be, seconds between cuts). Every size follows source through the resolution menu:
-    an expression reading another operator's size kept an unwired sample movie cooking while nothing
-    used the effect. The shaders are lib/glsl's lum, change, clock and lk. Returns the operators by name."""
+    changes it must be, seconds between cuts). flow=False leaves out the flow (lk8, lk4) and lum8p, which only lk8
+    reads, for an effect that needs only the luma and the clock (Temporal Resonator, Caustics). Every size follows
+    source through the resolution menu: an expression reading another operator's size kept an unwired sample movie
+    cooking while nothing used the effect. The shaders are lib/glsl's lum, change, clock and lk. Returns the
+    operators by name."""
     ops = {}
     for k in (8, 4, 2):
         if k not in levels:
@@ -211,8 +213,9 @@ def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4
         ops['lum{}'.format(k)] = glsl(comp, 'lum{}'.format(k), [source], lib_glsl(root, 'lum.glsl'),
                                       'Luma at 1/{}.'.format(k), fmt='mono32float', uK=k)
         setpars(ops['lum{}'.format(k)], outputresolution={8: 'eighth', 4: 'quarter', 2: 'half'}[k])
-        ops['lum{}p'.format(k)] = mk(comp, cacheTOP, 'lum{}p'.format(k), [ops['lum{}'.format(k)]],
-                                     'lum{} of the previous input frame.'.format(k), cachesize=2, outputindex=-1)
+        if flow or k != 8:
+            ops['lum{}p'.format(k)] = mk(comp, cacheTOP, 'lum{}p'.format(k), [ops['lum{}'.format(k)]],
+                                         'lum{} of the previous input frame.'.format(k), cachesize=2, outputindex=-1)
     lum8 = ops['lum8']
     seen = ops['seen'] = mk(comp, feedbackTOP, 'seen', [lum8],
                             'What change saw last frame: its g is the luma then.', top='change')
@@ -227,6 +230,8 @@ def optical_flow(comp, root, source, levels=(8, 4), new_frame=2e-5, cut=(0.02, 4
     ops['clock'] = glsl(comp, 'clock', [avg, clock_fb], lib_glsl(root, 'clock.glsl'),
                         'One pixel: is this a new input frame, is it a cut (experimental).', fmt='rgba32float',
                         uS=(new_frame, cut[0], cut[1], 0.1), uC=(clock_seconds(), cut[2]))
+    if not flow:
+        return ops
     ops['lk8'] = glsl(comp, 'lk8', [lum8, ops['lum8p'], lum8], lib_glsl(root, 'lk.glsl'),
                       'Optical flow at 1/8.', fmt='rgba32float', uP=(0, 1e-4, 4))
     if 4 in levels:
