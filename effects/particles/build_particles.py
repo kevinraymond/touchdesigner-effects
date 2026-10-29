@@ -6,7 +6,8 @@ estimator, a segmentation tool), what stands in front of its surroundings; with 
 webcam, a video), what moves, or what differs from the empty room once Capture Background is
 pressed. Find on Auto picks for itself and the Subject view says which it took. Behavior Push fills
 the frame with particles hanging in still air that the subject shoves aside, lighting them up; Flow
-streams them across the frame on the wind, parting round the subject. Music on input 2 drives them:
+streams them across the frame on the wind, parting round the subject; Ribbons winds bands of them round
+the subject's middle line, rising and twisting. Music on input 2 drives them:
 loudness thickens the stream, each beat fires a burst and kicks the whole cloud outward, each bar
 swings the wind; Fosfora's signal adds a build's turbulence and a drop's shockwave.
 
@@ -21,7 +22,8 @@ The network, left to right:
              particles are born; emit_stats averages it) and subject_blur (its edge, which way is out)
   air        for Push and Flow: subject_wide (how near the subject is) and subject_middle (the middle of
              the subject nearby) -> air (a stream function that goes round the subject); air_in passes
-             it only for Push and Flow, so it cooks only then
+             it only for Push and Flow, so it cooks only then; middle_in passes subject_middle for
+             Ribbons, the line they wind round
   particles  sim: up to PW x PH particles in four float buffers (sim, then sim_life, sim_color and
              sim_shove picked out by Render Select TOPs), read back through Feedback TOPs; alive_stats
              counts the living, so births come to the rate asked for
@@ -42,8 +44,9 @@ except NameError:
 _ROOT = os.path.dirname(os.path.dirname(_HERE))
 exec(compile(open(os.path.join(_ROOT, 'lib', 'tox_build.py')).read(), 'tox_build.py', 'exec'), globals())
 
-VERSION = '0.3.3'
-# The particles' buffers: at most PW x PH alive at once.
+VERSION = '0.4.0'
+# The particles' buffers: at most PW x PH alive at once. In Ribbons each row is a ribbon (sim.glsl: RIBBON_LONG x
+# RIBBON_WIDE = PW).
 PW, PH = 256, 256
 # The subject is found on a small copy of the picture and the depth: the row search in depth_find.glsl
 # reads a whole row per pixel, and particles are born across a pixel, so finer would cost more and
@@ -130,7 +133,8 @@ def labels_head():
                 len(LABELS), ', '.join(map(str, at)), ', '.join(str(len(t)) for t in LABELS)))
 
 
-README = src('readme.txt').format(v=VERSION, n=PW * PH, field=FIELD, fill=int(FIELD * 5000 * 2.5))
+README = src('readme.txt').format(v=VERSION, n=PW * PH, field=FIELD, fill=int(FIELD * 5000 * 2.5), band=PW,
+                                  bands=round(5000 / PW))
 comp, page, source = new_effect(
     'particles', 'Particles',
     'Particles {}: particles peel off the subject (found by depth on input 3, or by movement) and drift '
@@ -186,8 +190,9 @@ behavior = choices(custom(page, 'Menu', 'Behavior', 'Behavior', None,
                           'What the particles do. Emit: they peel off the subject and drift away. Push: they fill '
                           'the frame, hanging in still air, and the subject shoves them aside as it moves, lighting '
                           'them up. Flow: they stream across the frame on the wind (Drift, Direction), parting round '
-                          'the subject and passing behind it where it moves into them.'),
-                   ['emit', 'push', 'flow'], ['Emit', 'Push', 'Flow'], 'emit')
+                          'the subject and passing behind it where it moves into them. Ribbons: bands of particles '
+                          "peel off the subject and wind round its middle line, rising, spreading out and twisting."),
+                   ['emit', 'push', 'flow', 'ribbons'], ['Emit', 'Push', 'Flow', 'Ribbons'], 'emit')
 behavior.startSection = True
 choices(custom(page, 'Menu', 'Emitfrom', 'Emit From', None,
                'For Emit: where particles are born, anywhere on the subject (Body) or only along its edges '
@@ -195,21 +200,23 @@ choices(custom(page, 'Menu', 'Emitfrom', 'Emit From', None,
         ['body', 'outline'], ['Body', 'Outline'], 'body').enableExpr = "me.par.Behavior == 'emit'"
 custom(page, 'Float', 'Rate', 'Rate', 5000,
        'Particles born per second (at most {:,} alive at once): on the subject in Emit; in Push and Flow {} times '
-       'as many, all over the frame, so about {} x Rate x Life fill it.'.format(PW * PH, FIELD, FIELD), 0, 30000, True)
+       'as many, all over the frame, so about {} x Rate x Life fill it; in Ribbons, a ribbon is {} of them.'
+       .format(PW * PH, FIELD, FIELD, PW), 0, 30000, True)
 custom(page, 'Float', 'Life', 'Life', 2.5, 'How long a particle lives, in seconds (each one a little more or less).',
        0.2, 8, True)
 custom(page, 'Float', 'Size', 'Size', 3, 'Size of a particle in pixels at 720 high (scales with the picture).',
        1, 16, True)
 custom(page, 'Float', 'Speed', 'Speed', 0.15,
        'How fast particles leave the subject, in frame heights per second (in Push and Flow, those of a beat\'s '
-       'burst).', 0, 1, True)
+       'burst; in Ribbons, how fast the ribbons rise).', 0, 1, True)
 custom(page, 'Float', 'Drift', 'Drift', 0.1,
-       'For Emit and Flow: how fast the air blows, in frame heights per second, along Direction (up, unless '
-       'Direction turns it); below 0, the other way.', -0.5, 0.5, True).enableExpr = "me.par.Behavior != 'push'"
+       'For Emit, Flow and Ribbons: how fast the air blows, in frame heights per second, along Direction (up, '
+       'unless Direction turns it); below 0, the other way.', -0.5, 0.5, True).enableExpr = "me.par.Behavior != 'push'"
 custom(page, 'Float', 'Direction', 'Direction', 0,
-       'For Emit and Flow: which way the air blows, in degrees clockwise from straight up (90 to the right, 180 '
-       'down).', -180, 180, True).enableExpr = "me.par.Behavior != 'push'"
-custom(page, 'Float', 'Turbulence', 'Turbulence', 0.5, 'How much the air swirls the particles around.', 0, 2, True)
+       'For Emit, Flow and Ribbons: which way the air blows, in degrees clockwise from straight up (90 to the '
+       'right, 180 down).', -180, 180, True).enableExpr = "me.par.Behavior != 'push'"
+custom(page, 'Float', 'Turbulence', 'Turbulence', 0.5, 'How much the air swirls the particles around (bends the '
+       'ribbons, in Ribbons).', 0, 2, True)
 
 color = choices(custom(page, 'Menu', 'Color', 'Color', None,
                        "Particles take the picture's color where they are born (lifted, so dark clothes still "
@@ -225,10 +232,10 @@ custom(page, 'Float', 'Loudness', 'Loudness', 0.7,
        'third of Rate and the loudest a fifth more; 0 for a steady Rate.', 0, 1, True).startSection = True
 custom(page, 'Float', 'Burst', 'Beat Bursts', 0.5,
        'On each beat of input 2, a burst of particles leaves the subject faster than the rest and the whole cloud is '
-       'kicked outward; as often as Flashing allows, the burst is sparks (born bigger, shrinking as they go: a '
+       'kicked outward (in Ribbons, the ribbons spin faster); as often as Flashing allows, the burst is sparks (born bigger, shrinking as they go: a '
        'flash). 0 for none of it.', 0, 1, True)
 custom(page, 'Float', 'Gusts', 'Bar Gusts', 0.5,
-       'For Emit and Flow: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new '
+       'For Emit, Flow and Ribbons: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new '
        'direction; 0 keeps it blowing the same way.', 0, 1, True).enableExpr = "me.par.Behavior != 'push'"
 custom(page, 'Toggle', 'Moments', 'Song Moments', True,
        "With Fosfora's signal on input 2: a build stirs the air up as it rises, and a drop sends a shockwave "
@@ -325,7 +332,7 @@ drift = glsl(comp, 'drift', [gain_sum], src('drift.glsl'),
 # Only Find on Background needs the empty room and the drift: these Switch TOPs show black otherwise,
 # and a Switch TOP cooks only what it shows, so none of that chain runs in the other modes.
 BACKGROUND = Expr("1 if parent().par.Find == 'background' else 0")
-none = mk(comp, constantTOP, 'none', comment='Black: no empty room, no drift (Find is not Background), no air (Behavior is Emit).',
+none = mk(comp, constantTOP, 'none', comment='Black: no empty room, no drift (Find is not Background), no air (Behavior is Emit or Ribbons).',
           outputresolution='custom', resolutionw=1, resolutionh=1, format='rgba32float', colorr=0, colorg=0, colorb=0, alpha=0)
 plate_in = mk(comp, switchTOP, 'plate_in', [none, plate], 'The empty room, while Find is Background.',
               index=BACKGROUND)
@@ -346,11 +353,12 @@ subject_blur = mk(comp, blurTOP, 'subject_blur', [subject],
                   'The subject, blurred: its edge, and which way is out (down its slope).', size=8)
 
 # ---- The air (Push and Flow) -----------------------------------------------------------------------
-section('air', 'The air: how the subject pushes the particles (Push and Flow)')
+section('air', 'The air: how the subject pushes the particles (Push and Flow), and the middle line Ribbons wind round')
 subject_wide = mk(comp, blurTOP, 'subject_wide', [subject],
                   'The subject, blurred widely: how near it is, where the air starts to part round it.', size=WIDE)
 subject_middle = mk(comp, blurTOP, 'subject_middle', [emit],
-                    'emit, blurred more widely still: the middle of the subject nearby, for the air.', size=MIDDLE)
+                    'emit, blurred more widely still: the middle of the subject nearby, for the air and the ribbons.',
+                    size=MIDDLE)
 air = glsl(comp, 'air', [subject_wide, subject_middle], src('air.glsl'),
            'The air for Push and Flow: a stream function whose curl is the wind and the swirl, going round the subject.',
            res=(MW, MH), fmt='rgba32float',
@@ -362,7 +370,10 @@ air = glsl(comp, 'air', [subject_wide, subject_middle], src('air.glsl'),
                  clock_seconds()),
            uFrame=(Expr("op('source').width / max(1, op('source').height)"),))
 air_in = mk(comp, switchTOP, 'air_in', [none, air], 'The air, while Behavior is Push or Flow.',
-            index=Expr("0 if parent().par.Behavior == 'emit' else 1"))
+            index=Expr("1 if parent().par.Behavior in ('push', 'flow') else 0"))
+middle_in = mk(comp, switchTOP, 'middle_in', [none, subject_middle],
+               'The middle of the subject nearby, while Behavior is Ribbons: the line they wind round.',
+               index=Expr("1 if parent().par.Behavior == 'ribbons' else 0"))
 
 # ---- The particles ---------------------------------------------------------------------------------
 section('sim', 'The particles: born on the subject, moved, aged (one pixel each)')
@@ -373,12 +384,12 @@ fb = [mk(comp, feedbackTOP, name + '_fb', [empty], "{}'s last frame.".format(nam
       for name, y in (('sim', 450), ('sim_life', 300), ('sim_color', 150), ('sim_shove', 0))]
 alive = mk(comp, analyzeTOP, 'alive_stats', [fb[1]], 'How many particles were alive last frame (a).',
            op='average', analyzechannel='independent', format='rgba32float')
-sim = glsl(comp, 'sim', fb + [emit, subject_blur, source, alive, emit_stats, air_in], src('sim.glsl'),
+sim = glsl(comp, 'sim', fb + [emit, subject_blur, source, alive, emit_stats, air_in, middle_in], src('sim.glsl'),
            'The particles: born on the subject (or off it), carried by the air, the turbulence and the music.',
            res=(PW, PH), fmt='rgba32float',
            uClock=(DT, clock_seconds(), Expr('absTime.frame % 16777216'),
                    Expr("op('source').width / max(1, op('source').height)")),
-           uEmit=(Expr("parent().par.Rate * (1 if parent().par.Behavior == 'emit' else {}) * ((1 - parent().par.Loudness + parent().par.Loudness * ({} + {} * op('level_lag')[0]))"
+           uEmit=(Expr("parent().par.Rate * (1 if parent().par.Behavior in ('emit', 'ribbons') else {}) * ((1 - parent().par.Loudness + parent().par.Loudness * ({} + {} * op('level_lag')[0]))"
                        " if op('audio')['source'] > 0 else 1) * min(absTime.stepSeconds, 0.1)".format(FIELD, STREAM[0], STREAM[1])),
                   par('Life'), par('Speed'), Expr("1 if parent().par.Emitfrom == 'outline' else 0")),
            uMove=(par('Drift'), Expr("parent().par.Turbulence * (1 + 2 * op('build_lag')[0] * parent().par.Moments)"),

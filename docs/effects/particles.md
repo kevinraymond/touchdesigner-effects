@@ -12,7 +12,8 @@ running on any video. Without one, the movement in the picture is the next best 
 This effect sends particles off its subject, each in the picture's color where it was born. The air
 carries them up and swirls them around, and they fade over a few seconds. Two more behaviors fill
 the whole frame with particles instead: in Push the subject shoves through them and they light up
-where it touches them, and in Flow they stream past and part round it (see Behaviors). The music
+where it touches them, and in Flow they stream past and part round it. A fourth, Ribbons, winds bands
+of particles round the subject like ribbons round a pole (see Behaviors). The music
 moves the whole cloud: loudness thickens and thins the stream, every beat fires a burst (of big
 sparks, as often as Flashing allows) and kicks the cloud outward, and every bar swings the wind to a new direction; with Fosfora's signal, a build
 stirs up the air and a drop sends a shockwave out. It finds its subject with whatever you give it:
@@ -37,7 +38,7 @@ Non-Commercial license
 4. Optional: wire audio or beat channels into input 2 (see Audio input).
 5. Set Show to Subject to see what the particles come from, in orange, with a label saying how it
    was found; tune Find and the settings under it there, then set Show back to Particles.
-6. Pick a Behavior: Emit (particles peel off the subject), Push or Flow (below).
+6. Pick a Behavior: Emit (particles peel off the subject), Push, Flow or Ribbons (below).
 
 Open Window (on the effect's page) shows it full size; Esc closes the window.
 
@@ -71,6 +72,20 @@ subject's middle and back, rather than kicking it outward as Emit does: with par
 back round, a kick would gather them at the edges of the frame. The air parts round each person in
 the frame. Arms and other thin parts let a little air through, out of sight behind them, so the
 stream bends gently round them instead of turning sharply.
+
+![Ribbons: bands of light peel off the dancer and wind round her, twisting as they turn, and rise into a column above her head](particles_ribbons.webp)
+
+**Ribbons**: bands of particles peel off the subject and wind round its middle line, like ribbons
+round a pole. Each band is 256 particles, 64 along it and 4 across, born at once on the subject and
+fading together. It rises at Speed, winds out from the line over most of a second and turns round it.
+Its width twists along it, so as it turns it shows its face, a wide band of dots, then its edge, a
+line. Behind the line a band is dimmer, and hidden where the subject covers it, so the bands pass
+behind the subject and come round in front. The line is the middle of the subject near where a band
+is (within about a third of a frame height), so it follows the subject as it moves, and two people
+far enough apart each get their own (close together, they share one). Above the subject the wind carries the line (Drift, Direction,
+Bar Gusts), and Turbulence bends the bands. Rate counts particles, so the default 5000 a second makes
+about 20 bands a second. A beat spins every band faster for a moment. A beat's burst adds a handful
+of bands at once, which brightens an area, so it comes only as often as Flashing allows, as sparks.
 
 ## What you have, what you get
 
@@ -173,23 +188,23 @@ The Particles page, top to bottom:
 | Far Limit | 0.15 | Anything farther than this never counts, from 0 (farthest) to 1 (nearest). Raise it to drop the background; lower it if parts of the subject go missing. Brightness standing in for depth (nothing on input 3) counts only above 0.5, or above Far Limit when that is higher. |
 | Depth Type | Brighter Is Nearer | What input 3 holds: Brighter Is Nearer (depth estimators, masks), Distance 0-1 (the RealSense and Kinect TOPs; black, no reading, is left out) or Distance in Meters (the Kinect Azure TOP). |
 | Max Distance | 4 | For Distance in Meters: the far end of the depth, in meters (Far Limit and Stand Out are fractions of it). |
-| Behavior | Emit | What the particles do: Emit, Push or Flow (see Behaviors). |
+| Behavior | Emit | What the particles do: Emit, Push, Flow or Ribbons (see Behaviors). |
 | Emit From | Body | For Emit: where particles are born, anywhere on the subject or only along its outline. |
-| Rate | 5000 | Particles born per second, 0 to 30,000: on the subject in Emit; three times as many, all over the frame, in Push and Flow. At most 65,536 are alive at once. |
+| Rate | 5000 | Particles born per second, 0 to 30,000: on the subject in Emit; three times as many, all over the frame, in Push and Flow. In Ribbons a band is 256 of them. At most 65,536 are alive at once. |
 | Life | 2.5 | How long a particle lives, in seconds. Each lives between half and one and a half times this. |
 | Size | 3 | Size of a particle in pixels at 720 high; it scales with the picture. |
-| Speed | 0.15 | How fast particles leave the subject, in frame heights per second (in Push and Flow, those of a beat's burst). |
-| Drift | 0.1 | For Emit and Flow: how fast the air blows, in frame heights per second, along Direction; below 0 it blows the other way. Push's air is still. |
-| Direction | 0 | For Emit and Flow: which way the air blows, in degrees clockwise from straight up: 90 to the right, 180 down, -90 to the left. |
-| Turbulence | 0.5 | How much the air swirls the particles around. |
+| Speed | 0.15 | How fast particles leave the subject, in frame heights per second (in Push and Flow, those of a beat's burst; in Ribbons, how fast the bands rise). |
+| Drift | 0.1 | For Emit, Flow and Ribbons: how fast the air blows, in frame heights per second, along Direction; below 0 it blows the other way. Push's air is still. |
+| Direction | 0 | For Emit, Flow and Ribbons: which way the air blows, in degrees clockwise from straight up: 90 to the right, 180 down, -90 to the left. |
+| Turbulence | 0.5 | How much the air swirls the particles around. In Ribbons it bends the bands. |
 | Color | Picture | The picture's color where each particle is born, lifted so dark clothes still glow, or orange, blue or white. |
 | Glow | 0.5 | How much the particles glow around themselves. |
 | Backdrop | 0.6 | How bright the picture behind the particles is, from 0 (black) to 1. |
 | Loudness | 0.7 | How much the loudness of input 2 thickens and thins the stream. At 1, quiet passages emit a third of Rate and the loudest a fifth more; 0 keeps Rate steady. |
-| Beat Bursts | 0.5 | On each beat of input 2, a burst of particles leaves the subject, up to three times as fast as the rest, and the whole cloud is kicked outward (Emit) or pulses out and back (Push, Flow). As often as Flashing allows, the burst is sparks: born two and a half times their size, shrinking back over about 0.3 s. 0 for none of it. |
-| Bar Gusts | 0.5 | For Emit and Flow: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new direction, up to about 35 degrees either side of Direction at 1, and eases there over 0.6 s; 0 keeps it blowing straight. |
+| Beat Bursts | 0.5 | On each beat of input 2, a burst of particles leaves the subject, up to three times as fast as the rest, and the whole cloud is kicked outward (Emit), pulses out and back (Push, Flow) or spins faster (Ribbons). As often as Flashing allows, the burst is sparks: born two and a half times their size, shrinking back over about 0.3 s. In Ribbons a burst adds bands only then. 0 for none of it. |
+| Bar Gusts | 0.5 | For Emit, Flow and Ribbons: on each bar of input 2 (every 4 beats when it has no bars), the wind swings to a new direction, up to about 35 degrees either side of Direction at 1, and eases there over 0.6 s; 0 keeps it blowing straight. |
 | Song Moments | On | With Fosfora's signal on input 2: a build stirs the air up as it rises, and a drop sends a shockwave out from the subject. |
-| Flashing | Calm | How often a burst may be sparks, which light up a patch of the picture at once. Off never; Calm at most once a second (about every other beat at dance tempos); Up to 3 per second is the WCAG 2.3.1 limit (every beat up to 180 BPM). The bursts, kicks, stream and wind come on every beat at any setting. |
+| Flashing | Calm | How often a burst may be sparks, which light up a patch of the picture at once. Off never; Calm at most once a second (about every other beat at dance tempos); Up to 3 per second is the WCAG 2.3.1 limit (every beat up to 180 BPM). The bursts, kicks, stream and wind come on every beat at any setting, except that Ribbons' bursts go through the gate too. |
 | Open Window | | Shows the picture in its own window, 1280 x 720 or filling a display. Esc closes it. |
 | Full Screen | Off | Opens the window filling the whole display, for a projector or a second screen. |
 | Display | 0 | Which display the window opens on; 0 is the primary display. |
@@ -202,13 +217,15 @@ The About page has Version, Built With (the TouchDesigner build it was saved in)
 `fosfora_signal.tox` (in Fosfora's `integrations/touchdesigner/`) into your project, and wire it
 into input 2. Its loudness thickens and thins the stream (Loudness), every beat fires a burst and
 kicks the cloud outward, the burst sparks as often as Flashing allows (Beat Bursts; in Push and Flow
-the whole field pulses out and back), every bar swings the wind (Bar Gusts; in Flow the whole stream
-turns, and Push has no wind to swing), and with Song Moments on:
+the whole field pulses out and back, and in Ribbons the bands spin faster), every bar swings the wind
+(Bar Gusts; in Flow the whole stream turns, in Ribbons the bands above the subject sway, and Push has
+no wind to swing), and with Song Moments on:
 
 - **Builds:** the air swirls harder as a build rises, up to three times Turbulence, and calms over
   the two seconds after it.
 - **Drops:** a ring leaves the subject's middle and sweeps outward across the frame in 1.2 s,
-  shoving the particles it passes. Fosfora's drop detection is experimental.
+  shoving the particles it passes (in Ribbons, flinging the bands out as it passes). Fosfora's drop
+  detection is experimental.
 
 Its level comes from Fosfora's `bass`, which swells with each beat and between passages; Fosfora's
 `energy` is loudness over three seconds, nearly constant on mastered music.
@@ -231,10 +248,13 @@ to blur their glow, 0.6 ms to move them and about 0.4 ms to find the subject, on
 whatever their size. Without depth it costs about the same: 2.4 ms on Movement (people crossing a
 plaza, Find on Auto), 3.1 ms on Background. Push and Flow add about 0.6 ms for the air that goes
 round the subject: 3.0 ms (Push) and 3.1 ms (Flow) with the dancer's depth, 3.1 and 3.2 ms on the
-plaza. Rate and Life barely change the cost: every one of the 65,536 particles is moved and drawn
+plaza. Ribbons adds about 0.5 ms: 2.9 ms on the GPU (95th percentile 4.0 ms) and 1.1 ms on the CPU
+with the dancer's depth, for the middle line the bands wind round (0.15 ms) and their longer move
+(0.65 ms). Rate and Life barely change the cost: every one of the 65,536 particles is moved and drawn
 every frame, alive or not, and at Rate 30000 with Life 4 a frame took 2.6 ms on the GPU. A larger
 picture costs more to draw and blur. Nothing inside cooks while the output is unused, Background's
-passes run only while Find is Background, and the air only in Push and Flow.
+passes run only while Find is Background, the air only in Push and Flow, and the bands' middle line
+only in Ribbons.
 
 ## Accessibility
 
@@ -244,7 +264,9 @@ passes run only while Find is Background, and the air only in Push and Flow.
   limit, which no setting exceeds. The rest moves particles and adds them rather than lighting the
   picture, so it comes on every beat: particles fade in over a tenth of a second (Emit) or nearly
   half a second (Push, Flow) and out over the second half of their lives, and in Push the particles
-  the subject shoves light up a few at a time, where it moves.
+  the subject shoves light up a few at a time, where it moves. Ribbons is the exception: a burst
+  there adds whole bands at once, which brightens an area, so a burst comes only through the same
+  gate, as sparks. The bands' faster spin comes on every beat.
 - **No meaning in color.** Particles take the picture's colors or one color, as decoration. The
   Subject view marks the subject in bright orange and the depth beside it in dim blue, so brightness
   tells them apart as well as hue, and its label says in words how the subject was found.
@@ -254,17 +276,20 @@ busier than music: 8 beats, 2 bars and 1 drop a second, so a burst and a kick (o
 second and a shockwave every second. The table gives the flashes in the worst second, by WCAG's area
 rule, at Off, Calm and Up to 3 per second:
 
-| Clip | Emit | Push | Flow | The clip alone |
-|---|---|---|---|---|
-| Dancer in a hazy warehouse, with her depth | 1.0, 1.0, 2.0 | 1.0, 1.0, 1.0 | 1.5, 1.0, 1.0 | 1.0 |
-| Hands against black, with their depth | 1.0, 1.0, 1.0 | 1.0, 1.5, 1.5 | 1.0, 1.0, 1.0 | 1.5 |
-| People crossing a plaza, no depth (Movement) | 0.0, 0.5, 1.0 | 1.0, 1.5, 1.5 | 0.5, 1.0, 1.0 | 0.5 |
-| Dancer, a beat at 140 BPM (Emit) | 0.5, 1.0, 1.5 | | | 1.0 |
+| Clip | Emit | Push | Flow | Ribbons | The clip alone |
+|---|---|---|---|---|---|
+| Dancer in a hazy warehouse, with her depth | 1.0, 1.0, 2.0 | 1.0, 1.0, 1.0 | 1.5, 1.0, 1.0 | 1.0, 2.0, 2.5 | 1.0 |
+| Hands against black, with their depth | 1.0, 1.0, 1.0 | 1.0, 1.5, 1.5 | 1.0, 1.0, 1.0 | 1.0, 1.0, 1.5 | 1.5 |
+| People crossing a plaza, no depth (Movement) | 0.0, 0.5, 1.0 | 1.0, 1.5, 1.5 | 0.5, 1.0, 1.0 | 1.0, 1.0, 1.0 | 0.5 |
+| Dancer, a beat at 140 BPM | 0.5, 1.0, 1.5 | | | 1.0, 1.5, 2.0 | 1.0 |
 
 The last row is a dance tempo, a bar every 4 beats, where each burst's sparks shrink back before
 the next. Before the sparks went through the gate, Emit on the dancer measured 2.5 under the busy
-beat. Push on the plaza adds half a flash a second to the footage's own even at Off, the people's
-shoves lighting particles up, and a flash at Calm and Up to 3 per second; everything else stays
+beat. Ribbons measured 2.5 at Off on the dancer while every beat's burst added bands, still 2.0
+with the faster spin taken out and 1.0 with no bursts, so its bursts went through the gate as well.
+Push on the plaza adds half a flash a second to the footage's own even at Off, the people's
+shoves lighting particles up, and a flash at Calm and Up to 3 per second; Ribbons there adds half
+a flash at every setting, the bands sweeping over the crowd; everything else stays
 within a flash of the footage (the dimmed backdrop takes some of its own flicker away), all of it
 under WCAG's limit of 3. No red flashes.
 
@@ -298,6 +323,11 @@ exposure drift, Flow's particles waiting behind the subject and the beat's pulse
 - **Depth Type:** the RealSense, Kinect and Kinect Azure TOPs' depth, as their help pages describe
   it.
 - **Font:** the 5 x 7 bitmap font for the Subject view's labels was drawn for this library.
+- **Ribbons:** suggested by a Reddit post of particle sheets rising and twisting round a thin
+  line, made from a [POP particle tutorial](https://youtu.be/SlVoPnsQlbU) with a second line
+  emitter and its Random POP switched from points to primitives, so each emitted line moved as one.
+  Nothing is taken from either: the bands, their winding and their twist are written for this
+  library in the particle shader.
 - **Read during the survey, not used:** the Palette's particlesGpu (Derivative).
 - **Beats from raw audio** (the library's audio input, `lib/audio_callbacks.py`): a kick is a jump
   in the low band's loudness, and the beat clock takes its tempo from the gaps between kicks, each
