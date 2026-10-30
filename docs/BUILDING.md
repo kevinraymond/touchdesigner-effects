@@ -421,6 +421,17 @@ height added half a flash a second on the dancer, and one with a radius a ninth 
 on flowers in the wind, where everything moves and the wakes cover the whole pool, and over ten they added none. And the
 caustics' own contrast mattered less than how they move: halving it changed nothing the counter saw.
 
+Three more from Schlieren, whose picture is seen through warm air that bends it. A bright point the bending shifts
+flashes however small the shift: the air over a stage light, shaken by every beat's puff, slid its bright point back and
+forth over the dark room and flashed the cells around it 16 times a second, so the lights are opaque (the air shows
+around them, not over them) and the picture shifts at most a few pixels. A puff that lifts all the warm air at once
+moves the whole picture when all of it is warm: red flowers swaying in the wind, warm all over, measured 3.5 flashes a
+second at Calm, so a puff weakens in proportion where more than a twentieth of the picture is warm. And relief that
+turns with the blade, or air that rises fast enough to churn, sweeps light and dark past every cell it covers: turned on
+every bar of the stress beat the blade added half a flash a second with Flashing Off, and twice today's lift added one
+and a half, so the blade turns at most once every 2 seconds and the air never rises faster than 0.4 frame heights a
+second.
+
 ## The audio input
 
 An effect built with `new_effect(..., audio=True)` reads input 2 through `audio_in(comp, _ROOT)`,
@@ -553,12 +564,14 @@ Nothing under `dev/` goes into a `.tox`.
 
 ## Performance notes
 
-Each effect's page states its cost on the reference machine: MacBook Pro, Apple M2 Pro
-(16 GB), macOS 15.6, TouchDesigner 2025.33230, at 1280 x 720 input, measured with `dev/perf.py`
-(CPU and GPU milliseconds per frame at the defaults, and the frame rate TouchDesigner held) with
-the Mac otherwise idle: pause `/tdlib_demo`'s clip (Play off on its Demo page) while measuring. The
-GPU's times wander from run to run as it changes speed, a third or more (an operator with a fixed
-amount of work read 0.26 to 0.50 ms across Paint's runs), so a page gives the median of three runs.
+Each effect's page states its cost on the reference machine: MacBook Pro, Apple M2 Pro (16 GB),
+macOS 15.6, TouchDesigner 2025.33230, at 1280 x 720 input, measured with `dev/perf.py` (CPU and GPU
+milliseconds per frame at the defaults, and the frame rate TouchDesigner held) with the Mac
+otherwise idle: pause `/tdlib_demo`'s clip (Play off on its Demo page) while measuring. Its memory
+counts too: with 15 of its 16 GB in use and 5 GB compressed, Blob Track alone read 7 ms on the GPU
+against its page's 2.3 (Schlieren's session, 2026-10-30). The GPU's times wander from run to run as
+it changes speed, a third or more (an operator with a fixed amount of work read 0.26 to 0.50 ms
+across Paint's runs), so a page gives the median of three runs.
 
 ## Releasing
 
