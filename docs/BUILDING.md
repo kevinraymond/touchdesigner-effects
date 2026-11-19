@@ -576,16 +576,17 @@ across Paint's runs), so a page gives the median of three runs.
 ## Releasing
 
 Every change reaches `main` through a pull request. A ruleset on `main` requires one, with the
-Checks workflow passing, and allows only squash merges, so each pull request lands as one commit
-whose subject is the pull request's title (with its number) and whose message is its description.
-Direct pushes and force pushes to `main` are refused, except from the repository's admin, who can
-bypass the ruleset when a fix needs it (rewording a merged commit's message, say).
+Checks workflow passing, and allows only merge commits. The merge commit's subject is the pull
+request's title (with its number) and its message is the description. The branch's commits land on
+`main` as they are, so each one is written to keep. Direct pushes and force pushes to `main` are
+refused, except from the repository's admin, who can bypass the ruleset when a fix needs it
+(rewording a merged commit's message, say).
 
 ```sh
 git switch -c pixel-sort-0.2.0
 git push -u origin pixel-sort-0.2.0
 gh pr create --title "Pixel Sort 0.2.0: ..." --body "..."
-gh pr merge --squash
+gh pr merge --merge
 ```
 
 To release, bump `VERSION` in the builders that changed, rebuild them (and any bundle embedding
