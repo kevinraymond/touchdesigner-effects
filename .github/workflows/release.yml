@@ -4,7 +4,8 @@ name: Release
 # file name, so the docs can link releases/latest/download/<name>.tox and never go stale.
 # The .tox files are built in TouchDesigner and committed (docs/BUILDING.md); this only
 # checks that they match their sources and attaches them. The notes list the subject of every
-# commit since the previous tag (on main, a squash-merged pull request's title and number).
+# commit on main's first-parent line since the previous tag: a pull request's merge commit (its
+# title and number), or the squash commit an older pull request landed as.
 
 on:
   push:
@@ -58,7 +59,7 @@ jobs:
           {
             echo "## Changes"
             echo
-            git log --no-merges --format='- %s' "$range"
+            git log --first-parent --format='- %s' "$range"
             if [ -n "$prev" ]; then
               echo
               echo "**Full Changelog**: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/compare/$prev...$GITHUB_REF_NAME"
