@@ -198,10 +198,11 @@ since at their defaults the dancer read too little at the hero's size. Recording
 | Chladni Sand | `settle=5 Flashing=wcag`: at Calm its figure showed on too few strikes to read in 6 s |
 | Detail | `settle=5`, Detail 2.5 and Edge Contrast 0.35: the haze changed too little |
 | Frost | `settle=3`, so the frost has begun to grow |
+| Marbling | `settle=10`, so the tray has been combed a few times |
 | Reaction-Diffusion | `settle=5`, Size Fine, Grow On Depth, Colors Light on Dark: the stripes hid her in the haze |
 | Video Vocoder | `settle=5`, its four fine octaves at 2, Drive 1, Flashing Up to 3 per second: she looked like the input |
 
-The hero is 667 pixels wide at WebP quality 100, about 33 MB. At 1000 wide it reached 64 MB with 31 effects. Quality
+The hero is 667 pixels wide at WebP quality 100, about 33 MB with 31 effects. At 1000 wide it reached 64 MB. Quality
 95 made it 23 MB but broke Voxel Space's slowly drifting sky into gray blocks on some frames.
 
 ## Save-time checks
@@ -739,3 +740,10 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   jumps from one pixel to the next (parallax over a height field) then reads a coarse, blurred level along every
   jump: Ferrofluid's spikes came out speckled and banded until its look read the surface with `textureLod(..., 0.0)`
   (2025.33230).
+- A GLSL TOP takes a CHOP as a uniform array on its Arrays page (the sequence `array`: `array0name`, `array0type` float
+  to vec4, `array0chop`, `array0arraytype` uniformarray or texturebuffer). Each sample is an element and the first four
+  channels are its x, y, z and w; a fifth is dropped (2025.33230, `dev/probes/glsl_arrays.py`). Marbling hands its tray's
+  tools to its shaders so, three Select CHOPs of four channels each. Its first version read the tools from a texture,
+  two texels a tool for each of a pixel's four samples, and took 4.3 ms at its defaults against 1.1 ms with the
+  arrays and each tool worked out once a pixel. The four samples kept in arrays indexed in a loop (`p[k]`) took 8.3 ms
+  with 58 tools on the tray, and side by side in vectors 5.9 ms with 52.
