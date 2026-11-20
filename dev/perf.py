@@ -7,7 +7,7 @@ performance note on its docs page (docs/TD_IDIOMS.md C7):
     dev/td.sh --pull dev/out/perf/b1_dancer/done           # clip=<name> in TD_ARGS: another clip
     cat dev/out/perf/b1_dancer/report.txt
 
-Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT with its
+Each effect is loaded from effects/<n>/<n>.tox into TDLIB_PARENT with its
 default parameters and dev/testbed.py's input (the test clip, a busy Fosfora-shaped beat), with
 nothing else of ours cooking. After SETTLE seconds it samples SECONDS seconds: every frame, the CPU
 and GPU cook time of everything inside the effect that cooked, and the frame's wall-clock length.
@@ -52,8 +52,6 @@ def main():
             os.remove(os.path.join(out, f))
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
-    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
-              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip, beat = testbed(host, opts)
     overrides = {k: v for k, v in opts.items() if k[:1].isupper()}
     view = mk(host, nullTOP, 'view', comment='Pulls the effect every frame.', at=(400, 0))

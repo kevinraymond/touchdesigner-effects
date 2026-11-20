@@ -3,19 +3,16 @@
 
     uv run tests/check_tox.py
 
-A component is a folder effects/<name>/ or bundles/<name>/ holding build_<name>.py. For each,
-it fails when:
-  - the component was never built (no <name>.tox or <name>.json beside the builder),
+An effect is a folder effects/<name>/ holding build_<name>.py. For each, it fails when:
+  - the effect was never built (no <name>.tox or <name>.json beside the builder),
   - a source changed since the last build (lib/tox_build.py, the builder, anything in src/),
   - the .tox is not the file its manifest describes,
   - the builder's VERSION is not the version the .tox was built as,
-  - a component has no docs page (docs/effects/<name>.md, bundles too), the page doesn't link the
+  - an effect has no docs page (docs/effects/<name>.md), the page doesn't link the
     latest-release download, state the build the .tox was saved in or carry its Credits and license
     (what it uses or follows, docs/BUILDING.md), or the preview it shows is missing,
-  - a component's idiom review (<kind>/<name>/review.md, docs/TD_IDIOMS.md) is missing, leaves a
-    box open, reviews an older version, or lacks an item the checklist has gained since,
-  - a bundle embeds an older build of a component than the one checked in, or, built to embed
-    every effect (embeds_all in its manifest, like the showreel), leaves one out.
+  - an effect's idiom review (effects/<name>/review.md, docs/TD_IDIOMS.md) is missing, leaves a
+    box open, reviews an older version, or lacks an item the checklist has gained since.
 With --release <tag> (run before tagging, and by the release workflow) it also fails when the
 README doesn't name that release yet.
 tests/test_guards.py breaks each of these on purpose and checks that it fails.
@@ -32,7 +29,6 @@ import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-KINDS = ('effects', 'bundles')
 PREVIEW = re.compile(r"\]\(([^)\s]+\.(?:webp|gif|mp4|webm|png|jpg))\)")
 CREDITS = re.compile(r'^## Credits and license\n+\S', re.M)
 REVIEW_ITEM = re.compile(r'^- \*\*([A-Z]\d+)\*\* \(review\) (.*(?:\n  .*)*)', re.M)
@@ -48,11 +44,10 @@ def load_lib(root):
 
 
 def components(root):
-    for kind in KINDS:
-        for d in sorted(glob.glob(os.path.join(root, kind, '*', ''))):
-            name = os.path.basename(os.path.dirname(d))
-            if not name.startswith(('.', '_')):
-                yield kind, name, os.path.dirname(d)
+    for d in sorted(glob.glob(os.path.join(root, 'effects', '*', ''))):
+        name = os.path.basename(os.path.dirname(d))
+        if not name.startswith(('.', '_')):
+            yield name, os.path.dirname(d)
 
 
 def review_items(root):
@@ -106,15 +101,11 @@ def _docs(root, lib, rel, name, errors):
 
 
 def check(root=ROOT):
-    """Every problem found, as one line each, and how many components were checked."""
+    """Every problem found, as one line each, and how many effects were checked."""
     lib = load_lib(root)
-    errors, built, found = [], {}, list(components(root))
-    seen = {}
-    for kind, name, d in found:
-        rel = '{}/{}'.format(kind, name)
-        if name in seen:
-            errors.append('{} and {} share a name; release assets need unique names'.format(seen[name], rel))
-        seen[name] = rel
+    errors, found = [], list(components(root))
+    for name, d in found:
+        rel = 'effects/{}'.format(name)
         builder = os.path.join(d, 'build_{}.py'.format(name))
         if not os.path.isfile(builder):
             errors.append('{}: no builder build_{}.py'.format(rel, name))
@@ -144,20 +135,6 @@ def check(root=ROOT):
         if os.path.isfile(page) and (not build or build not in open(page).read()):
             errors.append('docs/effects/{}.md does not state the build the .tox was saved in ({})'.format(
                 name, build))
-        built[name] = (kind, manifest)
-    for kind, name, d in found:
-        manifest = built.get(name, (kind, {}))[1]
-        embeds = manifest.get('embeds', {})
-        for inner, sha in sorted(embeds.items()):
-            if inner not in built:
-                errors.append('{}/{} embeds {}, which is not a built component'.format(kind, name, inner))
-            elif built[inner][1]['tox_sha256'] != sha:
-                errors.append('{}/{}.tox embeds an older {}.tox: rebuild the bundle after the component'.format(
-                    kind, name, inner))
-        if manifest.get('embeds_all'):
-            for inner in sorted(n for n, (k, _) in built.items() if k == 'effects' and n not in embeds):
-                errors.append('{}/{} does not embed {}: rebuild the bundle, which takes every effect'.format(
-                    kind, name, inner))
     return errors, len(found)
 
 
@@ -173,8 +150,7 @@ def check_release(root, tag):
 def main():
     if sys.argv[1:2] == ['--review-template']:
         name = sys.argv[2]
-        kind = next(k for k in KINDS if os.path.isdir(os.path.join(ROOT, k, name)))
-        builder = open(os.path.join(ROOT, kind, name, 'build_{}.py'.format(name))).read()
+        builder = open(os.path.join(ROOT, 'effects', name, 'build_{}.py'.format(name))).read()
         sys.stdout.write(review_template(ROOT, name, re.search(r"^VERSION = '([^']+)'", builder, re.M).group(1)))
         return 0
     errors, n = check(ROOT)
@@ -182,7 +158,7 @@ def main():
         errors += check_release(ROOT, sys.argv[2])
     for e in errors:
         print('FAIL', e)
-    print('{} component(s) checked, {} problem(s)'.format(n, len(errors)))
+    print('{} effect(s) checked, {} problem(s)'.format(n, len(errors)))
     return 1 if errors else 0
 
 

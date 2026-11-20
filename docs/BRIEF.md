@@ -20,9 +20,8 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
 
 - **One .tox, self-contained.** Relative references only. Nothing points outside the
   component except TouchDesigner's own /sys and /ui operators. No absolute file paths;
-  bundled sample media comes from `app.samplesFolder`, never shipped. (One exception: the
-  showreel bundle carries short clips of the library's own CC BY footage, the dancer and her
-  depth map, since the samples barely move and have no depth. No component ever makes sound.)
+  bundled sample media comes from `app.samplesFolder`, never shipped. No component ever
+  makes sound.
 - **Works the moment it's dragged in**, on the free Non-Commercial license
   (resolution cap 1280 x 1280), and states the oldest TouchDesigner build it was saved in.
   Files saved in a newer build may not open in older ones.
@@ -53,7 +52,7 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
   textport with `__file__ = '/path/build_x.py'; exec(open(__file__).read())`.
 - **A manifest beside every .tox:** version, TouchDesigner build, a hash of the sources
   and a hash of the .tox. A plain-Python test (pre-commit and CI) fails when a source
-  changed without a rebuild, or when a bundle embeds an older component. Break every
+  changed without a rebuild. Break every
   guard once on purpose and watch it fail, or it guards nothing.
 - **Save-time checks in the builder:** refuse to save anything pointing outside the
   component (absolute paths, external .tox, clone, global shortcut), and any unused
@@ -110,4 +109,6 @@ Survey what's publicly available for TouchDesigner, and write it up as a table:
    attaches .tox files to releases, a docs page per effect.
 3. Three effects end to end, chosen from the gaps, each with a preview and a
    performance note.
-4. A bundle .tox with a View selector that shows them all, like a showreel.
+4. A bundle .tox with a View selector that shows them all, like a showreel. (Built as the
+   Showreel, then dropped at 30 effects: it had to be rebuilt and measured for every new one. The
+   README's hero shows them all instead.)

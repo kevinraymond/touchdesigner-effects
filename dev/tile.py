@@ -1,12 +1,12 @@
 """DEV ONLY. Tile dev/record.py's recordings of several effects into one labeled grid, for a docs
-preview that shows them side by side (the Showreel's page): each recording scaled to a cell, named
-bottom left in the library's 5 x 7 font on a dark plate as the Showreel names them, in rows, each
+preview that shows them side by side (the README's hero): each recording scaled to a cell, named
+bottom left in the library's 5 x 7 font on a dark plate, in rows, each
 row centered. Writes <out>.mp4 (silent), <out>.webp (PREVIEW_SECONDS from --start) and, with
 --still, <out>_still.png: one frame on a dark band, for a social preview.
 
     uv run --with pillow dev/tile.py dev/out/record \\
         --rows 'input,depth|ascii,blob_track,datamosh|glitch,particles,point_cloud' \\
-        --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --clip b1_dancer --out docs/effects/showreel
+        --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --clip b1_dancer --out docs/hero --width 667 --quality 100
 
 The recordings start together (dev/record.py restarts the clip and the track for each; its input
 and depth takes record the clip itself), so the cells stay in step.
@@ -22,7 +22,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PREVIEW_SECONDS = 6
-PAD, INK, PLATE = 3, 0.9, 0.6   # as bundles/showreel/src/names.glsl
+PAD, INK, PLATE = 3, 0.9, 0.6   # the name's margin (font pixels), its brightness, its plate's opacity
 
 
 def font():

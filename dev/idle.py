@@ -6,7 +6,7 @@
     dev/td.sh --pull dev/out/idle/done
     cat dev/out/idle/report.txt
 
-Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT with its node
+Each effect is loaded from effects/<n>/<n>.tox into TDLIB_PARENT with its node
 viewer off and nothing downstream, first with nothing wired, then with dev/testbed.py's clip and
 stress beat on its inputs (a beat that changes every frame, as Fosfora's signal does). Each time it
 waits SETTLE frames, then counts the operators inside whose cookAbsFrame moves over WATCH frames:
@@ -41,8 +41,6 @@ def main():
     overrides = {k: v for k, v in opts.items() if k[:1].isupper()}
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
-    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
-              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip, beat = testbed(host, dict(opts, beat='stress'))
     runs = []
     for path in paths:

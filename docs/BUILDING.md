@@ -25,8 +25,8 @@ effects/<name>/
   build_<name>.py             the builder (has a VERSION = 'x.y.z' line)
   src/                        what it is built from: *.glsl, *.py
   <name>.tox, <name>.json     built in TouchDesigner, committed together
-bundles/<name>/               same shape; a bundle embeds effects (the showreel)
 docs/effects/<name>.md        the effect's page, its preview beside it (_template.md to start)
+docs/hero.webp                the README's hero: every effect on the same clip (The README hero, below)
 tests/check_tox.py            the stale-file test
 tests/test_guards.py          breaks each rule check_tox.py enforces, once, and checks it fails
 dev/                          dev loop, self-test and measuring tools; never shipped
@@ -149,8 +149,8 @@ plain Python).
   The audio and depth lanes come last, since they start from inputs 2 and 3. Within a lane,
   boxes run in the order they are wired.
 - Inside a box, each operator sits as far right as what it feeds allows and level with what it
-  reads. Columns are `LAYOUT_COL` (200) apart, wider after a column holding a wider node (the
-  Showreel's effects), and operators stack by their own heights.
+  reads. Columns are `LAYOUT_COL` (200) apart, wider after a column holding a wider node, and
+  operators stack by their own heights.
 - The DATs docked to an operator sit right under it, its shader or callbacks first, then its
   Info DAT. TouchDesigner docks a pixel shader, a compute shader and an Info DAT to every GLSL
   TOP; `lay_out()` drops the shader its mode doesn't run, which would read as part of the effect,
@@ -175,21 +175,34 @@ component's operators, wires, references and boxes as JSON. To show that a chang
 operators and nothing else, compare two `dev/probes/structure_dump.py` runs with
 `dev/probes/structure_diff.py`.
 
-## Building a bundle
+## The README hero
 
-A bundle is a component that embeds others: `bundles/showreel/build_showreel.py` finds every
-built `effects/<name>/<name>.tox`, loads each one into the shell unchanged (its Flashing follows the
-bundle's, its node viewer off) and puts them behind one View menu. It saves with `save_tox()` and a
-manifest that records each embedded file's hash under `embeds`, with `embeds_all` set: the bundle
-takes every effect. So adding or rebuilding an effect needs only a rebuild of the showreel:
+The README opens on `docs/hero.webp`: every effect on the same clip of the dancer, all in step, each named in the
+library's font. The clip and its depth map, the inputs, sit alone on the top row. The effects follow in alphabetical
+order in rows of three, and when they don't fill the last row, the last two or four go in rows of two, never one alone.
+
+Adding an effect means recording its take and tiling the hero again:
 
 ```sh
-dev/td.sh bundles/showreel/build_showreel.py
+TD_ARGS='<name> seconds=8 audio=m1x_ease_from_drop' dev/td.sh dev/record.py
+TD_WAIT=900 dev/td.sh --pull dev/out/record/done
+uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth|ascii,bent_cam,blob_track|...' \
+    --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --out docs/hero --width 667 --quality 100
 ```
 
-Until then `tests/check_tox.py` fails, naming the effect it lacks or embeds an older build of. A
-bundle is a component like any other: the same save-time checks, a docs page, an idiom review. The
-dev tools load one when it is named (`TD_ARGS='showreel' dev/td.sh dev/perf.py`).
+Record only the new effect. The other takes in `dev/out/record` stay as they are, and a few carry settings of their own,
+since at their defaults the dancer read too little at the hero's size. Recording every effect again needs these back:
+
+| Take | Recorded with |
+|---|---|
+| Chladni Sand | `settle=5 Flashing=wcag`: at Calm its figure showed on too few strikes to read in 6 s |
+| Detail | `settle=5`, Detail 2.5 and Edge Contrast 0.35: the haze changed too little |
+| Frost | `settle=3`, so the frost has begun to grow |
+| Reaction-Diffusion | `settle=5`, Size Fine, Grow On Depth, Colors Light on Dark: the stripes hid her in the haze |
+| Video Vocoder | `settle=5`, its four fine octaves at 2, Drive 1, Flashing Up to 3 per second: she looked like the input |
+
+The hero is 667 pixels wide at WebP quality 100, about 33 MB. At 1000 wide it reached 64 MB with 31 effects. Quality
+95 made it 23 MB but broke Voxel Space's slowly drifting sky into gray blocks on some frames.
 
 ## Save-time checks
 
@@ -496,15 +509,13 @@ the picture flash still go through `flash_gate()`.
 
 `<name>.json` records the effect's version, the TouchDesigner build it was saved in, a hash
 of its sources (every `lib/*.py` and `lib/glsl/*`, the builder, everything in `src/`) and a hash of the
-`.tox`. A bundle's also records the hash of every `.tox` it embeds (`embeds`), and whether it
-takes every effect (`embeds_all`).
+`.tox`.
 
 `tests/check_tox.py` fails when a source changed since the last build, the `.tox` isn't the
-file its manifest describes, the builder's `VERSION` isn't the built one, a component (effect or
-bundle) has no docs page (or it doesn't link `releases/latest/download/<name>.tox`, doesn't state
-the build the `.tox` was saved in, has no Credits and license section, or its preview is missing), its idiom review is missing or out
-of date (above), a bundle embeds an older build, or a bundle that takes every effect leaves one
-out. `tests/test_guards.py` breaks each of those on purpose. Both run in CI and before every
+file its manifest describes, the builder's `VERSION` isn't the built one, an effect has no docs page
+(or it doesn't link `releases/latest/download/<name>.tox`, doesn't state the build the `.tox` was
+saved in, has no Credits and license section, or its preview is missing), or its idiom review is
+missing or out of date (above). `tests/test_guards.py` breaks each of those on purpose. Both run in CI and before every
 commit:
 
 ```sh
@@ -553,7 +564,7 @@ The other dev tools, each run through `dev/td.sh` (their headers say more):
 | `dev/beat_bench.py` | `lib/audio_callbacks.py` outside TouchDesigner: feeds it a song as raw audio and scores its beats and bars against the song's beat grid (`uv run --with numpy dev/beat_bench.py`); `--selftest` checks the beat clock on a made-up kick track with missing and extra kicks |
 | `dev/reaction.py` + `dev/reaction_report.py` | record each effect with a song as raw audio on input 2 and without audio, then measure what the music does to the picture: how much more it changes after a beat than before (the take without audio at the same times is the control), what a bar adds, and how brightness follows loudness (`uv run --with numpy dev/reaction_report.py dev/out/reaction`) |
 | `dev/record.py` + `dev/clips.py` | record effects (and, named `input` and `depth`, the clip and its depth map) as video with sound (Motion JPEG: the free license can't encode H.264), then MP4s and docs previews (`uv run dev/clips.py dev/out/record --preview`) |
-| `dev/tile.py` | tile `dev/record.py`'s takes into one labeled grid, rows centered, in the library's font: the README's hero and the Showreel's preview, the clip and its depth map alone on the top row as the inputs, the effects in rows of three (two where they don't fill a row) below (`TD_ARGS='input depth ascii ... seconds=8' dev/td.sh dev/record.py`, then `uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth\|ascii,...' --titles 'input=INPUT,...' --out dev/out/record/hero --still 6.5`) |
+| `dev/tile.py` | tile `dev/record.py`'s takes into one labeled grid, rows centered, in the library's font: the README's hero (The README hero, above) and the docs previews |
 | `dev/social.py` | the repository's social preview (GitHub, Settings, Social preview) from the same takes: the name, a line, input + depth map (optional) = every effect in two centered rows, each frame at one moment and named at a size that reads (`uv run --with pillow dev/social.py dev/out/record docs/social-preview.png --at 6.5`): `docs/social-preview.png`, uploaded by hand |
 | `dev/idle.py` | checks an effect does nothing while its output is unused, input 2 unwired and wired (TD_IDIOMS C5) |
 | `dev/testbed.py` | the clip, its depth (input 3, for an effect that takes one) and the stress beat `flash.py`, `perf.py` and `idle.py` feed every effect; the stress beat swings all seven bands fully 8 times a second too, and `beat=song` plays a track as raw audio instead (`song=<name>` for another than `m1x_ease_from_drop`). It finds the clips from the path of the script that runs it, so a probe in `dev/probes/` that exec()s it sets `READY` itself, or it quietly gets TouchDesigner's sample movie |
@@ -589,8 +600,7 @@ gh pr create --title "Pixel Sort 0.2.0: ..." --body "..."
 gh pr merge --merge
 ```
 
-To release, bump `VERSION` in the builders that changed, rebuild them (and any bundle embedding
-them) and merge that. The README's Status paragraph names the latest release and what it adds, so
+To release, bump `VERSION` in the builders that changed, rebuild them and merge that. The README's Status paragraph names the latest release and what it adds, so
 the last pull request before the tag points it at the new one ("README names the v0.4.0 release"),
 and the release ships with a README that already describes it. Then tag `main` and push the tag:
 
