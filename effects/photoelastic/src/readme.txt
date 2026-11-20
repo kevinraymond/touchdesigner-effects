@@ -1,0 +1,58 @@
+Photoelastic {v}: the live picture as clear plastic between polarizers, its warm parts stressing it into interference colors.
+touchdesigner-effects, MIT.
+Docs: https://github.com/kevinraymond/touchdesigner-effects/blob/main/docs/effects/photoelastic.md
+
+Clear plastic under stress splits light into two waves polarized at right angles, and one travels a little slower than the other. Between two polarizers the waves interfere, and white light comes out in rainbow bands: black where the plastic is unstressed, then gray, white, yellow, red, blue, green and pinks as the stress grows. Engineers have used this for about a century to see where a part is stressed, with plastic models of bridges, hooks and gears between polarizers. Each band is a fringe, a line of equal stress, and the fringes crowd together where the stress gathers.
+
+This effect gives the live picture that plastic. What stands in front in the depth map (or is inside a mask), the picture's lights and whatever moves warm the plastic, and a plastic warmed unevenly is stressed, since its warm parts swell against the cool ones around them. The fringes ring whatever is warm and crowd at its outline, and they follow a moving subject and fade behind it as the plastic cools. The plastic is cast to the warmth, thick where the picture warms it, so the colors gather on the subject. The stress is worked out from the warmth, never measured.
+
+USE
+Drag photoelastic.tox into your network. It shows TouchDesigner's banana with a soft white light circling over it: fringes ring the banana, and the light warms the plastic as it passes and leaves fringes fading behind it. Wire any TOP into input 1, and the result is on output 1 at the input's size. You can also wire audio or beat channels into input 2 and a depth map or mask into input 3 (below). Open Window shows the picture full size, and Esc closes the window. Reset cools the plastic at once.
+
+THE PAGE
+Style picks Dark Field, Light Field, Plane or Tint Plate (below). Stress says how strongly the warmth stresses the plastic: more stress, more fringes. Polarizer Angle turns the polarizers in Plane and Tint Plate. Backlight says what lights the plastic from behind: at 0 the picture itself, at 1 a plain white light, so the colors show in the picture's dark parts too. Cast says how much the plastic is cast to what warms it: at 1 it is thick where the picture is warm and thin elsewhere, so the colors gather on the subject and the rest stays dark, and at 0 it is an even sheet, so the stress shows wherever it reaches. Backdrop says how much of the picture shows as it is where the plastic is unstressed, as polarizers short of perfect let it through.
+
+Warm by Movement, Warm by Nearness and Warm by Light say what warms the plastic (below), and Linger how long it stays warm once what warmed it has gone. Input 3 Holds, Sensitivity, Depth Type and Max Distance read input 3. Beat Squeeze, Loudness and Bar Turn are the music's.
+
+STYLES
+Dark Field puts the plastic between crossed circular polarizers: unstressed plastic is black, and the stress shows in its interference colors.
+
+Light Field turns one polarizer round: the light passes where the plastic is unstressed, so the picture shows there, and the stress shows in the complementary colors.
+
+Plane uses crossed straight polarizers. They show the same colors, and they also darken the plastic wherever its stress lies along them, whatever its strength: dark bands (isoclinics) that turn with the polarizers.
+
+Tint Plate adds a full-wave plate after the plastic, as a mineralogist's microscope does. Unstressed plastic shows the plate's magenta, and stress turns it blue where it lies one way and yellow where it lies the other, so the plate shows which way the plastic is stressed.
+
+WHAT WARMS THE PLASTIC
+With a depth map or mask on input 3, what stands in front of its surroundings, or is inside the mask, warms the plastic (Warm by Nearness). Whatever moves warms it too, quickly, and leaves it to cool behind it (Warm by Movement), and so do the picture's lights (Warm by Light): what is bright and brighter than what is around it, so a bright sky isn't a light. A faint movement (haze drifting through a dark room) doesn't count. A warm patch is stressed at its outline and around it, not inside it, so the fringes outline a warm subject and ring it, closer together near it and farther apart away from it.
+
+AUDIO (input 2, optional)
+Fosfora's signal is the best input. Run `fosfora --signal`, drag fosfora_signal.tox (in Fosfora's integrations/touchdesigner/, https://github.com/kevinraymond/fosfora) into your project and wire it into input 2. Louder music loads the plastic harder, so the fringes multiply and spread, and quiet passages lighter (Loudness). The load follows the loudness over about a second, so the fringes swell with the music rather than pumping on every hit. Each beat squeezes the plastic, so every fringe jumps outward and settles back, as often as Flashing allows (Beat Squeeze). Each bar turns the polarizers a little, slowly and at most once every 2 seconds (Bar Turn, Plane and Tint Plate). Raw audio (Audio File In, Audio Device In) gives beats from a kick detector and a beat clock that locks to the kicks' tempo. That clock is experimental and can still add or miss beats. TouchDesigner's audioAnalysis gives beats from its kick or onset channels. With nothing wired, the load stays even.
+
+DEPTH OR MASK (input 3, optional)
+A depth map, brighter nearer, says what stands in front of its surroundings: that warms the plastic. Floors and walls don't count as standing out, someone cut off by the left or right edge of the frame drops out, and feet merge with the floor they stand on. With Input 3 Holds on Mask, what is inside the mask (white inside: MediaPipe, the NVIDIA Background TOP) does instead. Sensitivity says how easily something counts as standing out, or how gray a mask counts as inside. Depth Type reads depth cameras too: the RealSense and Kinect TOPs give distance from 0 to 1 (black where the camera got no reading, which is left out), and the Kinect Azure TOP gives meters, scaled by Max Distance. With nothing on input 3, movement and light warm the plastic.
+
+FLASHING
+Each fringe that passes over a spot takes it through light and dark, so fringes that move flash. A beat's squeeze moves every fringe at once, so it goes through the Flashing setting: Off never squeezes, Calm (the default) at most once a second, Up to 3 per second at most three times. The load follows the loudness over a second, the polarizers turn at most once every 2 seconds, the orders stop crowding past a cap, and every pixel goes through a red guard.
+
+PERFORMANCE
+Measured on an M2 Pro at 1280 x 720 (docs page).
+
+INSIDE
+Unwired, ball (a soft white light on a figure of eight) over sample (demo) stands in for input 1. Input 3 goes through depth, near (nearness at a quarter size) and find (what stands out, or the mask), lib depth_near and depth_find. subject says, at a quarter of the picture's size, what warms the plastic (what stands out, the lights). lib optical_flow (lum8, seen, change, change_avg, clock_fb, clock) says what changed, and warmth (lib warmth, with warmth_fb) blends what warms and what moves into one field that warms quickly and cools slowly. lib pyramid halves the warmth four times (w1 to w4), and warm_mean takes its mean, since an even warmth stresses nothing. solve4 works out the plastic's thermoelastic potential at the coarsest size directly, solve3 to solve0 refine it at each finer size, and stress takes the stress from it. chart says what the Style's polariscope lets through at each fringe order and angle, summed over wavelengths, and look shows the picture through it, as thick as Cast makes it from w2. clear is where warmth_fb starts, and Reset sends it back there. Input 2 goes through audio (lib audio_in): counts and steps turn its counts into steps, ask, flash_limit and flash let beats through as often as Flashing allows, squeeze_env shapes a squeeze, bar_gap, bars and turn_lag count the bars (at most one every 2 seconds) and ease the polarizers' turn, and level_smooth eases the loudness over a second.
+
+CREDITS
+- Stress birefringence and the polariscope: D. Brewster, "On the communication of the structure of doubly refracting crystals to glass, muriate of soda, fluor spar, and other substances, by mechanical compression and dilatation" (Phil. Trans. R. Soc. 106, 1816); the stress-optic law after J. C. Maxwell, "On the equilibrium of elastic solids" (Trans. R. Soc. Edinburgh 20, 1853); the dark and light fields, plane and circular polariscopes and isoclinics as M. M. Frocht lays them out, "Photoelasticity" (Wiley, 1941).
+- The interference colors: A. Michel-Levy's chart (1888) as B. E. Sorensen computes it from first principles, "A revised Michel-Levy interference colour chart based on first-principles calculations" (Eur. J. Mineral. 25, 2013), each wavelength's transmission summed through the CIE 1931 color matching functions as C. Wyman, P.-P. Sloan and P. Shirley fit them, "Simple Analytic Approximations to the CIE XYZ Color Matching Functions" (JCGT 2(2), 2013), shared with Lens Flare and Schlieren (lib spectrum.glsl). The tint plate's colors by R. C. Jones's calculus, "A new calculus for the treatment of optical systems" (JOSA 31, 1941).
+- The stress from the warmth: the thermoelastic displacement potential of J. N. Goodier, "On the integration of the thermo-elastic equations" (Phil. Mag. 23, 1937), solved by cascadic multigrid after F. A. Bornemann and P. Deuflhard, "The cascadic multigrid method for elliptic problems" (Numer. Math. 75, 1996), with Jacobi smoothing on the warmth's Gaussian pyramid (P. J. Burt and E. H. Adelson, 1983; lib pyramid). The coarsest level is summed directly through the square lattice's Green's function, the potential kernel of the plane's simple random walk, in its large-distance form (F. Spitzer, "Principles of Random Walk", 1964).
+- What warms the plastic: the library's warmth (lib warmth, shared with Frost and Schlieren), its change detection (lib optical_flow) and its depth reading (lib depth_near and depth_find); the lights found as Schlieren finds them. The stress is resampled Catmull-Rom (lib common.glsl).
+- Beats from raw audio (the library's audio input): a kick is a jump in the low band's loudness; the beat clock takes its tempo from the gaps between kicks, inter-onset-interval tempo induction, the idea behind S. Dixon, "Automatic Extraction of Tempo and Beat from Expressive Performances" (J. New Music Research, 2001). Followed, not copied.
+- Flash limits: WCAG 2.3.1 (W3C, Three Flashes or Below Threshold), measured with this library's tools.
+- Not used: a spectrum built for each pixel from its color by a lookup of its chromaticity, Dolby's US 8,929,654 and US 9,077,942; the picture here only multiplies the polariscope's white-light colors channel by channel. A displayed field carried along by a velocity, ByteDance's US 12,694,597 and GritWorld's pending US 2023/0106802: the stress stays where it is, worked out afresh every frame from the warmth.
+Everything else is written for this library: the picture's warmth as the plastic's heating, the stress as its thermal stress, the backlight and backdrop, the beat's squeeze and the bars turning the polarizers. MIT.
+
+EXPERIMENTAL
+Raw audio's beats are experimental (AUDIO).
+
+UPDATING
+Dragging a .tox in embeds a copy. To update, delete this one and drag in the new photoelastic.tox from https://github.com/kevinraymond/touchdesigner-effects/releases/latest (or point the COMP's External .tox at a downloaded copy). The version and the build it was saved in are on the About page.

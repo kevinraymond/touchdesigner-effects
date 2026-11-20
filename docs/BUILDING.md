@@ -203,7 +203,7 @@ since at their defaults the dancer read too little at the hero's size. Recording
 | Reaction-Diffusion | `settle=5`, Size Fine, Grow On Depth, Colors Light on Dark: the stripes hid her in the haze |
 | Video Vocoder | `settle=5`, its four fine octaves at 2, Drive 1, Flashing Up to 3 per second: she looked like the input |
 
-The hero is 888 pixels wide, four cells of 222, at WebP quality 100: about 33 MB with 31 effects. In rows of three it
+The hero is 888 pixels wide, four cells of 222, at WebP quality 100: about 34 MB with 32 effects. In rows of three it
 was 667 wide, the same size of file; at 1000 wide in threes it reached 64 MB. Quality 95 made it 23 MB but broke Voxel
 Space's slowly drifting sky into gray blocks on some frames.
 
@@ -749,3 +749,7 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
   two texels a tool for each of a pixel's four samples, and took 4.3 ms at its defaults against 1.1 ms with the
   arrays and each tool worked out once a pixel. The four samples kept in arrays indexed in a loop (`p[k]`) took 8.3 ms
   with 58 tools on the tray, and side by side in vectors 5.9 ms with 52.
+- A GLSL TOP's pass costs about 0.04 ms of GPU time on the M2 Pro whatever its size, so a solve made of many passes on
+  small textures costs its number of passes, not its pixels: Photoelastic's first solve ran 60 Jacobi passes on 10 x 5
+  texels and 46 more on the finer levels, and took 4.5 ms (2025.33230). Its coarsest level is now one pass that sums
+  every texel directly, and the finer ones six passes each, 29 in all, about 1 ms.
