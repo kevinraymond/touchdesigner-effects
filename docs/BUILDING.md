@@ -724,3 +724,8 @@ Beyond those in [BRIEF.md](BRIEF.md#touchdesigner-behaviors-that-silently-broke-
 - The Blur TOP's Type (`type`) offers `catmull`, `gaussian`, `box`, `bartlette` (a triangle), `sinc`, `hanning` and
   `blackman` (2025.33230, `dev/probes/blur_pars.py`). Relight's broad smoothings are triangles, since it never adds two
   Gaussian blurs together (its docs page, Credits and license).
+- A GLSL TOP's Input Smoothness at Mipmap gives every wired input mipmaps, data inputs as well as the picture, and
+  `texture()` picks its level from how far the sample point moves between neighboring pixels. A march whose hit point
+  jumps from one pixel to the next (parallax over a height field) then reads a coarse, blurred level along every
+  jump: Ferrofluid's spikes came out speckled and banded until its look read the surface with `textureLod(..., 0.0)`
+  (2025.33230).
