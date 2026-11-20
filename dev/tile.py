@@ -5,8 +5,8 @@ row centered. Writes <out>.mp4 (silent), <out>.webp (PREVIEW_SECONDS from --star
 --still, <out>_still.png: one frame on a dark band, for a social preview.
 
     uv run --with pillow dev/tile.py dev/out/record \\
-        --rows 'input,depth|ascii,blob_track,datamosh|glitch,particles,point_cloud' \\
-        --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --clip b1_dancer --out docs/hero --width 667 --quality 100
+        --rows 'input,depth|ascii,bent_cam,blob_track,caustics|chladni_sand,datamosh,detail,ferrofluid' \\
+        --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --clip b1_dancer --out docs/hero --width 888 --quality 100
 
 The recordings start together (dev/record.py restarts the clip and the track for each; its input
 and depth takes record the clip itself), so the cells stay in step.

@@ -179,15 +179,16 @@ operators and nothing else, compare two `dev/probes/structure_dump.py` runs with
 
 The README opens on `docs/hero.webp`: every effect on the same clip of the dancer, all in step, each named in the
 library's font. The clip and its depth map, the inputs, sit alone on the top row. The effects follow in alphabetical
-order in rows of three, and when they don't fill the last row, the last two or four go in rows of two, never one alone.
+order in rows of four, and a last row that four don't fill is centered. Never leave one alone: one left over makes the
+last two rows three and two.
 
 Adding an effect means recording its take and tiling the hero again:
 
 ```sh
 TD_ARGS='<name> seconds=8 audio=m1x_ease_from_drop' dev/td.sh dev/record.py
 TD_WAIT=900 dev/td.sh --pull dev/out/record/done
-uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth|ascii,bent_cam,blob_track|...' \
-    --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --out docs/hero --width 667 --quality 100
+uv run --with pillow dev/tile.py dev/out/record --rows 'input,depth|ascii,bent_cam,blob_track,caustics|...' \
+    --titles 'input=INPUT,depth=DEPTH MAP,ascii=ASCII,...' --out docs/hero --width 888 --quality 100
 ```
 
 Record only the new effect. The other takes in `dev/out/record` stay as they are, and a few carry settings of their own,
@@ -202,8 +203,9 @@ since at their defaults the dancer read too little at the hero's size. Recording
 | Reaction-Diffusion | `settle=5`, Size Fine, Grow On Depth, Colors Light on Dark: the stripes hid her in the haze |
 | Video Vocoder | `settle=5`, its four fine octaves at 2, Drive 1, Flashing Up to 3 per second: she looked like the input |
 
-The hero is 667 pixels wide at WebP quality 100, about 33 MB with 31 effects. At 1000 wide it reached 64 MB. Quality
-95 made it 23 MB but broke Voxel Space's slowly drifting sky into gray blocks on some frames.
+The hero is 888 pixels wide, four cells of 222, at WebP quality 100: about 33 MB with 31 effects. In rows of three it
+was 667 wide, the same size of file; at 1000 wide in threes it reached 64 MB. Quality 95 made it 23 MB but broke Voxel
+Space's slowly drifting sky into gray blocks on some frames.
 
 ## Save-time checks
 
