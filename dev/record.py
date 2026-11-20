@@ -16,13 +16,13 @@ name) to set that parameter on every effect that has one, tag=<word> to add _<wo
 (TD_ARGS='particles Behavior=push tag=push'), and settle=<s> to let each effect cook that long on the playing clip
 before the clip and track restart, for an effect that starts by growing in (Reaction-Diffusion fades in over 4 s).
 
-Each effect is loaded from effects/<n>/<n>.tox (a bundle when named) into TDLIB_PARENT at its
+Each effect is loaded from effects/<n>/<n>.tox into TDLIB_PARENT at its
 defaults, the clip, its depth (<clip>_depth.mp4, on input 3 of an effect that takes one) and the
 track restart together, and the effect hears the track on input 2 while a
 Movie File Out records its output and the track at 30 fps (at its defaults, but for any <Par>=<value>).
 One effect at a time, nothing else of ours cooking. Before the first take the clip plays for WARMUP seconds: cued while it was still
 opening, the first take started at another point of the clip than the rest (ASCII, first, ran
-out of step in the Showreel's tiled preview). Writes dev/out/record/<effect>_<clip>.mov, then dev/out/record/done with each file's
+out of step in the tiled hero). Writes dev/out/record/<effect>_<clip>.mov, then dev/out/record/done with each file's
 frames written and dropped (TouchDesigner repeats a frame to keep time when it drops one: keep the
 Mac otherwise idle while recording).
 """
@@ -77,8 +77,6 @@ def main():
     names = [n for n in names if n not in TAKES]
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not (names or takes) or os.path.splitext(os.path.basename(p))[0] in names]
-    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
-              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     clip = mk(host, moviefileinTOP, 'clip', comment='The clip.', file=clip_file, at=(-600, 0))
     depth_file = os.path.splitext(clip_file)[0] + '_depth.mp4'
     depth = mk(host, moviefileinTOP, 'clip_depth', comment="The clip's depth.",

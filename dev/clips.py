@@ -3,7 +3,7 @@
     uv run dev/clips.py dev/out/record                 # each .mov -> .mp4 (H.264, AAC)
     uv run dev/clips.py dev/out/record --preview       # also a silent animated .webp preview
     uv run dev/clips.py dev/out/record --preview --start 2 --crop   # from 2 s in, the middle at 1:1
-    uv run dev/clips.py dev/out/showreel --preview --crop 1280x480 --width 1000   # a wide middle band
+    uv run dev/clips.py dev/out/record --preview --crop 1280x480 --width 1000   # a wide middle band
 
 The MP4 keeps the recording's size, rate and sound (for the README, a demo reel, sharing). The
 preview is what a docs page shows inline: 640 px wide, 20 fps, PREVIEW_SECONDS from --start (0: the

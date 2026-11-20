@@ -32,7 +32,7 @@ jobs:
       - name: Stage the .tox files and SHA256SUMS
         run: |
           shopt -s nullglob
-          files=(effects/*/*.tox bundles/*/*.tox)
+          files=(effects/*/*.tox)
           if [ ${#files[@]} -eq 0 ]; then
             echo "::error::no .tox files to release"
             exit 1

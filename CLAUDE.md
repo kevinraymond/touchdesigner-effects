@@ -17,14 +17,13 @@ uv run tests/check_tox.py            # every .tox in step with its sources (pre-
 dev/td.sh dev/selftest.py            # in TouchDesigner: each save-time check refuses when broken
 dev/td.sh effects/<n>/build_<n>.py   # build an effect in TouchDesigner, copy the .tox back
 dev/td.sh dev/demo.py                # after every build: load it into /tdlib_demo, where Kevin watches it grow
-dev/td.sh bundles/showreel/build_showreel.py   # then the showreel, which embeds every effect
 ```
 
 ## Rules
 
 - `.tox` files are generated, never hand-edited. Change the sources, rebuild, and commit the
   `.tox` with its `.json` manifest. Changing anything in `lib/` means rebuilding every effect.
-  Building or adding an effect means rebuilding the showreel too (check_tox.py fails until then).
+  Adding an effect means recording its take and re-tiling the README hero (docs/BUILDING.md, The README hero).
 - Builders start from `new_effect()` and end with `finish_effect()` + `save_effect()`; see
   the builder shape in docs/BUILDING.md. Fill docked DATs with `docked()`; never add a second one.
 - Name each part of a network with `section()`, titled in plain words; `finish_effect()` lays the

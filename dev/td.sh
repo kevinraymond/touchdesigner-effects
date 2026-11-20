@@ -37,7 +37,7 @@ flock 9
 
 pull() {
   rsync -a --include '*/' --include '*.tox' --include '*.json' --exclude '*' --prune-empty-dirs \
-    "$HOST:$REPO/effects" "$HOST:$REPO/bundles" "$root/" 2>/dev/null || true
+    "$HOST:$REPO/effects" "$root/" 2>/dev/null || true
   rsync -a "$HOST:$REPO/dev/out/" "$root/dev/out/" 2>/dev/null || true
 }
 
@@ -56,7 +56,7 @@ script=$(realpath --relative-to="$root" "$1")
 
 # Sources out; built files stay where they are on both sides until they come back below.
 rsync -a --delete --exclude .git --exclude '/effects/*/*.tox' --exclude '/effects/*/*.json' \
-  --exclude '/bundles/*/*.tox' --exclude '/bundles/*/*.json' --exclude /dev/out "$root/" "$HOST:$REPO/"
+  --exclude /dev/out "$root/" "$HOST:$REPO/"
 
 args=$(TD_ARGS="${TD_ARGS:-}" python3 -c 'import json, os; print(json.dumps(os.environ["TD_ARGS"].split()))')
 

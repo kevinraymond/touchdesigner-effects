@@ -1,7 +1,6 @@
 """Breaks every guard in check_tox.py once on purpose and checks that it fails; a guard that
-has never failed guards nothing. Builds a small fake library (one effect, one bundle that
-embeds every effect) in a temporary folder, checks that the intact copy passes, then breaks one thing
-per copy.
+has never failed guards nothing. Builds a small fake library (one effect) in a temporary folder,
+checks that the intact copy passes, then breaks one thing per copy.
 
     uv run tests/test_guards.py
 """
@@ -28,18 +27,15 @@ def write(root, rel, data):
         f.write(data)
 
 
-def build(root, kind, name, tox, embeds=None):
+def build(root, name, tox):
     """What a builder does after its save checks: write the .tox and its manifest."""
     lib = check_tox.load_lib(root)
-    d = os.path.join(root, kind, name)
-    write(root, '{}/{}/{}.tox'.format(kind, name, name), tox)
+    d = os.path.join(root, 'effects', name)
+    write(root, 'effects/{0}/{0}.tox'.format(name), tox)
     version = open(os.path.join(d, 'build_{}.py'.format(name))).read().split("VERSION = '")[1].split("'")[0]
     manifest = dict(version=version, sources_sha256=lib['digest'](root, lib['component_sources'](root, d)),
                     touchdesigner_build='2025.33230', tox_sha256=hashlib.sha256(tox).hexdigest(), tox_bytes=len(tox))
-    if embeds:
-        manifest['embeds'] = embeds
-        manifest['embeds_all'] = True
-    write(root, '{}/{}/{}.json'.format(kind, name, name), json.dumps(manifest, indent=2) + '\n')
+    write(root, 'effects/{0}/{0}.json'.format(name), json.dumps(manifest, indent=2) + '\n')
     return manifest
 
 
@@ -50,28 +46,26 @@ def fixture(root):
     shutil.copy(IDIOMS, os.path.join(root, 'docs', 'TD_IDIOMS.md'))
     write(root, 'README.md', '## Status\n\nEverything is in the latest release, '
           '[v0.1.0](https://github.com/o/r/releases/tag/v0.1.0).\n')
-    demo = add_effect(root, 'demo')
-    pages(root, 'bundles', 'reel')
-    build(root, 'bundles', 'reel', b'reel tox v1', embeds={'demo': demo['tox_sha256']})
+    add_effect(root, 'demo')
 
 
-def pages(root, kind, name):
-    """A component's builder, docs page, preview and ticked review."""
+def pages(root, name):
+    """An effect's builder, docs page, preview and ticked review."""
     lib = check_tox.load_lib(root)
-    write(root, '{0}/{1}/build_{1}.py'.format(kind, name), "VERSION = '0.1.0'\n")
+    write(root, 'effects/{0}/build_{0}.py'.format(name), "VERSION = '0.1.0'\n")
     write(root, 'docs/effects/{}.md'.format(name), '# {0}\n\n![{0}]({0}.gif)\n\n[Download]({1}) · saved in '
           'TouchDesigner 2025.33230\n\n## Credits and license\n\nMIT. Original.\n'.format(
               name, lib['DOWNLOAD_URL'].format(name)))
     write(root, 'docs/effects/{}.gif'.format(name), b'GIF89a')
-    write(root, '{}/{}/review.md'.format(kind, name),
+    write(root, 'effects/{}/review.md'.format(name),
           check_tox.review_template(root, name, '0.1.0').replace('- [ ]', '- [x]'))
 
 
 def add_effect(root, name):
     """A complete, built effect."""
-    pages(root, 'effects', name)
+    pages(root, name)
     write(root, 'effects/{0}/src/{0}.glsl'.format(name), 'out vec4 fragColor;\nvoid main() { fragColor = vec4(1.0); }\n')
-    return build(root, 'effects', name, '{} tox v1'.format(name).encode())
+    return build(root, name, '{} tox v1'.format(name).encode())
 
 
 def edit(rel, old, new):
@@ -88,15 +82,9 @@ def remove(rel):
 
 
 def bump_and_rebuild(root):
-    """A new version built and the bundle rebuilt around it, but nobody reviewed it."""
+    """A new version built, but nobody reviewed it."""
     edit('effects/demo/build_demo.py', '0.1.0', '0.2.0')(root)
-    demo = build(root, 'effects', 'demo', b'demo tox v2')
-    build(root, 'bundles', 'reel', b'reel tox v2', embeds={'demo': demo['tox_sha256']})
-
-
-def rebuild_effect_only(root):
-    write(root, 'effects/demo/src/demo.glsl', '// v2\n')
-    build(root, 'effects', 'demo', b'demo tox v2')
+    build(root, 'demo', b'demo tox v2')
 
 
 BREAKS = [
@@ -114,15 +102,12 @@ BREAKS = [
     ('never built', remove('effects/demo/demo.json'), 'never built'),
     ('no builder', lambda r: write(r, 'effects/orphan/src/a.glsl', '\n'), 'no builder'),
     ('no docs page', remove('docs/effects/demo.md'), 'no docs page'),
-    ('a bundle without a docs page', remove('docs/effects/reel.md'), 'bundles/reel: no docs page'),
-    ('a new effect the bundle leaves out', lambda r: add_effect(r, 'demo2'), 'does not embed demo2'),
     ('no download link', edit('docs/effects/demo.md', 'releases/latest/download', 'releases/download/v1'),
      'does not link'),
     ('no credits on the docs page', edit('docs/effects/demo.md', '## Credits and license\n\nMIT. Original.\n', ''),
      'no "## Credits and license"'),
     ('no preview shown', edit('docs/effects/demo.md', '![demo](demo.gif)', ''), 'shows no preview'),
     ('preview missing', remove('docs/effects/demo.gif'), 'which does not exist'),
-    ('bundle embeds an older effect', rebuild_effect_only, 'embeds an older demo.tox'),
     ('no idiom review', remove('effects/demo/review.md'), 'no review.md'),
     ('a review box left open', edit('effects/demo/review.md', '- [x] C5', '- [ ] C5'), 'leaves unchecked: C5'),
     ('a new version, not reviewed', bump_and_rebuild, 'reviews version 0.1.0, the builder is at 0.2.0'),
@@ -130,8 +115,6 @@ BREAKS = [
         r, 'docs/TD_IDIOMS.md')).read() + '- **Z9** (review) A new idiom.\n'), 'leaves unchecked: Z9'),
     ('docs page without the build', edit('docs/effects/demo.md', ' · saved in TouchDesigner 2025.33230', ''),
      'does not state the build'),
-    ('two components share a name', lambda r: write(r, 'bundles/demo/build_demo.py', "VERSION = '0.1.0'\n"),
-     'share a name'),
 ]
 
 
@@ -143,8 +126,8 @@ def main():
         items = check_tox.review_items(intact)
         assert len(items) >= 10, ('docs/TD_IDIOMS.md must yield its review items', items)
         errors, n = check_tox.check(intact)
-        assert errors == [] and n == 2, ('the intact fixture must pass', errors, n)
-        print('ok    intact fixture passes ({} components)'.format(n))
+        assert errors == [] and n == 1, ('the intact fixture must pass', errors, n)
+        print('ok    intact fixture passes ({} effect)'.format(n))
         assert check_tox.check_release(intact, 'v0.1.0') == [], 'the intact README names v0.1.0'
         failed = 0
         errors = check_tox.check_release(intact, 'v0.2.0')

@@ -6,12 +6,12 @@ flashes (docs/TD_IDIOMS.md A2):
     TD_ARGS='clip=b2_plaza' dev/td.sh dev/flash.py     # every effect on another test clip
     TD_ARGS='blob_track beat=none' dev/td.sh dev/flash.py   # no beat: into dev/out/flash/b1_dancer_no_beat
     TD_ARGS='datamosh beat=music' dev/td.sh dev/flash.py    # a dance-tempo beat: b1_dancer_beat-music
-    TD_ARGS='showreel View=cycle' dev/td.sh dev/flash.py    # a setting off its default: b1_dancer_View-cycle
+    TD_ARGS='paint Style=ink' dev/td.sh dev/flash.py        # a setting off its default: b1_dancer_Style-ink
     TD_ARGS='bent_cam flashing=off Zoom=1.1' dev/td.sh dev/flash.py   # one Flashing setting only (a quick sweep)
     dev/td.sh --pull dev/out/flash/b1_dancer/done
     uv run --with numpy dev/flashcount.py dev/out/flash/b1_dancer
 
-Each effect is loaded from effects/<n>/<n>.tox (a bundle, bundles/<n>/<n>.tox, when named) into
+Each effect is loaded from effects/<n>/<n>.tox into
 TDLIB_PARENT and gets dev/testbed.py's input: the test clip and a beat far busier than music, so
 every flash it can make is asked for. For each Flashing setting (once, as <n>_fixed, for an effect
 without one) it waits SETTLE seconds, then records SECONDS seconds: a GLSL TOP averages the output
@@ -77,8 +77,6 @@ def main():
     os.makedirs(out, exist_ok=True)
     paths = [p for p in sorted(glob.glob(os.path.join(_ROOT, 'effects', '*', '*.tox')))
              if not names or os.path.splitext(os.path.basename(p))[0] in names]
-    paths += [p for p in sorted(glob.glob(os.path.join(_ROOT, 'bundles', '*', '*.tox')))
-              if os.path.splitext(os.path.basename(p))[0] in names]  # bundles by name only
     # Only this run's recordings are replaced; other effects' stay for the report.
     for stem in ['clip'] + [os.path.splitext(os.path.basename(p))[0] for p in paths]:
         for f in glob.glob(os.path.join(out, stem + '_*.npz')):
